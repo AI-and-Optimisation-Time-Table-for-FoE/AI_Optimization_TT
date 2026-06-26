@@ -35,6 +35,21 @@ public class UserAccount {
     @Column(name = "last_login")
     private LocalDateTime lastLogin;
 
+    @Column(name = "batch_id")
+    private Integer batchId;
+
+    @Column(name = "department_id")
+    private Integer departmentId;
+
+    @Column(name = "first_name", length = 100)
+    private String firstName;
+
+    @Column(name = "last_name", length = 100)
+    private String lastName;
+
+    @Column(name = "university_email", length = 150)
+    private String universityEmail;
+
     public enum Role { admin, lecturer, student }
 
     // Getters and Setters
@@ -50,4 +65,14 @@ public class UserAccount {
     public void setIsActive(Boolean active) { isActive = active; }
     public LocalDateTime getLastLogin() { return lastLogin; }
     public void setLastLogin(LocalDateTime lastLogin) { this.lastLogin = lastLogin; }
+    public Integer getBatchId() { return batchId; }
+    public void setBatchId(Integer batchId) { this.batchId = batchId; }
+    public Integer getDepartmentId() { return departmentId; }
+    public void setDepartmentId(Integer departmentId) { this.departmentId = departmentId; }
+    public String getFirstName() { return firstName; }
+    public void setFirstName(String firstName) { this.firstName = firstName; }
+    public String getLastName() { return lastName; }
+    public void setLastName(String lastName) { this.lastName = lastName; }
+    public String getUniversityEmail() { return universityEmail; }
+    public void setUniversityEmail(String universityEmail) { this.universityEmail = universityEmail; }
 }

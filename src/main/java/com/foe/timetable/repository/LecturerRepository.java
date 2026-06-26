@@ -12,4 +12,6 @@ public interface LecturerRepository extends JpaRepository<Lecturer, Integer> {
     
     // Correct Spring Data JPA property path derivation
     List<Lecturer> findByDepartment_DepartmentId(Integer departmentId);
+    
+    java.util.Optional<Lecturer> findByUserAccount_UserId(Integer userId);
 }

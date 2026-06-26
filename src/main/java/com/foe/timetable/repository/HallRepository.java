@@ -10,4 +10,5 @@ import com.foe.timetable.model.Hall;
 @Repository
 public interface HallRepository extends JpaRepository<Hall, Integer> {
     List<Hall> findByHallTypeAndIsActiveTrue(Hall.HallType hallType);
+    List<Hall> findByIsActiveTrue();
 }
