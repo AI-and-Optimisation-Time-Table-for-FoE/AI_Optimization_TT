@@ -1,5 +1,7 @@
 package com.foe.timetable.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -13,6 +15,7 @@ import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "lecturer")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "userAccount"})
 public class Lecturer {
 
     @Id
@@ -27,6 +30,12 @@ public class Lecturer {
     private Integer maxHoursPerWeek;
 
     private String specialization;
+
+    @Column(name = "university_address")
+    private String universityAddress;
+
+    @Column(name = "phone_number")
+    private String phoneNumber;
 
     @ManyToOne
     @JoinColumn(name = "department_id", referencedColumnName = "department_id")
@@ -58,4 +67,10 @@ public class Lecturer {
 
     public UserAccount getUserAccount() { return userAccount; }
     public void setUserAccount(UserAccount userAccount) { this.userAccount = userAccount; }
+
+    public String getUniversityAddress() { return universityAddress; }
+    public void setUniversityAddress(String universityAddress) { this.universityAddress = universityAddress; }
+
+    public String getPhoneNumber() { return phoneNumber; }
+    public void setPhoneNumber(String phoneNumber) { this.phoneNumber = phoneNumber; }
 }
