@@ -1,0 +1,779 @@
+{
+  "batchId": 2,
+  "studentCount": 150,
+  "lunchStartTime": "11:30",
+  "lunchEndTime": "12:30",
+  "modules": [
+    {
+      "batchModuleId": 206,
+      "moduleCode": "EE6301",
+      "moduleName": "Computer Networks",
+      "sessionsNeeded": 3,
+      "lecturerId": 33,
+      "preferredHallId": 43
+    },
+    {
+      "batchModuleId": 207,
+      "moduleCode": "EE6302",
+      "moduleName": "Control Systems Design",
+      "sessionsNeeded": 3,
+      "lecturerId": 30,
+      "preferredHallId": 43
+    },
+    {
+      "batchModuleId": 208,
+      "moduleCode": "EE6203",
+      "moduleName": "Digital Signal Processing",
+      "sessionsNeeded": 2,
+      "lecturerId": 10,
+      "preferredHallId": 43
+    },
+    {
+      "batchModuleId": 209,
+      "moduleCode": "EE6304",
+      "moduleName": "Embedded Systems Design",
+      "sessionsNeeded": 3,
+      "lecturerId": 42,
+      "preferredHallId": 43
+    },
+    {
+      "batchModuleId": 210,
+      "moduleCode": "EE6305",
+      "moduleName": "Artificial Intelligence (TE)",
+      "sessionsNeeded": 3,
+      "lecturerId": 10,
+      "preferredHallId": null
+    },
+    {
+      "batchModuleId": 211,
+      "moduleCode": "EE6206",
+      "moduleName": "Energy Economics (TE)",
+      "sessionsNeeded": 2,
+      "lecturerId": 41,
+      "preferredHallId": 46
+    },
+    {
+      "batchModuleId": 212,
+      "moduleCode": "EE6207",
+      "moduleName": "Information Security (TE)",
+      "sessionsNeeded": 2,
+      "lecturerId": 32,
+      "preferredHallId": 46
+    },
+    {
+      "batchModuleId": 213,
+      "moduleCode": "EE6208",
+      "moduleName": "Introduction to Biomedical Engineering (TE)",
+      "sessionsNeeded": 2,
+      "lecturerId": 10,
+      "preferredHallId": null
+    },
+    {
+      "batchModuleId": 214,
+      "moduleCode": "EE6309",
+      "moduleName": "Renewable Energy Systems (TE)",
+      "sessionsNeeded": 3,
+      "lecturerId": 35,
+      "preferredHallId": 43
+    },
+    {
+      "batchModuleId": 215,
+      "moduleCode": "EE6210",
+      "moduleName": "Wireless and Mobile Communications (TE)",
+      "sessionsNeeded": 2,
+      "lecturerId": 33,
+      "preferredHallId": 43
+    }
+  ],
+  "halls": [
+    {
+      "hallId": 35,
+      "hallName": "Auditorium",
+      "capacity": 550
+    },
+    {
+      "hallId": 36,
+      "hallName": "Lecture Theatre \u2013 1",
+      "capacity": 300
+    },
+    {
+      "hallId": 37,
+      "hallName": "Lecture Theatre \u2013 2",
+      "capacity": 300
+    },
+    {
+      "hallId": 38,
+      "hallName": "Lecture Room \u2013 1",
+      "capacity": 130
+    },
+    {
+      "hallId": 39,
+      "hallName": "Lecture Room \u2013 2",
+      "capacity": 130
+    },
+    {
+      "hallId": 40,
+      "hallName": "Drawing Office - 1",
+      "capacity": 150
+    },
+    {
+      "hallId": 41,
+      "hallName": "Drawing Office - 2",
+      "capacity": 150
+    },
+    {
+      "hallId": 42,
+      "hallName": "Electrical seminar room",
+      "capacity": 75
+    },
+    {
+      "hallId": 43,
+      "hallName": "Electrical Computer Centre",
+      "capacity": 80
+    },
+    {
+      "hallId": 44,
+      "hallName": "New Lecture Hall 2",
+      "capacity": 100
+    },
+    {
+      "hallId": 45,
+      "hallName": "Civil COBEU",
+      "capacity": 130
+    },
+    {
+      "hallId": 46,
+      "hallName": "Electrical Lecture Room",
+      "capacity": 80
+    },
+    {
+      "hallId": 47,
+      "hallName": "Mechanical Lecture Room",
+      "capacity": 100
+    },
+    {
+      "hallId": 48,
+      "hallName": "Audio Visual Centre",
+      "capacity": 30
+    },
+    {
+      "hallId": 49,
+      "hallName": "Old Computer Centre",
+      "capacity": 150
+    },
+    {
+      "hallId": 50,
+      "hallName": "New Lecture Hall 1",
+      "capacity": 125
+    },
+    {
+      "hallId": 51,
+      "hallName": "New Computer Centre",
+      "capacity": 275
+    }
+  ],
+  "timeSlots": [
+    {
+      "slotId": 41,
+      "dayOfWeek": "Friday",
+      "startTime": "08:30:00",
+      "endTime": "09:30:00",
+      "slotNumber": 41
+    },
+    {
+      "slotId": 42,
+      "dayOfWeek": "Friday",
+      "startTime": "09:30:00",
+      "endTime": "10:30:00",
+      "slotNumber": 42
+    },
+    {
+      "slotId": 43,
+      "dayOfWeek": "Friday",
+      "startTime": "10:30:00",
+      "endTime": "11:30:00",
+      "slotNumber": 43
+    },
+    {
+      "slotId": 44,
+      "dayOfWeek": "Friday",
+      "startTime": "11:30:00",
+      "endTime": "12:30:00",
+      "slotNumber": 44
+    },
+    {
+      "slotId": 45,
+      "dayOfWeek": "Friday",
+      "startTime": "12:30:00",
+      "endTime": "13:30:00",
+      "slotNumber": 45
+    },
+    {
+      "slotId": 46,
+      "dayOfWeek": "Friday",
+      "startTime": "13:30:00",
+      "endTime": "14:30:00",
+      "slotNumber": 46
+    },
+    {
+      "slotId": 47,
+      "dayOfWeek": "Friday",
+      "startTime": "14:30:00",
+      "endTime": "15:30:00",
+      "slotNumber": 47
+    },
+    {
+      "slotId": 48,
+      "dayOfWeek": "Friday",
+      "startTime": "15:30:00",
+      "endTime": "16:30:00",
+      "slotNumber": 48
+    },
+    {
+      "slotId": 49,
+      "dayOfWeek": "Friday",
+      "startTime": "16:30:00",
+      "endTime": "17:30:00",
+      "slotNumber": 49
+    },
+    {
+      "slotId": 1,
+      "dayOfWeek": "Monday",
+      "startTime": "08:30:00",
+      "endTime": "09:30:00",
+      "slotNumber": 1
+    },
+    {
+      "slotId": 2,
+      "dayOfWeek": "Monday",
+      "startTime": "09:30:00",
+      "endTime": "10:30:00",
+      "slotNumber": 2
+    },
+    {
+      "slotId": 3,
+      "dayOfWeek": "Monday",
+      "startTime": "10:30:00",
+      "endTime": "11:30:00",
+      "slotNumber": 3
+    },
+    {
+      "slotId": 4,
+      "dayOfWeek": "Monday",
+      "startTime": "11:30:00",
+      "endTime": "12:30:00",
+      "slotNumber": 4
+    },
+    {
+      "slotId": 5,
+      "dayOfWeek": "Monday",
+      "startTime": "12:30:00",
+      "endTime": "13:30:00",
+      "slotNumber": 5
+    },
+    {
+      "slotId": 6,
+      "dayOfWeek": "Monday",
+      "startTime": "13:30:00",
+      "endTime": "14:30:00",
+      "slotNumber": 6
+    },
+    {
+      "slotId": 7,
+      "dayOfWeek": "Monday",
+      "startTime": "14:30:00",
+      "endTime": "15:30:00",
+      "slotNumber": 7
+    },
+    {
+      "slotId": 8,
+      "dayOfWeek": "Monday",
+      "startTime": "15:30:00",
+      "endTime": "16:30:00",
+      "slotNumber": 8
+    },
+    {
+      "slotId": 9,
+      "dayOfWeek": "Monday",
+      "startTime": "16:30:00",
+      "endTime": "17:30:00",
+      "slotNumber": 9
+    },
+    {
+      "slotId": 31,
+      "dayOfWeek": "Thursday",
+      "startTime": "08:30:00",
+      "endTime": "09:30:00",
+      "slotNumber": 31
+    },
+    {
+      "slotId": 32,
+      "dayOfWeek": "Thursday",
+      "startTime": "09:30:00",
+      "endTime": "10:30:00",
+      "slotNumber": 32
+    },
+    {
+      "slotId": 33,
+      "dayOfWeek": "Thursday",
+      "startTime": "10:30:00",
+      "endTime": "11:30:00",
+      "slotNumber": 33
+    },
+    {
+      "slotId": 34,
+      "dayOfWeek": "Thursday",
+      "startTime": "11:30:00",
+      "endTime": "12:30:00",
+      "slotNumber": 34
+    },
+    {
+      "slotId": 35,
+      "dayOfWeek": "Thursday",
+      "startTime": "12:30:00",
+      "endTime": "13:30:00",
+      "slotNumber": 35
+    },
+    {
+      "slotId": 36,
+      "dayOfWeek": "Thursday",
+      "startTime": "13:30:00",
+      "endTime": "14:30:00",
+      "slotNumber": 36
+    },
+    {
+      "slotId": 37,
+      "dayOfWeek": "Thursday",
+      "startTime": "14:30:00",
+      "endTime": "15:30:00",
+      "slotNumber": 37
+    },
+    {
+      "slotId": 38,
+      "dayOfWeek": "Thursday",
+      "startTime": "15:30:00",
+      "endTime": "16:30:00",
+      "slotNumber": 38
+    },
+    {
+      "slotId": 39,
+      "dayOfWeek": "Thursday",
+      "startTime": "16:30:00",
+      "endTime": "17:30:00",
+      "slotNumber": 39
+    },
+    {
+      "slotId": 11,
+      "dayOfWeek": "Tuesday",
+      "startTime": "08:30:00",
+      "endTime": "09:30:00",
+      "slotNumber": 11
+    },
+    {
+      "slotId": 12,
+      "dayOfWeek": "Tuesday",
+      "startTime": "09:30:00",
+      "endTime": "10:30:00",
+      "slotNumber": 12
+    },
+    {
+      "slotId": 13,
+      "dayOfWeek": "Tuesday",
+      "startTime": "10:30:00",
+      "endTime": "11:30:00",
+      "slotNumber": 13
+    },
+    {
+      "slotId": 14,
+      "dayOfWeek": "Tuesday",
+      "startTime": "11:30:00",
+      "endTime": "12:30:00",
+      "slotNumber": 14
+    },
+    {
+      "slotId": 15,
+      "dayOfWeek": "Tuesday",
+      "startTime": "12:30:00",
+      "endTime": "13:30:00",
+      "slotNumber": 15
+    },
+    {
+      "slotId": 16,
+      "dayOfWeek": "Tuesday",
+      "startTime": "13:30:00",
+      "endTime": "14:30:00",
+      "slotNumber": 16
+    },
+    {
+      "slotId": 17,
+      "dayOfWeek": "Tuesday",
+      "startTime": "14:30:00",
+      "endTime": "15:30:00",
+      "slotNumber": 17
+    },
+    {
+      "slotId": 18,
+      "dayOfWeek": "Tuesday",
+      "startTime": "15:30:00",
+      "endTime": "16:30:00",
+      "slotNumber": 18
+    },
+    {
+      "slotId": 19,
+      "dayOfWeek": "Tuesday",
+      "startTime": "16:30:00",
+      "endTime": "17:30:00",
+      "slotNumber": 19
+    },
+    {
+      "slotId": 21,
+      "dayOfWeek": "Wednesday",
+      "startTime": "08:30:00",
+      "endTime": "09:30:00",
+      "slotNumber": 21
+    },
+    {
+      "slotId": 22,
+      "dayOfWeek": "Wednesday",
+      "startTime": "09:30:00",
+      "endTime": "10:30:00",
+      "slotNumber": 22
+    },
+    {
+      "slotId": 23,
+      "dayOfWeek": "Wednesday",
+      "startTime": "10:30:00",
+      "endTime": "11:30:00",
+      "slotNumber": 23
+    },
+    {
+      "slotId": 24,
+      "dayOfWeek": "Wednesday",
+      "startTime": "11:30:00",
+      "endTime": "12:30:00",
+      "slotNumber": 24
+    },
+    {
+      "slotId": 25,
+      "dayOfWeek": "Wednesday",
+      "startTime": "12:30:00",
+      "endTime": "13:30:00",
+      "slotNumber": 25
+    },
+    {
+      "slotId": 26,
+      "dayOfWeek": "Wednesday",
+      "startTime": "13:30:00",
+      "endTime": "14:30:00",
+      "slotNumber": 26
+    },
+    {
+      "slotId": 27,
+      "dayOfWeek": "Wednesday",
+      "startTime": "14:30:00",
+      "endTime": "15:30:00",
+      "slotNumber": 27
+    },
+    {
+      "slotId": 28,
+      "dayOfWeek": "Wednesday",
+      "startTime": "15:30:00",
+      "endTime": "16:30:00",
+      "slotNumber": 28
+    },
+    {
+      "slotId": 29,
+      "dayOfWeek": "Wednesday",
+      "startTime": "16:30:00",
+      "endTime": "17:30:00",
+      "slotNumber": 29
+    }
+  ],
+  "lecturerUnavailability": {
+    "33": [],
+    "35": [],
+    "30": [],
+    "41": [],
+    "42": [],
+    "10": [
+      44,
+      16,
+      41,
+      32,
+      24,
+      34,
+      22,
+      14,
+      42,
+      4,
+      3,
+      12,
+      31,
+      33,
+      9,
+      21,
+      43
+    ],
+    "32": []
+  },
+  "hallUnavailability": {
+    "44": [],
+    "45": [],
+    "35": [
+      48,
+      25,
+      35,
+      42,
+      41,
+      37,
+      7,
+      36,
+      44,
+      16,
+      31,
+      26,
+      17,
+      1,
+      32,
+      46,
+      47,
+      21,
+      22,
+      12,
+      11
+    ],
+    "46": [],
+    "36": [
+      2,
+      36,
+      31
+    ],
+    "47": [],
+    "37": [
+      11,
+      5,
+      6,
+      42,
+      4,
+      32,
+      18,
+      19,
+      26,
+      37,
+      16
+    ],
+    "48": [],
+    "38": [],
+    "49": [
+      22,
+      1,
+      46,
+      38,
+      3,
+      35,
+      8,
+      49,
+      26,
+      13,
+      32,
+      47,
+      11,
+      37,
+      12,
+      39,
+      25,
+      33,
+      34,
+      9,
+      21,
+      36,
+      31,
+      24,
+      14,
+      29,
+      19,
+      17,
+      16,
+      7,
+      6,
+      2,
+      23,
+      18
+    ],
+    "39": [],
+    "50": [],
+    "40": [
+      5,
+      32,
+      2,
+      24,
+      43,
+      23,
+      13,
+      34,
+      18,
+      35,
+      36,
+      7,
+      3,
+      6,
+      12,
+      8,
+      26,
+      25
+    ],
+    "51": [
+      12,
+      21,
+      47,
+      39,
+      48,
+      46,
+      9,
+      23,
+      33,
+      38,
+      34,
+      41,
+      32,
+      24,
+      22,
+      14,
+      4,
+      3,
+      31,
+      43,
+      42,
+      44,
+      16,
+      45,
+      17
+    ],
+    "41": [
+      13,
+      35,
+      48,
+      7,
+      18,
+      12,
+      33,
+      3,
+      14,
+      34,
+      22,
+      11,
+      4,
+      37,
+      36,
+      26,
+      25,
+      9,
+      8,
+      31,
+      1,
+      6,
+      41,
+      16,
+      32,
+      49,
+      17,
+      21,
+      47,
+      38
+    ],
+    "42": [],
+    "43": []
+  },
+  "batchLabSchedules": {
+    "210": [
+      21,
+      22,
+      23,
+      46,
+      47,
+      48
+    ],
+    "211": [
+      21,
+      22,
+      23,
+      46,
+      47,
+      48
+    ],
+    "212": [
+      21,
+      22,
+      23,
+      46,
+      47,
+      48
+    ],
+    "213": [
+      21,
+      22,
+      23,
+      46,
+      47,
+      48
+    ],
+    "214": [
+      21,
+      22,
+      23,
+      46,
+      47,
+      48
+    ],
+    "215": [
+      21,
+      22,
+      23,
+      46,
+      47,
+      48
+    ],
+    "206": [
+      21,
+      22,
+      23,
+      46,
+      47,
+      48
+    ],
+    "207": [
+      21,
+      22,
+      23,
+      46,
+      47,
+      48
+    ],
+    "208": [
+      21,
+      22,
+      23,
+      46,
+      47,
+      48
+    ],
+    "209": [
+      21,
+      22,
+      23,
+      46,
+      47,
+      48
+    ]
+  },
+  "lecturerPreferences": {
+    "33": [],
+    "35": [],
+    "30": [],
+    "41": [],
+    "42": [],
+    "10": [],
+    "32": []
+  },
+  "studentPreferences": []
+}
