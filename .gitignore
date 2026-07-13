@@ -1,0 +1,31 @@
+# Next.js build
+frontend/.next/
+frontend/out/
+frontend/node_modules/
+node_modules/
+
+# Python cache and environments
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+**/*.pyd
+optimizer/venv/
+optimizer/.venv/
+.venv/
+venv/
+
+# Java build target
+**/target/
+
+# Local configuration, backups, and logs
+*.log
+*.sql
+*.json
+.env
+.env.local
+
+# Agent/workspace helper files
+task.md
+walkthrough.md
+scratch/
+temp_payload.json
