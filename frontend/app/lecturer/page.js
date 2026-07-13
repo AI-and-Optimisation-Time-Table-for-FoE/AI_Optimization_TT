@@ -104,7 +104,7 @@ export default function LecturerDashboard() {
             <div>
               {/* Welcome Header Banner */}
               <div className="card" style={{ 
-                background: "linear-gradient(135deg, #059669 0%, #064e3b 100%)", 
+                background: "var(--bg-sidebar)", 
                 color: "#fff", 
                 padding: "32px 24px", 
                 marginBottom: "32px", 

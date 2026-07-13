@@ -247,7 +247,9 @@ function TimetableViewPage() {
   const entryMap = useMemo(() => {
     const map = new Map();
     for (const entry of entries) {
-      const key = `${entry.dayOfWeek}|${entry.startTime}|${entry.endTime}`;
+      const start = entry.startTime ? entry.startTime.substring(0, 5) : "";
+      const end = entry.endTime ? entry.endTime.substring(0, 5) : "";
+      const key = `${entry.dayOfWeek}|${start}|${end}`;
       if (!map.has(key)) {
         map.set(key, []);
       }

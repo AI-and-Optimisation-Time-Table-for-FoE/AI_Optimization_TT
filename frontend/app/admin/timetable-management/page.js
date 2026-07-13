@@ -265,7 +265,9 @@ export default function TimetableManagement() {
   const previewEntryMap = new Map();
   previewEntries.forEach(entry => {
     if (entry.dayOfWeek) {
-      const key = `${entry.dayOfWeek}|${entry.startTime}|${entry.endTime}`;
+      const start = entry.startTime ? entry.startTime.substring(0, 5) : "";
+      const end = entry.endTime ? entry.endTime.substring(0, 5) : "";
+      const key = `${entry.dayOfWeek}|${start}|${end}`;
       if (!previewEntryMap.has(key)) {
         previewEntryMap.set(key, []);
       }
