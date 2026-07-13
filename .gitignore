@@ -1,33 +1,31 @@
-HELP.md
-target/
-.mvn/wrapper/maven-wrapper.jar
-!**/src/main/**/target/
-!**/src/test/**/target/
+# Next.js build
+frontend/.next/
+frontend/out/
+frontend/node_modules/
+node_modules/
 
-### STS ###
-.apt_generated
-.classpath
-.factorypath
-.project
-.settings
-.springBeans
-.sts4-cache
+# Python cache and environments
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+**/*.pyd
+optimizer/venv/
+optimizer/.venv/
+.venv/
+venv/
 
-### IntelliJ IDEA ###
-.idea
-*.iws
-*.iml
-*.ipr
+# Java build target
+**/target/
 
-### NetBeans ###
-/nbproject/private/
-/nbbuild/
-/dist/
-/nbdist/
-/.nb-gradle/
-build/
-!**/src/main/**/build/
-!**/src/test/**/build/
+# Local configuration, backups, and logs
+*.log
+*.sql
+*.json
+.env
+.env.local
 
-### VS Code ###
-.vscode/
+# Agent/workspace helper files
+task.md
+walkthrough.md
+scratch/
+temp_payload.json
