@@ -76,8 +76,8 @@ export default function Sidebar() {
             }} 
           />
           <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
-            <div className="sidebar-logo-text" style={{ fontSize: "14px", fontWeight: "700", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", letterSpacing: "-0.2px" }}>Faculty of Eng</div>
-            <div className="sidebar-logo-subtitle" style={{ fontSize: "9px", opacity: 0.7, textTransform: "uppercase", letterSpacing: "0.2px", marginTop: "1px" }}>Timetable Scheduler</div>
+            <div className="sidebar-logo-text" style={{ fontSize: "14px", fontWeight: "700", whiteSpace: "normal", lineHeight: "1.2", letterSpacing: "-0.2px" }}>Faculty of Engineering</div>
+            <div className="sidebar-logo-subtitle" style={{ fontSize: "9px", opacity: 0.7, textTransform: "uppercase", letterSpacing: "0.2px", marginTop: "4px" }}>Timetable Scheduler</div>
           </div>
         </Link>
       </div>

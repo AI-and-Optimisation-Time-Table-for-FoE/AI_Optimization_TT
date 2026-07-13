@@ -255,7 +255,7 @@ export default function RegisterPage() {
                   transition: "all var(--transition-base)"
                 }}
               >
-                🎓 Student
+                Student
               </button>
               <button
                 type="button"
@@ -272,7 +272,7 @@ export default function RegisterPage() {
                   transition: "all var(--transition-base)"
                 }}
               >
-                👨‍🏫 Lecturer
+                Lecturer
               </button>
             </div>
           </div>
