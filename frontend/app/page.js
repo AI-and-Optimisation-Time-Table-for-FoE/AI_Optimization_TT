@@ -79,25 +79,42 @@ export default function LoginPage() {
         color: "#fff"
       }}>
         <div style={{ textAlign: "center", marginBottom: "32px" }}>
-          <div style={{
-            fontSize: "48px",
-            marginBottom: "12px",
-            display: "inline-block",
-            animation: "pulse 2s infinite"
-          }}>📋</div>
+          <img 
+            src="/logo.jpg" 
+            alt="Faculty of Engineering Logo" 
+            style={{ 
+              width: "90px", 
+              height: "90px", 
+              objectFit: "contain", 
+              borderRadius: "8px", 
+              background: "#ffffff", 
+              padding: "6px", 
+              marginBottom: "16px", 
+              boxShadow: "0 4px 12px rgba(0,0,0,0.15)", 
+              display: "inline-block" 
+            }} 
+          />
           <h1 style={{
-            fontSize: "28px",
+            fontSize: "24px",
             fontWeight: "800",
             letterSpacing: "-0.5px",
-            background: "linear-gradient(135deg, #fff 0%, var(--primary-200) 100%)",
+            background: "linear-gradient(135deg, #ffffff 0%, var(--primary-200) 100%)",
             WebkitBackgroundClip: "text",
-            WebkitTextFillColor: "transparent"
-          }}>TimeTable Scheduler</h1>
+            WebkitTextFillColor: "transparent",
+            margin: 0
+          }}>Faculty of Engineering</h1>
+          <h2 style={{
+            fontSize: "15px",
+            fontWeight: "600",
+            color: "rgba(255, 255, 255, 0.85)",
+            marginTop: "4px",
+            marginBottom: "2px"
+          }}>Timetable Scheduling System</h2>
           <p style={{
-            fontSize: "14px",
-            color: "rgba(255, 255, 255, 0.6)",
-            marginTop: "6px"
-          }}>Please sign in to access your dashboard</p>
+            fontSize: "12px",
+            color: "rgba(255, 255, 255, 0.55)",
+            margin: 0
+          }}>University of Ruhuna</p>
         </div>
 
         {error && (

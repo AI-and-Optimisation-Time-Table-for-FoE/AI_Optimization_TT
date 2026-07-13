@@ -162,19 +162,42 @@ export default function RegisterPage() {
         color: "#fff"
       }}>
         <div style={{ textAlign: "center", marginBottom: "30px" }}>
+          <img 
+            src="/logo.jpg" 
+            alt="Faculty of Engineering Logo" 
+            style={{ 
+              width: "80px", 
+              height: "80px", 
+              objectFit: "contain", 
+              borderRadius: "8px", 
+              background: "#ffffff", 
+              padding: "6px", 
+              marginBottom: "12px", 
+              boxShadow: "0 4px 12px rgba(0,0,0,0.15)", 
+              display: "inline-block" 
+            }} 
+          />
           <h1 style={{
-            fontSize: "26px",
+            fontSize: "22px",
             fontWeight: "800",
             letterSpacing: "-0.5px",
-            background: "linear-gradient(135deg, #fff 0%, var(--primary-200) 100%)",
+            background: "linear-gradient(135deg, #ffffff 0%, var(--primary-200) 100%)",
             WebkitBackgroundClip: "text",
-            WebkitTextFillColor: "transparent"
-          }}>Create an Account</h1>
-          <p style={{
+            WebkitTextFillColor: "transparent",
+            margin: 0
+          }}>Faculty of Engineering</h1>
+          <h2 style={{
             fontSize: "14px",
-            color: "rgba(255, 255, 255, 0.6)",
-            marginTop: "6px"
-          }}>Join the timetable scheduler system</p>
+            fontWeight: "600",
+            color: "rgba(255, 255, 255, 0.85)",
+            marginTop: "4px",
+            marginBottom: "2px"
+          }}>Account Registration</h2>
+          <p style={{
+            fontSize: "11px",
+            color: "rgba(255, 255, 255, 0.55)",
+            margin: 0
+          }}>University of Ruhuna</p>
         </div>
 
         {error && (

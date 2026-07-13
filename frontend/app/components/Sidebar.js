@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Shield, GraduationCap, Users, Calendar, LogOut, ClipboardList } from "lucide-react";
+import { Shield, GraduationCap, Users, Calendar, LogOut } from "lucide-react";
 
 export default function Sidebar() {
   const pathname = usePathname();
@@ -61,13 +61,23 @@ export default function Sidebar() {
   return (
     <aside className="sidebar">
       <div className="sidebar-header">
-        <Link href={user ? `/${user.role}` : "/"} className="sidebar-logo">
-          <div className="sidebar-logo-icon" style={{ display: "flex", alignItems: "center" }}>
-            <ClipboardList size={24} style={{ color: "var(--primary-400)" }} />
-          </div>
-          <div>
-            <div className="sidebar-logo-text">TimeTable</div>
-            <div className="sidebar-logo-subtitle">Scheduler</div>
+        <Link href={user ? `/${user.role}` : "/"} className="sidebar-logo" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <img 
+            src="/logo.jpg" 
+            alt="Faculty of Engineering Logo" 
+            style={{ 
+              width: "36px", 
+              height: "36px", 
+              objectFit: "contain", 
+              background: "#ffffff", 
+              padding: "2px", 
+              borderRadius: "4px",
+              flexShrink: 0
+            }} 
+          />
+          <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
+            <div className="sidebar-logo-text" style={{ fontSize: "14px", fontWeight: "700", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", letterSpacing: "-0.2px" }}>Faculty of Eng</div>
+            <div className="sidebar-logo-subtitle" style={{ fontSize: "9px", opacity: 0.7, textTransform: "uppercase", letterSpacing: "0.2px", marginTop: "1px" }}>Timetable Scheduler</div>
           </div>
         </Link>
       </div>
