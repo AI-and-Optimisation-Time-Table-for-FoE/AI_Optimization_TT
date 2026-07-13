@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Shield, GraduationCap, Users, Calendar, LogOut } from "lucide-react";
+import { Shield, GraduationCap, Users, Calendar, LogOut, ClipboardList } from "lucide-react";
 
 export default function Sidebar() {
   const pathname = usePathname();
