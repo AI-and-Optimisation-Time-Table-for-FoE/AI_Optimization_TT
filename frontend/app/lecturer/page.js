@@ -126,39 +126,39 @@ export default function LecturerDashboard() {
 
                 {/* Modules count - Deep Teal */}
                 <div className="card" style={{ background: "linear-gradient(135deg, #0f766e 0%, #0e9280 100%)", border: "none", boxShadow: "0 8px 24px rgba(15,118,110,0.35)", display: "flex", flexDirection: "column", justifyContent: "center", borderRadius: "16px" }}>
-                  <div className="card-body" style={{ padding: "28px 24px", display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", gap: "14px" }}>
-                    <div style={{ background: "rgba(255,255,255,0.2)", borderRadius: "50%", width: "60px", height: "60px", display: "flex", alignItems: "center", justifyContent: "center", color: "#ffffff" }}>
-                      <BookOpen size={30} />
+                  <div className="card-body" style={{ padding: "16px 18px", display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", gap: "8px" }}>
+                    <div style={{ background: "rgba(255,255,255,0.2)", borderRadius: "50%", width: "44px", height: "44px", display: "flex", alignItems: "center", justifyContent: "center", color: "#ffffff" }}>
+                      <BookOpen size={22} />
                     </div>
                     <div>
-                      <div style={{ fontSize: "36px", fontWeight: "900", color: "#ffffff", lineHeight: 1.1 }}>{assignedModules.length}</div>
-                      <div style={{ fontSize: "11px", color: "rgba(255,255,255,0.85)", fontWeight: "700", marginTop: "6px", textTransform: "uppercase", letterSpacing: "1px" }}>Modules Teaching</div>
+                      <div style={{ fontSize: "26px", fontWeight: "900", color: "#ffffff", lineHeight: 1.1 }}>{assignedModules.length}</div>
+                      <div style={{ fontSize: "10px", color: "rgba(255,255,255,0.85)", fontWeight: "700", marginTop: "4px", textTransform: "uppercase", letterSpacing: "1px" }}>Modules Teaching</div>
                     </div>
                   </div>
                 </div>
 
                 {/* Workload Hours - Deep Indigo */}
                 <div className="card" style={{ background: "linear-gradient(135deg, #4338ca 0%, #6d28d9 100%)", border: "none", boxShadow: "0 8px 24px rgba(67,56,202,0.35)", display: "flex", flexDirection: "column", justifyContent: "center", borderRadius: "16px" }}>
-                  <div className="card-body" style={{ padding: "28px 24px", display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", gap: "14px" }}>
-                    <div style={{ background: "rgba(255,255,255,0.2)", borderRadius: "50%", width: "60px", height: "60px", display: "flex", alignItems: "center", justifyContent: "center", color: "#ffffff" }}>
-                      <Clock size={30} />
+                  <div className="card-body" style={{ padding: "16px 18px", display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", gap: "8px" }}>
+                    <div style={{ background: "rgba(255,255,255,0.2)", borderRadius: "50%", width: "44px", height: "44px", display: "flex", alignItems: "center", justifyContent: "center", color: "#ffffff" }}>
+                      <Clock size={22} />
                     </div>
                     <div>
-                      <div style={{ fontSize: "36px", fontWeight: "900", color: "#ffffff", lineHeight: 1.1 }}>{totalHours} hrs</div>
-                      <div style={{ fontSize: "11px", color: "rgba(255,255,255,0.85)", fontWeight: "700", marginTop: "6px", textTransform: "uppercase", letterSpacing: "1px" }}>Weekly Teaching Hours</div>
+                      <div style={{ fontSize: "26px", fontWeight: "900", color: "#ffffff", lineHeight: 1.1 }}>{totalHours} hrs</div>
+                      <div style={{ fontSize: "10px", color: "rgba(255,255,255,0.85)", fontWeight: "700", marginTop: "4px", textTransform: "uppercase", letterSpacing: "1px" }}>Weekly Teaching Hours</div>
                     </div>
                   </div>
                 </div>
 
                 {/* Scheduled Slots - Deep Amber-Orange */}
                 <div className="card" style={{ background: "linear-gradient(135deg, #b45309 0%, #d97706 100%)", border: "none", boxShadow: "0 8px 24px rgba(180,83,9,0.35)", display: "flex", flexDirection: "column", justifyContent: "center", borderRadius: "16px" }}>
-                  <div className="card-body" style={{ padding: "28px 24px", display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", gap: "14px" }}>
-                    <div style={{ background: "rgba(255,255,255,0.2)", borderRadius: "50%", width: "60px", height: "60px", display: "flex", alignItems: "center", justifyContent: "center", color: "#ffffff" }}>
-                      <Calendar size={30} />
+                  <div className="card-body" style={{ padding: "16px 18px", display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", gap: "8px" }}>
+                    <div style={{ background: "rgba(255,255,255,0.2)", borderRadius: "50%", width: "44px", height: "44px", display: "flex", alignItems: "center", justifyContent: "center", color: "#ffffff" }}>
+                      <Calendar size={22} />
                     </div>
                     <div>
-                      <div style={{ fontSize: "36px", fontWeight: "900", color: "#ffffff", lineHeight: 1.1 }}>{entries.length}</div>
-                      <div style={{ fontSize: "11px", color: "rgba(255,255,255,0.85)", fontWeight: "700", marginTop: "6px", textTransform: "uppercase", letterSpacing: "1px" }}>Weekly Scheduled Slots</div>
+                      <div style={{ fontSize: "26px", fontWeight: "900", color: "#ffffff", lineHeight: 1.1 }}>{entries.length}</div>
+                      <div style={{ fontSize: "10px", color: "rgba(255,255,255,0.85)", fontWeight: "700", marginTop: "4px", textTransform: "uppercase", letterSpacing: "1px" }}>Weekly Scheduled Slots</div>
                     </div>
                   </div>
                 </div>
