@@ -25,6 +25,9 @@ public class TimetableEntryController {
     @Autowired private TimetableQueryService timetableQueryService;
     @Autowired private BatchModuleRepository batchModuleRepository;
     @Autowired private com.foe.timetable.repository.TimetableRepository timetableRepository;
+    @Autowired private com.foe.timetable.service.TimetableValidationService validationService;
+    @Autowired private com.foe.timetable.repository.TimeSlotRepository timeSlotRepository;
+    @Autowired private org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
 
     @GetMapping
     public List<TimetableEntryViewDto> getCompleteTimetable(
@@ -135,5 +138,95 @@ public List<BatchModule> getModulesBySemester(@RequestParam Integer semester) {
         
         List<TimetableEntryViewDto> entries = timetableGenerationService.generateForBatch(targetBatchId, targetDeptId);
         return ResponseEntity.ok(Map.of("message", "Generated successfully!", "batchId", targetBatchId, "entries", entries));
+    }
+
+    @org.springframework.transaction.annotation.Transactional
+    @PutMapping("/entries/{entryId}/move")
+    public ResponseEntity<?> moveTimetableEntry(
+            @PathVariable Integer entryId,
+            @RequestBody Map<String, Object> payload) {
+        
+        String newDayOfWeek = (String) payload.get("dayOfWeek");
+        String newStartTime = (String) payload.get("startTime");
+        String newEndTime = (String) payload.get("endTime");
+        Number venueIdNum = (Number) payload.get("venueId");
+        Integer newVenueId = venueIdNum != null ? venueIdNum.intValue() : null;
+
+        if (newDayOfWeek == null || newStartTime == null || newEndTime == null) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Missing required fields for move"));
+        }
+
+        String validationError = validationService.validateManualMove(entryId, newDayOfWeek, newStartTime, newEndTime, newVenueId);
+        if (validationError != null) {
+            return ResponseEntity.status(409).body(Map.of("message", validationError));
+        }
+
+        java.util.Optional<com.foe.timetable.model.TimetableEntry> entryOpt = timetableEntryRepository.findById(entryId);
+        if (entryOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        com.foe.timetable.model.TimetableEntry entry = entryOpt.get();
+        Integer oldSlotId = entry.getTimeSlot() != null ? entry.getTimeSlot().getSlotId() : null;
+        
+        java.util.Optional<com.foe.timetable.model.TimeSlot> slotOpt = timeSlotRepository.findAll().stream()
+            .filter(s -> s.getDayOfWeek().equalsIgnoreCase(newDayOfWeek) && 
+                         s.getStartTime().toString().startsWith(newStartTime) && 
+                         s.getEndTime().toString().startsWith(newEndTime))
+            .findFirst();
+            
+        com.foe.timetable.model.TimeSlot slot;
+        if (slotOpt.isEmpty()) {
+            slot = new com.foe.timetable.model.TimeSlot();
+            slot.setDayOfWeek(newDayOfWeek);
+            slot.setStartTime(newStartTime + (newStartTime.length() == 5 ? ":00" : ""));
+            slot.setEndTime(newEndTime + (newEndTime.length() == 5 ? ":00" : ""));
+            slot = timeSlotRepository.save(slot);
+        } else {
+            slot = slotOpt.get();
+        }
+        
+        entry.setTimeSlot(slot);
+        
+        Integer targetHallId = newVenueId != null ? newVenueId : (entry.getHall() != null ? entry.getHall().getHallId() : null);
+        if (newVenueId != null) {
+            com.foe.timetable.model.Hall newHall = new com.foe.timetable.model.Hall();
+            newHall.setHallId(newVenueId);
+            entry.setHall(newHall);
+        }
+
+        com.foe.timetable.model.BatchModule bm = entry.getBatchModule();
+        com.foe.timetable.model.Module m = bm.getModule();
+        boolean isShared = (bm.getIsShared() != null && bm.getIsShared()) || 
+                           (m.getDepartment() != null && m.getDepartment().getDepartmentId().equals(4)) ||
+                           (m.getDepartment() != null && "IS".equals(m.getDepartment().getDepartmentCode()));
+
+        if (isShared && oldSlotId != null) {
+            Integer moduleId = m.getModuleId();
+            Integer batchId = bm.getBatchId();
+            Integer bmId = bm.getBatchModuleId();
+            Integer linkedBmId = bm.getLinkedBatchModuleId() != null ? bm.getLinkedBatchModuleId() : -1;
+            
+            try {
+                jdbcTemplate.update(
+                    "UPDATE timetable_entry te " +
+                    "JOIN batch_module bm2 ON te.batch_module_id = bm2.batch_module_id " +
+                    "JOIN timetable t ON te.timetable_id = t.timetable_id " +
+                    "SET te.slot_id = ?, te.hall_id = ? " +
+                    "WHERE (bm2.module_id = ? OR bm2.batch_module_id = ? OR bm2.linked_batch_module_id = ? OR bm2.batch_module_id = ?) AND t.batch_id = ? AND te.slot_id = ?",
+                    slot.getSlotId(), targetHallId, moduleId, bmId, bmId, linkedBmId, batchId, oldSlotId
+                );
+            } catch (Exception e) {
+                System.out.println("Sync warning: Could not update linked entries: " + e.getMessage());
+                throw new RuntimeException("Failed to sync shared module to other departments due to a clash or conflict: " + e.getMessage());
+            }
+        } else {
+            timetableEntryRepository.save(entry);
+        }
+        
+        return ResponseEntity.ok(Map.of(
+            "message", "Timetable entry moved successfully",
+            "entryId", entry.getEntryId()
+        ));
     }
 }

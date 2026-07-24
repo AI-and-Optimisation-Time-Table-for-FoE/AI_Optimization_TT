@@ -148,4 +148,72 @@ public class TimetableVersionController {
             "message", "Successfully bulk-published " + publishedCount + " batches for Semester " + semester + "."
         ));
     }
+
+    @PostMapping("/unpublish")
+    @Transactional
+    public ResponseEntity<?> unpublishVersion(@RequestBody Map<String, Object> payload) {
+        Number timetableIdNum = (Number) payload.get("timetableId");
+        if (timetableIdNum == null) {
+            return ResponseEntity.badRequest().body(Map.of("message", "timetableId is required"));
+        }
+        int timetableId = timetableIdNum.intValue();
+
+        Optional<Timetable> targetOpt = timetableRepository.findById(timetableId);
+        if (targetOpt.isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Timetable not found"));
+        }
+
+        Timetable target = targetOpt.get();
+        target.setStatus("draft");
+        target.setPublishedAt(null);
+        timetableRepository.save(target);
+
+        return ResponseEntity.ok(Map.of(
+            "message", "Timetable version unpublished successfully!",
+            "timetableId", timetableId,
+            "status", "draft"
+        ));
+    }
+
+    @Autowired
+    private com.foe.timetable.repository.SystemConfigRepository systemConfigRepository;
+
+    @GetMapping("/master-lecturer-status")
+    public ResponseEntity<?> getMasterLecturerStatus() {
+        Optional<com.foe.timetable.model.SystemConfig> isPubOpt = systemConfigRepository.findById("LECTURER_TIMETABLE_PUBLISHED");
+        Optional<com.foe.timetable.model.SystemConfig> pubAtOpt = systemConfigRepository.findById("LECTURER_TIMETABLE_PUBLISHED_AT");
+        
+        boolean isPublished = isPubOpt.isPresent() && "true".equalsIgnoreCase(isPubOpt.get().getConfigValue());
+        String publishedAt = pubAtOpt.map(com.foe.timetable.model.SystemConfig::getConfigValue).orElse(null);
+
+        return ResponseEntity.ok(Map.of(
+            "isLecturerPublished", isPublished,
+            "publishedAt", publishedAt != null ? publishedAt : ""
+        ));
+    }
+
+    @PostMapping("/publish-master-lecturer")
+    @Transactional
+    public ResponseEntity<?> publishMasterLecturer() {
+        systemConfigRepository.save(new com.foe.timetable.model.SystemConfig("LECTURER_TIMETABLE_PUBLISHED", "true"));
+        String nowStr = java.time.LocalDateTime.now().toString();
+        systemConfigRepository.save(new com.foe.timetable.model.SystemConfig("LECTURER_TIMETABLE_PUBLISHED_AT", nowStr));
+
+        return ResponseEntity.ok(Map.of(
+            "message", "Master Lecturer Timetable published successfully!",
+            "isLecturerPublished", true,
+            "publishedAt", nowStr
+        ));
+    }
+
+    @PostMapping("/unpublish-master-lecturer")
+    @Transactional
+    public ResponseEntity<?> unpublishMasterLecturer() {
+        systemConfigRepository.save(new com.foe.timetable.model.SystemConfig("LECTURER_TIMETABLE_PUBLISHED", "false"));
+
+        return ResponseEntity.ok(Map.of(
+            "message", "Master Lecturer Timetable unpublished. Lecturer view is now in draft mode.",
+            "isLecturerPublished", false
+        ));
+    }
 }

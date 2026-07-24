@@ -57,6 +57,7 @@ public class UserAccountController {
                 String universityEmail = (String) userData.get("universityEmail");
                 Number departmentIdNum = (Number) userData.get("departmentId");
                 Integer deptId = (departmentIdNum != null) ? departmentIdNum.intValue() : null;
+                String studentIdNumber = (String) userData.get("studentIdNumber");
 
                 if (firstName == null) firstName = username;
                 if (lastName == null) lastName = "";
@@ -64,7 +65,7 @@ public class UserAccountController {
 
                 account = authService.registerStudent(
                     username, password, batchIdNum != null ? batchIdNum.intValue() : null,
-                    firstName, lastName, universityEmail, deptId
+                    firstName, lastName, universityEmail, deptId, studentIdNumber
                 );
             } else if (role == UserAccount.Role.lecturer) {
                 String name = (String) userData.get("name");
@@ -144,6 +145,22 @@ public class UserAccountController {
         if (userData.containsKey("batchId")) {
             Number batchIdNum = (Number) userData.get("batchId");
             user.setBatchId(batchIdNum != null ? batchIdNum.intValue() : null);
+        }
+        if (userData.containsKey("departmentId")) {
+            Number deptIdNum = (Number) userData.get("departmentId");
+            user.setDepartmentId(deptIdNum != null ? deptIdNum.intValue() : null);
+        }
+        if (userData.containsKey("studentIdNumber")) {
+            user.setStudentIdNumber((String) userData.get("studentIdNumber"));
+        }
+        if (userData.containsKey("firstName")) {
+            user.setFirstName((String) userData.get("firstName"));
+        }
+        if (userData.containsKey("lastName")) {
+            user.setLastName((String) userData.get("lastName"));
+        }
+        if (userData.containsKey("universityEmail")) {
+            user.setUniversityEmail((String) userData.get("universityEmail"));
         }
 
         UserAccount updated = userAccountRepository.save(user);

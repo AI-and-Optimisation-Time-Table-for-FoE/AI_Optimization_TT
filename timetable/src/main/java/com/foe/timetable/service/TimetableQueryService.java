@@ -145,7 +145,15 @@ public class TimetableQueryService {
         return timetableMapperService.toViewDtos(entries, batch);
     }
 
+    @Autowired private com.foe.timetable.repository.SystemConfigRepository systemConfigRepository;
+
     public List<TimetableEntryViewDto> getTimetableByLecturerId(int lecturerId) {
+        java.util.Optional<com.foe.timetable.model.SystemConfig> isPubOpt = systemConfigRepository.findById("LECTURER_TIMETABLE_PUBLISHED");
+        boolean isMasterPublished = isPubOpt.isPresent() && "true".equalsIgnoreCase(isPubOpt.get().getConfigValue());
+        if (!isMasterPublished) {
+            return java.util.Collections.emptyList();
+        }
+
         List<TimetableEntry> entries = timetableEntryRepository.findByLecturerId(lecturerId);
 
         List<TimetableEntry> activeEntries = entries.stream()
@@ -214,6 +222,14 @@ public class TimetableQueryService {
         if (addedAny) {
             batchModules = batchModuleRepository.findByBatch_BatchId(batchId);
         }
+
+        // Filter: only show modules that belong to the batch's CURRENT semester
+        // Check both the stored bm.semester AND the module's actual semester for robustness
+        final int currentSemester = batch.getSemester();
+        batchModules = batchModules.stream()
+            .filter(bm -> bm.getSemester() == currentSemester
+                       && bm.getModule().getSemester() == currentSemester)
+            .collect(Collectors.toList());
 
         // 2. Filter by department if batch semester >= 3 and departmentId is not null
         if (batch.getSemester() >= 3 && departmentId != null) {

@@ -39,6 +39,9 @@ public class BatchController {
     @Autowired
     private com.foe.timetable.repository.DepartmentRepository departmentRepository;
 
+    @Autowired
+    private com.foe.timetable.service.TimetableGenerationService timetableGenerationService;
+
     @GetMapping
     public List<Batch> getAllBatches() {
         return batchRepository.findAll();
@@ -134,6 +137,12 @@ public class BatchController {
             batchModuleRepository.save(bm);
             return org.springframework.http.ResponseEntity.ok(java.util.Map.of("message", "Batch module updated successfully"));
         }).orElse(org.springframework.http.ResponseEntity.notFound().build());
+    }
+
+    @PostMapping("/{batchId}/auto-link-shared")
+    public org.springframework.http.ResponseEntity<?> autoLinkSharedModules(@PathVariable int batchId) {
+        timetableGenerationService.autoLinkSharedModules(batchId);
+        return org.springframework.http.ResponseEntity.ok(java.util.Map.of("message", "Shared modules auto-linked successfully"));
     }
 
     @PostMapping("/{batchId}/modules")

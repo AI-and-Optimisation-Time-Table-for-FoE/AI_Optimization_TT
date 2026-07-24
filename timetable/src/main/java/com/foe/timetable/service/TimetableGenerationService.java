@@ -77,6 +77,9 @@ public class TimetableGenerationService {
         Batch batch = batchRepository.findById(batchId)
             .orElseThrow(() -> new IllegalArgumentException("Batch not found: " + batchId));
 
+        // Auto-link shared modules across departments for this batch (e.g. EE and EC shared modules)
+        autoLinkSharedModules(batchId);
+
         List<BatchModule> batchModules = batchModuleRepository.findByBatch_BatchId(batchId);
         if (batchModules.isEmpty()) {
             // Auto-populate batch modules for this batch based on modules in the same semester
@@ -198,6 +201,7 @@ public class TimetableGenerationService {
         }
 
         // Map Modules
+        final int finalOptStudentCount = optStudentCount;
         List<OptimizationRequest.ModuleInput> moduleInputs = ownModules.stream().map(bm -> {
             OptimizationRequest.ModuleInput mInput = new OptimizationRequest.ModuleInput();
             mInput.setBatchModuleId(bm.getBatchModuleId());
@@ -211,6 +215,61 @@ public class TimetableGenerationService {
             mInput.setLecturerId(bm.getLecturerId());
             mInput.setLecturerIds(new java.util.ArrayList<>(bm.getAllLecturerIds()));
             mInput.setPreferredHallId(bm.getPreferredHall() != null ? bm.getPreferredHall().getHallId() : null);
+            
+            boolean isComputerNeeded = bm.getModule().getNeedsComputer() != null ? bm.getModule().getNeedsComputer() : false;
+            if (!isComputerNeeded && bm.getModule().getModuleName() != null) {
+                String name = bm.getModule().getModuleName().toLowerCase();
+                if (name.contains("computer") || name.contains("programming") || 
+                    name.contains("software") || name.contains("database") || 
+                    name.contains("network") || name.contains("information")) {
+                    isComputerNeeded = true;
+                }
+            }
+            mInput.setNeedsComputer(isComputerNeeded);
+            int moduleStudentCount = finalOptStudentCount;
+            boolean isSharedModuleConfig = (Boolean.TRUE.equals(bm.getIsShared())) || bm.getLinkedBatchModuleId() != null;
+
+            if (isSharedModuleConfig) {
+                String normalizedName = normalizeModuleName(bm.getModule() != null ? bm.getModule().getModuleName() : "");
+                List<BatchModule> allBatchModules = batchModuleRepository.findByBatch_BatchId(batchId);
+                int sharedTotalStudentCount = 0;
+                java.util.Set<Integer> countedDeptIds = new java.util.HashSet<>();
+
+                for (BatchModule otherBm : allBatchModules) {
+                    if (otherBm.getModule() != null && normalizeModuleName(otherBm.getModule().getModuleName()).equals(normalizedName)) {
+                        Integer deptId = (otherBm.getModule().getDepartment() != null) ? otherBm.getModule().getDepartment().getDepartmentId() : null;
+                        if (deptId != null && !countedDeptIds.contains(deptId)) {
+                            countedDeptIds.add(deptId);
+                            try {
+                                Integer count = jdbcTemplate.queryForObject("SELECT student_count FROM department WHERE department_id = ?", Integer.class, deptId);
+                                if (count != null && count > 0) {
+                                    sharedTotalStudentCount += count;
+                                }
+                            } catch (Exception e) {}
+                        }
+                    }
+                }
+                if (sharedTotalStudentCount > 0) {
+                    moduleStudentCount = sharedTotalStudentCount;
+                }
+            } else if (bm.getOfferingDeptIds() != null && !bm.getOfferingDeptIds().isEmpty()) {
+                String[] deptIds = bm.getOfferingDeptIds().split(",");
+                int totalCount = 0;
+                for (String dIdStr : deptIds) {
+                    try {
+                        Integer count = jdbcTemplate.queryForObject("SELECT student_count FROM department WHERE department_id = ?", Integer.class, Integer.parseInt(dIdStr.trim()));
+                        if (count != null) totalCount += count;
+                    } catch (Exception e) {}
+                }
+                if (totalCount > 0) moduleStudentCount = totalCount;
+            } else if (bm.getModule() != null && bm.getModule().getDepartment() != null) {
+                try {
+                    Integer count = jdbcTemplate.queryForObject("SELECT student_count FROM department WHERE department_id = ?", Integer.class, bm.getModule().getDepartment().getDepartmentId());
+                    if (count != null && count > 0) moduleStudentCount = count;
+                } catch (Exception e) {}
+            }
+            mInput.setStudentCount(moduleStudentCount);
+
             return mInput;
         }).collect(Collectors.toList());
         optRequest.setModules(moduleInputs);
@@ -221,6 +280,7 @@ public class TimetableGenerationService {
             hInput.setHallId(h.getHallId());
             hInput.setHallName(h.getHallName());
             hInput.setCapacity(h.getCapacity() != null ? h.getCapacity() : 60);
+            hInput.setIsComputerLab(h.getIsComputerLab() != null ? h.getIsComputerLab() : false);
             return hInput;
         }).collect(Collectors.toList());
         optRequest.setHalls(hallInputs);
@@ -518,15 +578,12 @@ public class TimetableGenerationService {
                                     } catch (Exception e) {
                                         System.out.println("Sync warning: Could not delete old entries: " + e.getMessage());
                                     }
-                                    TimetableEntry entry = new TimetableEntry();
-                                    entry.setTimetableId(ot.getTimetableId());
-                                    entry.setBatchModule(bm);
-                                    entry.setHall(te.getHall());
-                                    entry.setTimeSlot(te.getTimeSlot());
-                                    entry.setSessionType(te.getSessionType());
-                                    entry.setIsRecurring(te.getIsRecurring());
                                      try {
-                                         timetableEntryRepository.saveAndFlush(entry);
+                                         jdbcTemplate.update(
+                                             "INSERT INTO timetable_entry (timetable_id, batch_module_id, hall_id, slot_id, session_type, is_recurring) " +
+                                             "VALUES (?, ?, ?, ?, ?, ?)",
+                                             ot.getTimetableId(), bm.getBatchModuleId(), te.getHall().getHallId(), te.getTimeSlot().getSlotId(), te.getSessionType(), te.getIsRecurring()
+                                         );
                                      } catch (Exception e) {
                                          System.out.println("Sync warning: Could not copy IS entry to timetable " + ot.getTimetableId() + ": " + e.getMessage());
                                          e.printStackTrace();
@@ -564,15 +621,12 @@ public class TimetableGenerationService {
                                         } catch (Exception e) {
                                             System.out.println("Sync warning: Could not delete old entries: " + e.getMessage());
                                         }
-                                        TimetableEntry entry = new TimetableEntry();
-                                        entry.setTimetableId(ot.getTimetableId());
-                                        entry.setBatchModule(lm);
-                                        entry.setHall(te.getHall());
-                                        entry.setTimeSlot(te.getTimeSlot());
-                                        entry.setSessionType(te.getSessionType());
-                                        entry.setIsRecurring(te.getIsRecurring());
                                         try {
-                                            timetableEntryRepository.saveAndFlush(entry);
+                                            jdbcTemplate.update(
+                                                "INSERT INTO timetable_entry (timetable_id, batch_module_id, hall_id, slot_id, session_type, is_recurring) " +
+                                                "VALUES (?, ?, ?, ?, ?, ?)",
+                                                ot.getTimetableId(), lm.getBatchModuleId(), te.getHall().getHallId(), te.getTimeSlot().getSlotId(), te.getSessionType(), te.getIsRecurring()
+                                            );
                                         } catch (Exception e) {
                                             System.out.println("Sync warning: Could not copy linked entry to timetable " + ot.getTimetableId() + ": " + e.getMessage());
                                             e.printStackTrace();
@@ -671,6 +725,48 @@ public class TimetableGenerationService {
                 return java.time.LocalTime.of(h, m, s);
             } catch (Exception e) {
                 return null;
+            }
+        }
+    }
+
+    public static String normalizeModuleName(String name) {
+        if (name == null) return "";
+        String s = name.toLowerCase().trim();
+        s = s.replaceAll("(?i)\\(te\\)", "").replaceAll("(?i)\\[te\\]", "").trim();
+        s = s.replaceAll("[^a-z0-9]", "");
+        if (s.endsWith("s")) {
+            s = s.substring(0, s.length() - 1);
+        }
+        return s;
+    }
+
+    @Transactional
+    public void autoLinkSharedModules(Integer batchId) {
+        if (batchId == null) return;
+        List<BatchModule> allBms = batchModuleRepository.findByBatch_BatchId(batchId);
+        if (allBms.size() <= 1) return;
+
+        Map<String, List<BatchModule>> grouped = new HashMap<>();
+        for (BatchModule bm : allBms) {
+            if (bm.getModule() == null || bm.getModule().getModuleName() == null) continue;
+            String norm = normalizeModuleName(bm.getModule().getModuleName());
+            if (norm.isEmpty()) continue;
+            grouped.computeIfAbsent(norm, k -> new ArrayList<>()).add(bm);
+        }
+
+        for (Map.Entry<String, List<BatchModule>> entry : grouped.entrySet()) {
+            List<BatchModule> list = entry.getValue();
+            if (list.size() > 1) {
+                BatchModule primary = list.get(0);
+                for (BatchModule bm : list) {
+                    bm.setIsShared(true);
+                    if (bm.getBatchModuleId().equals(primary.getBatchModuleId())) {
+                        bm.setLinkedBatchModuleId(null);
+                    } else {
+                        bm.setLinkedBatchModuleId(primary.getBatchModuleId());
+                    }
+                    batchModuleRepository.save(bm);
+                }
             }
         }
     }

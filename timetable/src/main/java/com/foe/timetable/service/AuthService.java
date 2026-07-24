@@ -59,7 +59,7 @@ public class AuthService {
     @Transactional
     public UserAccount registerStudent(String username, String password, Integer batchId,
                                        String firstName, String lastName, String universityEmail,
-                                       Integer departmentId) {
+                                       Integer departmentId, String studentIdNumber) {
         if (userAccountRepository.findByUsername(username).isPresent()) {
             throw new RuntimeException("Username already exists");
         }
@@ -73,9 +73,17 @@ public class AuthService {
         account.setLastName(lastName);
         account.setUniversityEmail(universityEmail);
         account.setDepartmentId(departmentId);
+        account.setStudentIdNumber(studentIdNumber);
         account.setIsActive(true);
 
         return userAccountRepository.save(account);
+    }
+
+    @Transactional
+    public UserAccount registerStudent(String username, String password, Integer batchId,
+                                       String firstName, String lastName, String universityEmail,
+                                       Integer departmentId) {
+        return registerStudent(username, password, batchId, firstName, lastName, universityEmail, departmentId, null);
     }
 
     @Transactional
