@@ -236,7 +236,7 @@ export default function RegisterPage() {
 
           <div>
             <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#404040', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>University Email</label>
-            <input type="email" value={universityEmail} onChange={(e) => setUniversityEmail(e.target.value)} disabled={loading} placeholder={role === "student" ? "student@eie.ruh.ac.lk" : "lecture@eie.ruh.ac.lk"} style={inputStyle} onFocus={focusStyle} onBlur={blurStyle} />
+            <input type="email" value={universityEmail} onChange={(e) => setUniversityEmail(e.target.value)} disabled={loading} placeholder={role === "student" ? "student@engug.ruh.ac.lk" : "lecture@eie.ruh.ac.lk"} style={inputStyle} onFocus={focusStyle} onBlur={blurStyle} />
           </div>
 
           <div>
