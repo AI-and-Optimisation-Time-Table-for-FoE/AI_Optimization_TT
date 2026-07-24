@@ -198,6 +198,12 @@ export function fetchLecturerModules(lecturerId) {
   return request(`/api/lecturers/${lecturerId}/modules`);
 }
 
+export function autoLinkSharedModules(batchId) {
+  return request(`/api/batches/${batchId}/auto-link-shared`, {
+    method: "POST"
+  });
+}
+
 // === BATCH MODULE ASSIGNMENT ===
 export function fetchBatchModules(batchId, departmentId) {
   const query = departmentId ? `?departmentId=${departmentId}` : "";
@@ -307,10 +313,102 @@ export function publishTimetableVersion(versionId) {
   });
 }
 
+export function unpublishTimetableVersion(versionId) {
+  return request("/api/timetable/versions/unpublish", {
+    method: "POST",
+    body: JSON.stringify({ timetableId: versionId }),
+  });
+}
+
 export function deleteTimetableVersion(versionId) {
   return request(`/api/timetable/versions/${versionId}`, {
     method: "DELETE",
   });
+}
+
+export function fetchMasterLecturerStatus() {
+  return request("/api/timetable/versions/master-lecturer-status");
+}
+
+export function publishMasterLecturerTimetable() {
+  return request("/api/timetable/versions/publish-master-lecturer", {
+    method: "POST",
+  });
+}
+
+export function unpublishMasterLecturerTimetable() {
+  return request("/api/timetable/versions/unpublish-master-lecturer", {
+    method: "POST",
+  });
+}
+
+// === EXAM TIMETABLE ===
+export function fetchExamTimetables(batchId) {
+  let query = batchId ? `?batchId=${batchId}` : "";
+  return request(`/api/exam-timetables${query}`);
+}
+
+export function fetchExamTimetableDetails(examTimetableId) {
+  return request(`/api/exam-timetables/${examTimetableId}`);
+}
+
+export function createExamTimetable(data) {
+  return request("/api/exam-timetables", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export function saveExamEntries(examTimetableId, entries) {
+  return request(`/api/exam-timetables/${examTimetableId}/entries`, {
+    method: "POST",
+    body: JSON.stringify(entries),
+  });
+}
+
+export function publishExamTimetable(examTimetableId) {
+  return request(`/api/exam-timetables/${examTimetableId}/publish`, {
+    method: "POST",
+  });
+}
+
+export function unpublishExamTimetable(examTimetableId) {
+  return request(`/api/exam-timetables/${examTimetableId}/unpublish`, {
+    method: "POST",
+  });
+}
+
+export function reoptimizeExamTimetable(examTimetableId) {
+  return request(`/api/exam-timetables/${examTimetableId}/reoptimize`, {
+    method: "POST",
+  });
+}
+
+export function deleteExamTimetable(examTimetableId) {
+  return request(`/api/exam-timetables/${examTimetableId}`, {
+    method: "DELETE",
+  });
+}
+
+export function fetchExamHallUnavailabilities() {
+  return request("/api/exam-timetables/hall-unavailabilities");
+}
+
+export function addExamHallUnavailability(data) {
+  return request("/api/exam-timetables/hall-unavailabilities", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export function deleteExamHallUnavailability(id) {
+  return request(`/api/exam-timetables/hall-unavailabilities/${id}`, {
+    method: "DELETE",
+  });
+}
+
+export function fetchStudentExamTimetable(batchId) {
+  return request(`/api/exam-timetables/student?batchId=${batchId}`);
 }
 
 // === USER PROFILE ===
@@ -322,5 +420,12 @@ export function updateUserProfile(userId, data) {
   return request(`/api/auth/profile/${userId}`, {
     method: "PATCH",
     body: JSON.stringify(data),
+  });
+}
+
+export function moveTimetableEntry(entryId, dayOfWeek, startTime, endTime, venueId) {
+  return request(`/api/timetable/entries/${entryId}/move`, {
+    method: "PUT",
+    body: JSON.stringify({ dayOfWeek, startTime, endTime, venueId }),
   });
 }

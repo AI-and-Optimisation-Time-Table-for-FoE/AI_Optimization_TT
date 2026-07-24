@@ -39,14 +39,16 @@ export default function Sidebar() {
 
     if (user.role === "admin") {
       items.push({ label: "Admin Panel", href: "/admin", icon: <Shield size={18} /> });
-      items.push({ label: "Manage Timetables", href: "/admin/timetable-management", icon: <ClipboardList size={18} /> });
+      items.push({ label: "Lecture Schedule", href: "/timetable", icon: <Calendar size={18} /> });
+      items.push({ label: "Exam Timetable", href: "/admin/exam-timetable", icon: <ClipboardList size={18} /> });
     } else if (user.role === "student") {
       items.push({ label: "Student Panel", href: "/student", icon: <GraduationCap size={18} /> });
+      items.push({ label: "Lecture Schedule", href: "/timetable", icon: <Calendar size={18} /> });
+      items.push({ label: "Exam Schedule", href: "/student/exam-timetable", icon: <ClipboardList size={18} /> });
     } else if (user.role === "lecturer") {
       items.push({ label: "Lecturer Panel", href: "/lecturer", icon: <Users size={18} /> });
+      items.push({ label: "Lecture Schedule", href: "/timetable", icon: <Calendar size={18} /> });
     }
-
-    items.push({ label: "Timetable View", href: "/timetable", icon: <Calendar size={18} /> });
 
     return [
       {
