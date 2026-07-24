@@ -7,6 +7,13 @@ app = FastAPI(title="Timetable Optimization Service")
 
 @app.post("/optimize", response_model=OptimizeResponse)
 def optimize_timetable(req: OptimizeRequest):
+    import json
+    try:
+        with open("last_request.json", "w") as f:
+            json.dump(req.dict(), f, indent=2)
+    except Exception as e:
+        print("Failed to save last_request:", e)
+        
     # Phase 1: Solve Hard Constraints (OR-Tools CP-SAT)
     status, feasible_schedule = solve_hard_constraints(req)
     
