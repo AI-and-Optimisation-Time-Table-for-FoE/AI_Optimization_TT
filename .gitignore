@@ -21,6 +21,9 @@ venv/
 *.log
 *.sql
 *.json
+!package.json
+!frontend/package.json
+!frontend/vercel.json
 .env
 .env.local
 
