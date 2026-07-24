@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { login } from "./lib/api";
-import "./optimizer.css"; // Reuse existing base css or customized classes
+import "./optimizer.css"; 
 
 export default function LoginPage() {
   const router = useRouter();
@@ -59,138 +59,91 @@ export default function LoginPage() {
 
   return (
     <div style={{
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      minHeight: "100vh",
-      background: "radial-gradient(circle at 50% 50%, var(--primary-900) 0%, var(--neutral-900) 100%)",
-      fontFamily: "var(--font-family)",
-      padding: "20px"
+      minHeight: '100vh',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      background: 'var(--bg-primary)',
+      fontFamily: "'Inter', sans-serif",
+      padding: '20px'
     }}>
       <div style={{
-        width: "100%",
-        maxWidth: "450px",
-        background: "rgba(255, 255, 255, 0.08)",
-        backdropFilter: "blur(16px)",
-        borderRadius: "var(--radius-lg)",
-        border: "1px solid rgba(255, 255, 255, 0.12)",
-        padding: "40px",
-        boxShadow: "var(--shadow-xl)",
-        color: "#fff"
+        background: '#ffffff',
+        borderRadius: '24px',
+        boxShadow: '0 25px 50px -12px rgba(22, 163, 74, 0.15)',
+        width: '100%',
+        maxWidth: '440px',
+        padding: '48px',
+        position: 'relative',
+        overflow: 'hidden'
       }}>
-        <div style={{ textAlign: "center", marginBottom: "32px" }}>
-          <img 
-            src="/logo.jpg" 
-            alt="Faculty of Engineering Logo" 
-            style={{ 
-              width: "90px", 
-              height: "90px", 
-              objectFit: "contain", 
-              borderRadius: "8px", 
-              background: "#ffffff", 
-              padding: "6px", 
-              marginBottom: "16px", 
-              boxShadow: "0 4px 12px rgba(0,0,0,0.15)", 
-              display: "inline-block" 
-            }} 
-          />
-          <h1 style={{
-            fontSize: "24px",
-            fontWeight: "800",
-            letterSpacing: "-0.5px",
-            background: "linear-gradient(135deg, #ffffff 0%, var(--primary-200) 100%)",
-            WebkitBackgroundClip: "text",
-            WebkitTextFillColor: "transparent",
-            margin: 0
-          }}>Faculty of Engineering</h1>
-          <h2 style={{
-            fontSize: "15px",
-            fontWeight: "600",
-            color: "rgba(255, 255, 255, 0.85)",
-            marginTop: "4px",
-            marginBottom: "2px"
-          }}>Timetable Scheduling System</h2>
-          <p style={{
-            fontSize: "12px",
-            color: "rgba(255, 255, 255, 0.55)",
-            margin: 0
-          }}>University of Ruhuna</p>
+        {/* Subtle decorative top border */}
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '6px', background: 'var(--primary-600)' }}></div>
+        
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '32px' }}>
+          <img src="/logo.jpg" alt="University Logo" style={{ width: '72px', height: '72px', objectFit: 'contain', marginBottom: '16px', borderRadius: '12px' }} />
+          <h1 style={{ fontSize: '24px', fontWeight: '800', color: '#171717', margin: '0 0 8px 0', textAlign: 'center' }}>
+            Faculty of Engineering
+          </h1>
+          <p style={{ fontSize: '14px', color: '#737373', margin: 0, textAlign: 'center' }}>
+            Timetable Management System
+          </p>
         </div>
 
         {error && (
-          <div style={{
-            background: "rgba(239, 68, 68, 0.15)",
-            border: "1px solid var(--error)",
-            borderRadius: "var(--radius-sm)",
-            padding: "12px 16px",
-            fontSize: "14px",
-            color: "#fca5a5",
-            marginBottom: "24px"
-          }}>
-            ⚠️ {error}
+          <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#b91c1c', padding: '12px 16px', borderRadius: '8px', fontSize: '14px', marginBottom: '24px', textAlign: 'center', fontWeight: '500' }}>
+            {error}
           </div>
         )}
 
-        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           <div>
-            <label style={{
-              display: "block",
-              fontSize: "13px",
-              fontWeight: "600",
-              textTransform: "uppercase",
-              letterSpacing: "0.5px",
-              color: "rgba(255, 255, 255, 0.8)",
-              marginBottom: "8px"
-            }}>Username</label>
+            <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#404040', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              University Email
+            </label>
             <input
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="Enter your username"
+              disabled={loading}
+              placeholder=""
               style={{
-                width: "100%",
-                padding: "12px 16px",
-                borderRadius: "var(--radius-sm)",
-                border: "1px solid rgba(255, 255, 255, 0.15)",
-                background: "rgba(0, 0, 0, 0.2)",
-                color: "#fff",
-                fontSize: "15px",
-                outline: "none",
-                transition: "all var(--transition-base)"
+                width: '100%',
+                padding: '12px 16px',
+                borderRadius: '10px',
+                border: '2px solid #e2e8f0',
+                fontSize: '15px',
+                outline: 'none',
+                transition: 'border-color 0.2s',
+                boxSizing: 'border-box'
               }}
-              onFocus={(e) => e.target.style.borderColor = "var(--primary-400)"}
-              onBlur={(e) => e.target.style.borderColor = "rgba(255, 255, 255, 0.15)"}
+              onFocus={(e) => e.target.style.borderColor = 'var(--primary-600)'}
+              onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
             />
           </div>
 
           <div>
-            <label style={{
-              display: "block",
-              fontSize: "13px",
-              fontWeight: "600",
-              textTransform: "uppercase",
-              letterSpacing: "0.5px",
-              color: "rgba(255, 255, 255, 0.8)",
-              marginBottom: "8px"
-            }}>Password</label>
+            <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#404040', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              Password
+            </label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
+              disabled={loading}
+              placeholder=""
               style={{
-                width: "100%",
-                padding: "12px 16px",
-                borderRadius: "var(--radius-sm)",
-                border: "1px solid rgba(255, 255, 255, 0.15)",
-                background: "rgba(0, 0, 0, 0.2)",
-                color: "#fff",
-                fontSize: "15px",
-                outline: "none",
-                transition: "all var(--transition-base)"
+                width: '100%',
+                padding: '12px 16px',
+                borderRadius: '10px',
+                border: '2px solid #e2e8f0',
+                fontSize: '15px',
+                outline: 'none',
+                transition: 'border-color 0.2s',
+                boxSizing: 'border-box'
               }}
-              onFocus={(e) => e.target.style.borderColor = "var(--primary-400)"}
-              onBlur={(e) => e.target.style.borderColor = "rgba(255, 255, 255, 0.15)"}
+              onFocus={(e) => e.target.style.borderColor = 'var(--primary-600)'}
+              onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
             />
           </div>
 
@@ -198,42 +151,44 @@ export default function LoginPage() {
             type="submit"
             disabled={loading}
             style={{
-              width: "100%",
-              padding: "14px",
-              background: "linear-gradient(135deg, var(--primary-500) 0%, var(--primary-700) 100%)",
-              border: "none",
-              borderRadius: "var(--radius-sm)",
-              color: "#fff",
-              fontSize: "16px",
-              fontWeight: "700",
-              cursor: "pointer",
-              boxShadow: "0 4px 12px rgba(0, 150, 136, 0.3)",
-              transition: "all var(--transition-base)",
-              marginTop: "10px"
+              width: '100%',
+              padding: '14px',
+              background: 'var(--primary-600)',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '10px',
+              fontSize: '16px',
+              fontWeight: '600',
+              cursor: loading ? 'not-allowed' : 'pointer',
+              marginTop: '12px',
+              boxShadow: '0 4px 12px rgba(22, 163, 74, 0.25)',
+              transition: 'transform 0.1s, background 0.2s',
+              opacity: loading ? 0.8 : 1,
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center'
             }}
-            onMouseOver={(e) => e.target.style.transform = "translateY(-1px)"}
-            onMouseOut={(e) => e.target.style.transform = "translateY(0)"}
+            onMouseOver={(e) => !loading && (e.currentTarget.style.background = 'var(--primary-700)')}
+            onMouseOut={(e) => !loading && (e.currentTarget.style.background = 'var(--primary-600)')}
+            onMouseDown={(e) => !loading && (e.currentTarget.style.transform = 'scale(0.98)')}
+            onMouseUp={(e) => !loading && (e.currentTarget.style.transform = 'scale(1)')}
           >
-            {loading ? "Signing in..." : "Sign In"}
+            {loading ? (
+              <div style={{ width: '20px', height: '20px', border: '2px solid rgba(255,255,255,0.4)', borderTop: '2px solid #fff', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
+            ) : "Sign In"}
           </button>
         </form>
 
-        <div style={{
-          textAlign: "center",
-          marginTop: "24px",
-          fontSize: "14px",
-          color: "rgba(255, 255, 255, 0.6)"
-        }}>
-          Don't have an account?{" "}
-          <Link href="/register" style={{
-            color: "var(--primary-300)",
-            textDecoration: "none",
-            fontWeight: "600"
-          }}>
-            Register here
+        <div style={{ marginTop: '32px', textAlign: 'center', fontSize: '14px', color: '#737373' }}>
+          Don't have an account?{' '}
+          <Link href="/register" style={{ color: 'var(--primary-600)', fontWeight: '600', textDecoration: 'none' }}>
+            Create one now
           </Link>
         </div>
       </div>
+      <style dangerouslySetInnerHTML={{__html: `
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+      `}} />
     </div>
   );
 }

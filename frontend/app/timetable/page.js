@@ -3,8 +3,8 @@
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Sidebar from "../components/Sidebar";
-import { fetchBatches, fetchTimetable, fetchTimetableStatus, fetchDepartments, fetchTimeSlots, fetchLabSchedules, fetchLecturerTimetable } from "../lib/api";
-import { Calendar, Inbox, FlaskConical, GraduationCap, Building, User } from "lucide-react";
+import { fetchBatches, fetchTimetable, fetchTimetableStatus, fetchDepartments, fetchTimeSlots, fetchLabSchedules, fetchLecturerTimetable, moveTimetableEntry, fetchTimetableVersions, publishTimetableVersion, unpublishTimetableVersion, fetchMasterLecturerStatus, publishMasterLecturerTimetable, unpublishMasterLecturerTimetable, fetchLecturers } from "../lib/api";
+import { Calendar, Inbox, FlaskConical, GraduationCap, Building, User, CheckCircle, Radio, EyeOff } from "lucide-react";
 import "./timetable.css";
 
 export default function TimetablePage() {
@@ -98,15 +98,55 @@ function TimetableViewPage() {
   const [departments, setDepartments] = useState([]);
 
   const [batches, setBatches] = useState([]);
+
+  const handleDrop = async (e, day, slot) => {
+    e.preventDefault();
+    e.stopPropagation();
+    e.currentTarget.style.backgroundColor = '';
+    
+    if (user?.role !== "admin") return;
+
+    const rawData = e.dataTransfer.getData("text/plain");
+    if (!rawData) return;
+    
+    try {
+      const data = JSON.parse(rawData);
+      const entryId = data.entryId;
+      const oldDay = data.oldDay;
+      const oldStart = data.oldStart;
+      
+      if (!entryId || (oldDay === day && oldStart === slot.start)) return;
+      
+      setLoading(true);
+      await moveTimetableEntry(entryId, day, slot.start, slot.end, null);
+      setError("");
+      
+      // Refresh
+      const isAdmin = user?.role === "admin";
+      const selectedBatch = batches.find(b => String(b.batchId) === String(selectedBatchId));
+      const deptIdToFetch = (selectedBatch?.semester >= 3 && selectedDeptId) ? Number(selectedDeptId) : null;
+      const timetableIdParam = searchParams.get("timetableId");
+      const entriesData = await fetchTimetable(Number(selectedBatchId), deptIdToFetch, isAdmin, timetableIdParam ? Number(timetableIdParam) : null);
+      setEntries(entriesData);
+    } catch (err) {
+      console.error("Move error", err);
+      alert(err.message || "Failed to move entry due to a conflict.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const [selectedBatchId, setSelectedBatchId] = useState(initialBatchId || "");
+  const [selectedTimetableId, setSelectedTimetableId] = useState("");
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [versions, setVersions] = useState([]);
+  const [isPublishing, setIsPublishing] = useState(false);
   
   const [user, setUser] = useState(null);
   const [status, setStatus] = useState("none");
   const [publishedAt, setPublishedAt] = useState("");
-  // publishing state removed
   const [dbTimeSlots, setDbTimeSlots] = useState([]);
   const [labSchedules, setLabSchedules] = useState([]);
 
@@ -178,8 +218,16 @@ function TimetableViewPage() {
 
     try {
       if (isLecturer) {
+        let lecId = currentUser?.lecturerId;
+        if (!lecId) {
+          try {
+            const allLecs = await fetchLecturers();
+            const found = allLecs.find(l => (l.userAccount && l.userAccount.userId === currentUser?.userId) || (l.email && currentUser?.universityEmail && l.email.toLowerCase() === currentUser.universityEmail.toLowerCase()));
+            if (found) lecId = found.lecturerId;
+          } catch (e) {}
+        }
         const [tData, statusData] = await Promise.all([
-          fetchLecturerTimetable(currentUser.lecturerId),
+          lecId ? fetchLecturerTimetable(lecId) : Promise.resolve([]),
           fetchTimetableStatus("", "")
         ]);
         setEntries(Array.isArray(tData) ? tData : []);
@@ -194,15 +242,36 @@ function TimetableViewPage() {
           deptIdToFetch = currentUser.departmentId ? Number(currentUser.departmentId) : null;
         }
 
-        const initialTimetableId = searchParams.get("timetableId");
+        const initialParamId = selectedTimetableId || searchParams.get("timetableId");
+        
+        let fetchedVersions = [];
+        if (isAdmin) {
+          try {
+            fetchedVersions = await fetchTimetableVersions(Number(selectedBatchId), deptIdToFetch);
+            setVersions(fetchedVersions);
+          } catch (e) {
+            console.error("Failed to load versions", e);
+          }
+        }
+
         const [tData, statusData] = await Promise.all([
-          fetchTimetable(Number(selectedBatchId), deptIdToFetch, isAdmin, initialTimetableId ? Number(initialTimetableId) : null),
+          fetchTimetable(Number(selectedBatchId), deptIdToFetch, isAdmin, initialParamId ? Number(initialParamId) : null),
           fetchTimetableStatus(Number(selectedBatchId), deptIdToFetch)
         ]);
 
         setEntries(Array.isArray(tData) ? tData : []);
         setStatus(statusData?.status || "none");
         setPublishedAt(statusData?.publishedAt || "");
+        
+        if (initialParamId) {
+          setSelectedTimetableId(initialParamId);
+        } else if (statusData?.timetableId) {
+          setSelectedTimetableId(String(statusData.timetableId));
+        } else if (fetchedVersions.length > 0) {
+          setSelectedTimetableId(String(fetchedVersions[0].timetableId));
+        } else {
+          setSelectedTimetableId("");
+        }
       }
     } catch (err) {
       console.error(err);
@@ -212,13 +281,91 @@ function TimetableViewPage() {
     } finally {
       setLoading(false);
     }
-  }, [selectedBatchId, selectedDeptId, searchParams]);
-
-  // handlePublish removed
+  }, [selectedBatchId, selectedDeptId, searchParams, selectedTimetableId]);
 
   useEffect(() => {
     loadTimetable();
-  }, [loadTimetable]);
+  }, [selectedBatchId, selectedDeptId, selectedTimetableId]);
+
+  const [masterLecturerStatus, setMasterLecturerStatus] = useState({ isLecturerPublished: false, publishedAt: "" });
+
+  useEffect(() => {
+    fetchMasterLecturerStatus()
+      .then(setMasterLecturerStatus)
+      .catch((e) => console.warn(e));
+  }, []);
+
+  const handleApprove = async () => {
+    const activeVer = versions.find(v => String(v.timetableId) === selectedTimetableId) || versions.find(v => v.status === "active") || versions[0];
+    const targetIdToUse = selectedTimetableId || (activeVer ? String(activeVer.timetableId) : "");
+    if (!targetIdToUse) {
+      alert("No timetable version found to publish.");
+      return;
+    }
+    try {
+      setIsPublishing(true);
+      await publishTimetableVersion(Number(targetIdToUse));
+      alert("Timetable approved and published successfully!");
+      
+      const selectedBatch = batches.find(b => String(b.batchId) === String(selectedBatchId));
+      const deptIdToFetch = (selectedBatch?.semester >= 3 && selectedDeptId) ? Number(selectedDeptId) : null;
+      const fetchedVersions = await fetchTimetableVersions(Number(selectedBatchId), deptIdToFetch);
+      setVersions(fetchedVersions);
+      setSelectedTimetableId(String(targetIdToUse));
+      
+      setStatus("active");
+      setPublishedAt(new Date().toISOString());
+    } catch (err) {
+      alert("Failed to publish timetable: " + err.message);
+    } finally {
+      setIsPublishing(false);
+    }
+  };
+
+  const handleUnpublishVersion = async () => {
+    const activeVer = versions.find(v => String(v.timetableId) === selectedTimetableId) || versions.find(v => v.status === "active") || versions[0];
+    const targetIdToUse = selectedTimetableId || (activeVer ? String(activeVer.timetableId) : "");
+    if (!targetIdToUse) {
+      alert("No timetable version found to unpublish.");
+      return;
+    }
+    try {
+      setIsPublishing(true);
+      await unpublishTimetableVersion(Number(targetIdToUse));
+      alert("Timetable version unpublished! It is now in draft mode.");
+      
+      const selectedBatch = batches.find(b => String(b.batchId) === String(selectedBatchId));
+      const deptIdToFetch = (selectedBatch?.semester >= 3 && selectedDeptId) ? Number(selectedDeptId) : null;
+      const fetchedVersions = await fetchTimetableVersions(Number(selectedBatchId), deptIdToFetch);
+      setVersions(fetchedVersions);
+      setSelectedTimetableId(String(targetIdToUse));
+      
+      setStatus("draft");
+      setPublishedAt("");
+    } catch (err) {
+      alert("Failed to unpublish timetable: " + err.message);
+    } finally {
+      setIsPublishing(false);
+    }
+  };
+
+  const handleToggleMasterLecturer = async () => {
+    try {
+      if (masterLecturerStatus.isLecturerPublished) {
+        if (confirm("Are you sure you want to unpublish the Lecturer Timetable? Lecturers will see a draft notification on their dashboard.")) {
+          await unpublishMasterLecturerTimetable();
+          setMasterLecturerStatus({ isLecturerPublished: false, publishedAt: "" });
+          alert("Lecturer Timetable unpublished! Lecturer view is now in draft mode.");
+        }
+      } else {
+        const res = await publishMasterLecturerTimetable();
+        setMasterLecturerStatus({ isLecturerPublished: true, publishedAt: res.publishedAt || new Date().toISOString() });
+        alert("Lecturer Timetable published successfully! All lecturers can now view their complete schedules.");
+      }
+    } catch (err) {
+      alert("Error updating Lecturer Timetable status: " + err.message);
+    }
+  };
 
   useEffect(() => {
     // Only poll for student and lecturer dashboards to receive live updates
@@ -303,7 +450,7 @@ function TimetableViewPage() {
         <header className="topbar">
           <div className="topbar-left">
             <div className="topbar-breadcrumb">
-              Home <span style={{ color: "var(--neutral-400)" }}>/</span> <span>Timetable View</span>
+              Home <span style={{ color: "var(--neutral-400)" }}>/</span> <span>Weekly Lecture Schedule</span>
             </div>
           </div>
         </header>
@@ -314,48 +461,144 @@ function TimetableViewPage() {
               <h1 style={{ display: "flex", alignItems: "center", gap: "12px", margin: 0 }}>
                 <span style={{ display: "inline-flex", alignItems: "center", gap: "10px" }}>
                   <Calendar size={24} style={{ color: "#ffffff" }} />
-                  <span>{user?.role === "lecturer" ? "My Teaching Timetable" : "Timetable View"}</span>
-                </span>
-                {status === "active" && (
-                  <span style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}>
-                    <span className="badge badge-success" style={{
-                      fontSize: "12px",
-                      padding: "4px 8px",
-                      borderRadius: "12px",
-                      fontWeight: "600",
-                      textTransform: "uppercase",
-                      background: "var(--success-500, #22c55e)",
-                      color: "#fff"
-                    }}>
-                      Published
-                    </span>
-                    {publishedAt && (
-                      <span style={{ fontSize: "12px", color: "rgba(255, 255, 255, 0.7)", fontWeight: "500" }}>
-                        (Last Updated: {new Date(publishedAt).toLocaleString()})
-                      </span>
-                    )}
+                  <span>
+                    {user?.role === "student"
+                      ? "Weekly Lecture Schedule"
+                      : user?.role === "lecturer"
+                      ? "My Teaching Schedule"
+                      : "Batch Lecture Timetable"}
                   </span>
-                )}
+                </span>
+                {(() => {
+                  if (user?.role === "admin" && selectedTimetableId) {
+                    const currentVersion = versions.find(v => String(v.timetableId) === selectedTimetableId);
+                    const isPublished = currentVersion?.status === "active";
+                    
+                    return (
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}>
+                        <span className={`badge ${isPublished ? 'badge-success' : 'badge-warning'}`} style={{
+                          fontSize: "12px",
+                          padding: "4px 8px",
+                          borderRadius: "12px",
+                          fontWeight: "600",
+                          textTransform: "uppercase",
+                          background: isPublished ? "var(--success-500, #22c55e)" : "var(--warning-500, #f59e0b)",
+                          color: "#fff"
+                        }}>
+                          {isPublished ? "Published" : "Draft"}
+                        </span>
+                        {isPublished && publishedAt && (
+                          <span style={{ fontSize: "12px", color: "rgba(255, 255, 255, 0.7)", fontWeight: "500" }}>
+                            (Last Updated: {new Date(publishedAt).toLocaleString()})
+                          </span>
+                        )}
+                      </span>
+                    );
+                  }
+                  
+                  if (status === "active") {
+                    return (
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}>
+                        <span className="badge badge-success" style={{
+                          fontSize: "12px",
+                          padding: "4px 8px",
+                          borderRadius: "12px",
+                          fontWeight: "600",
+                          textTransform: "uppercase",
+                          background: "var(--success-500, #22c55e)",
+                          color: "#fff"
+                        }}>
+                          Published
+                        </span>
+                        {publishedAt && (
+                          <span style={{ fontSize: "12px", color: "rgba(255, 255, 255, 0.7)", fontWeight: "500" }}>
+                            (Last Updated: {new Date(publishedAt).toLocaleString()})
+                          </span>
+                        )}
+                      </span>
+                    );
+                  }
+                  return null;
+                })()}
               </h1>
-              <p style={{ margin: "4px 0 0 0" }}>
-                {user?.role === "lecturer"
-                  ? "Showing your personalized teaching schedule."
-                  : (entries.length > 0
-                      ? `Showing database schedule for ${batchLabel}.`
-                      : "Generate a timetable from the Optimizer page to see database entries here.")}
-              </p>
+              {user?.role !== "student" && (
+                <p style={{ margin: "4px 0 0 0", fontSize: "14px", opacity: 0.9 }}>
+                  {user?.role === "lecturer"
+                    ? "Showing your personalized teaching schedule across all modules."
+                    : (entries.length > 0
+                        ? `Showing published lecture schedule for ${selectedBatch ? selectedBatch.batchName : 'Batch'}.`
+                        : "Generate a timetable from the Optimizer page to see database entries here.")}
+                </p>
+              )}
             </div>
-            {/* Publish button removed */}
+            
           </div>
 
           {user?.role === "admin" && (
-            <div className="timetable-actions" style={{ display: "flex", gap: "12px", alignItems: "center", marginBottom: "20px" }}>
+            <div className="card" style={{ 
+              padding: "16px 20px", 
+              marginBottom: "20px", 
+              borderRadius: "12px",
+              background: masterLecturerStatus.isLecturerPublished ? "linear-gradient(135deg, #064e3b 0%, #047857 100%)" : "linear-gradient(135deg, #78350f 0%, #d97706 100%)",
+              color: "#ffffff",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              boxShadow: "0 4px 14px rgba(0,0,0,0.12)"
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                <div style={{ background: "rgba(255,255,255,0.2)", borderRadius: "50%", padding: "10px", display: "flex" }}>
+                  <Radio size={20} />
+                </div>
+                <div>
+                  <div style={{ fontSize: "15px", fontWeight: "700", display: "flex", alignItems: "center", gap: "8px" }}>
+                    Lecturer Timetable Status: 
+                    <span style={{ 
+                      padding: "2px 10px", 
+                      borderRadius: "12px", 
+                      fontSize: "11px", 
+                      fontWeight: "800",
+                      textTransform: "uppercase",
+                      background: masterLecturerStatus.isLecturerPublished ? "#10b981" : "#f59e0b",
+                      color: "#ffffff"
+                    }}>
+                      {masterLecturerStatus.isLecturerPublished ? "PUBLISHED" : "DRAFT MODE"}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: "12px", opacity: 0.9, marginTop: "2px" }}>
+                    {masterLecturerStatus.isLecturerPublished
+                      ? `Visible to all lecturers. (Published: ${masterLecturerStatus.publishedAt ? new Date(masterLecturerStatus.publishedAt).toLocaleString() : 'Active'})`
+                      : "Hidden from lecturers so you can generate and publish individual batch timetables privately."}
+                  </div>
+                </div>
+              </div>
+              <button
+                className="btn"
+                onClick={handleToggleMasterLecturer}
+                style={{
+                  background: masterLecturerStatus.isLecturerPublished ? "rgba(255,255,255,0.2)" : "#ffffff",
+                  color: masterLecturerStatus.isLecturerPublished ? "#ffffff" : "#78350f",
+                  fontWeight: "700",
+                  border: "none",
+                  padding: "8px 16px",
+                  borderRadius: "8px",
+                  cursor: "pointer"
+                }}
+              >
+                {masterLecturerStatus.isLecturerPublished ? "Unpublish Lecturer Timetable" : "Publish Lecturer Timetable"}
+              </button>
+            </div>
+          )}
+
+          {user?.role === "admin" && (
+            <div className="timetable-actions" style={{ display: "flex", gap: "12px", alignItems: "center", marginBottom: "20px", flexWrap: "wrap" }}>
               <select
                 className="form-select"
                 value={selectedBatchId}
                 onChange={(e) => {
                   setSelectedBatchId(e.target.value);
-                  setSelectedDeptId(""); // Reset department filter on batch change
+                  setSelectedDeptId(""); 
+                  setSelectedTimetableId("");
                 }}
                 style={{ minWidth: 220 }}
               >
@@ -366,14 +609,17 @@ function TimetableViewPage() {
                 ))}
               </select>
 
-              {user?.role === "admin" && (() => {
+              {(() => {
                 const selBatch = batches.find(b => String(b.batchId) === String(selectedBatchId));
                 if (selBatch && selBatch.semester >= 3) {
                   return (
                     <select
                       className="form-select"
                       value={selectedDeptId}
-                      onChange={(e) => setSelectedDeptId(e.target.value)}
+                      onChange={(e) => {
+                        setSelectedDeptId(e.target.value);
+                        setSelectedTimetableId("");
+                      }}
                       style={{ minWidth: 200 }}
                     >
                       <option value="">All Departments</option>
@@ -386,6 +632,59 @@ function TimetableViewPage() {
                   );
                 }
                 return null;
+              })()}
+
+              {versions.length > 0 && (
+                <select
+                  className="form-select"
+                  value={selectedTimetableId}
+                  onChange={(e) => setSelectedTimetableId(e.target.value)}
+                  style={{ minWidth: 250 }}
+                >
+                  <option value="" disabled>Select Version...</option>
+                  {versions.map(v => (
+                    <option key={v.timetableId} value={v.timetableId}>
+                      {v.status === "active" ? "PUBLISHED: " : "DRAFT: "} 
+                      {new Date(v.generatedAt).toLocaleString()}
+                    </option>
+                  ))}
+                </select>
+              )}
+
+              {/* Publish / Unpublish Action Button for Batch Timetable */}
+              {(() => {
+                const activeVer = versions.find(v => String(v.timetableId) === selectedTimetableId) || versions.find(v => v.status === "active");
+                const targetIdToUse = selectedTimetableId || (activeVer ? String(activeVer.timetableId) : "");
+                
+                if (!targetIdToUse && versions.length === 0) return null;
+
+                const isCurrentActive = (activeVer && String(activeVer.timetableId) === targetIdToUse && activeVer.status === "active") || (status === "active");
+
+                if (isCurrentActive) {
+                  return (
+                    <button 
+                      className="btn btn-secondary" 
+                      onClick={handleUnpublishVersion}
+                      disabled={isPublishing}
+                      style={{ display: "flex", alignItems: "center", gap: "6px", background: "#dc2626", color: "#ffffff", border: "none", padding: "8px 16px", borderRadius: "8px", fontWeight: "600", cursor: "pointer" }}
+                    >
+                      <EyeOff size={16} />
+                      {isPublishing ? "Updating..." : "Unpublish Batch Timetable"}
+                    </button>
+                  );
+                } else {
+                  return (
+                    <button 
+                      className="btn btn-primary" 
+                      onClick={handleApprove}
+                      disabled={isPublishing || !targetIdToUse}
+                      style={{ display: "flex", alignItems: "center", gap: "6px", padding: "8px 16px", borderRadius: "8px", fontWeight: "600", cursor: "pointer" }}
+                    >
+                      <CheckCircle size={16} />
+                      {isPublishing ? "Publishing..." : "Publish Batch Timetable"}
+                    </button>
+                  );
+                }
               })()}
             </div>
           )}
@@ -481,10 +780,41 @@ function TimetableViewPage() {
                           }
 
                           return (
-                            <td key={`${day}-${slot.label}`}>
+                            <td 
+                              key={`${day}-${slot.label}`}
+                              onDragOver={(e) => {
+                                if (user?.role === "admin") {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  e.dataTransfer.dropEffect = 'move';
+                                  e.currentTarget.style.backgroundColor = 'rgba(59, 130, 246, 0.1)';
+                                }
+                              }}
+                              onDragLeave={(e) => {
+                                if (user?.role === "admin") {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  e.currentTarget.style.backgroundColor = '';
+                                }
+                              }}
+                              onDrop={(e) => handleDrop(e, day, slot)}
+                            >
                               <div className="timetable-cell">
                                 {cellEntries.map((entry) => (
-                                  <div key={entry.entryId} className="timetable-session">
+                                  <div 
+                                    key={entry.entryId} 
+                                    className="timetable-session"
+                                    draggable={user?.role === "admin"}
+                                    style={{ cursor: user?.role === "admin" ? "grab" : "default" }}
+                                    onDragStart={(e) => {
+                                      if (user?.role === "admin") {
+                                        e.stopPropagation();
+                                        const dragData = { entryId: entry.entryId.toString(), oldDay: day, oldStart: slot.start };
+                                        e.dataTransfer.setData("text/plain", JSON.stringify(dragData));
+                                        e.dataTransfer.effectAllowed = "move";
+                                      }
+                                    }}
+                                  >
                                     <div className="timetable-session-code">{entry.moduleCode}</div>
                                     <div className="timetable-session-name">{entry.moduleName}</div>
                                     <div className="timetable-session-meta">

@@ -3,8 +3,9 @@
 import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Sidebar from "../components/Sidebar";
-import { fetchLecturerTimetable, fetchLecturers, fetchLecturerModules } from "../lib/api";
+import { fetchLecturerTimetable, fetchLecturers, fetchLecturerModules, fetchMasterLecturerStatus } from "../lib/api";
 import { BookOpen, Clock, Calendar } from "lucide-react";
+import UpcomingLecture from "../components/UpcomingLecture";
 
 export default function LecturerDashboard() {
   const router = useRouter();
@@ -12,6 +13,7 @@ export default function LecturerDashboard() {
   const [lecturer, setLecturer] = useState(null);
   const [entries, setEntries] = useState([]);
   const [assignedModules, setAssignedModules] = useState([]);
+  const [isMasterPublished, setIsMasterPublished] = useState(true);
   
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -31,35 +33,83 @@ export default function LecturerDashboard() {
     setUser(userData);
 
     loadLecturerData(userData);
+
+    const interval = setInterval(() => {
+      loadLecturerData(userData, false); // pass false to avoid loading spinner
+    }, 30000);
+
+    return () => clearInterval(interval);
   }, []);
 
-  const loadLecturerData = async (userData) => {
-    if (!userData.lecturerId) {
-      setError("No lecturer profile linked to this user account. Please contact an administrator.");
-      setLoading(false);
-      return;
-    }
-
-    setLoading(true);
+  async function loadLecturerData(userData, showLoading = true) {
+    if (showLoading) setLoading(true);
     setError("");
 
     try {
-      // 1. Fetch lecturer profile details
-      const currentLecturer = (await fetchLecturers()).find((l) => l.lecturerId === userData.lecturerId);
-      setLecturer(currentLecturer);
+      // Check Master Lecturer Timetable published status
+      try {
+        const masterStatus = await fetchMasterLecturerStatus();
+        setIsMasterPublished(masterStatus?.isLecturerPublished !== false);
+      } catch (e) {
+        setIsMasterPublished(true);
+      }
 
-      // 2. Fetch assigned academic modules from BatchModule mapping
-      const modulesData = await fetchLecturerModules(userData.lecturerId);
-      setAssignedModules(Array.isArray(modulesData) ? modulesData : []);
+      // 1. Fetch all lecturer profiles
+      const allLecturers = await fetchLecturers();
+      let targetLecturerId = userData.lecturerId;
 
-      // 3. Fetch timetable entries for this lecturer (active/published only) to compute weekly slots count
-      const timetableData = await fetchLecturerTimetable(userData.lecturerId);
-      setEntries(Array.isArray(timetableData) ? timetableData : []);
+      // Fallback lookup if lecturerId is missing from session
+      let currentLecturer = allLecturers.find((l) => l.lecturerId === targetLecturerId);
+      if (!currentLecturer) {
+        currentLecturer = allLecturers.find((l) => 
+          (l.userAccount && l.userAccount.userId === userData.userId) ||
+          (l.email && userData.universityEmail && l.email.toLowerCase() === userData.universityEmail.toLowerCase()) ||
+          (l.email && userData.username && l.email.toLowerCase().startsWith(userData.username.toLowerCase()))
+        );
+        if (currentLecturer) {
+          targetLecturerId = currentLecturer.lecturerId;
+          const updatedUser = { ...userData, lecturerId: targetLecturerId };
+          setUser(updatedUser);
+          localStorage.setItem("user", JSON.stringify(updatedUser));
+        }
+      }
+
+      setLecturer(currentLecturer || { name: userData.firstName ? `${userData.firstName} ${userData.lastName || ""}` : userData.username });
+
+      if (!targetLecturerId) {
+        setError("No lecturer profile linked to this user account. Please contact an administrator.");
+        if (showLoading) setLoading(false);
+        return;
+      }
+
+      // 2. Fetch assigned academic modules
+      try {
+        const modulesData = await fetchLecturerModules(targetLecturerId);
+        setAssignedModules(Array.isArray(modulesData) ? modulesData : []);
+      } catch (err) {
+        console.warn("Error fetching lecturer modules:", err);
+        setAssignedModules([]);
+      }
+
+      // 3. Fetch timetable entries for this lecturer
+      try {
+        const timetableData = await fetchLecturerTimetable(targetLecturerId);
+        if (Array.isArray(timetableData)) {
+          setEntries(timetableData);
+        } else if (timetableData && timetableData.entries) {
+          setEntries(timetableData.entries);
+        } else {
+          setEntries([]);
+        }
+      } catch (err) {
+        console.warn("Error fetching lecturer timetable entries:", err);
+        setEntries([]);
+      }
     } catch (err) {
-      console.error(err);
+      console.error("Lecturer dashboard load error:", err);
       setError("Could not load lecturer dashboard details from the database.");
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
   };
 
@@ -67,6 +117,16 @@ export default function LecturerDashboard() {
   const totalHours = useMemo(() => {
     return assignedModules.reduce((acc, m) => acc + (m.lectureHoursPerWeek || 0), 0);
   }, [assignedModules]);
+
+  // Calculate unique active teaching days per week
+  const activeDays = useMemo(() => {
+    const days = new Set();
+    entries.forEach((e) => {
+      const day = e.dayOfWeek || (e.timeSlot && e.timeSlot.dayOfWeek);
+      if (day) days.add(day.trim());
+    });
+    return days.size;
+  }, [entries]);
 
   if (loading) {
     return (
@@ -107,7 +167,7 @@ export default function LecturerDashboard() {
                 background: "var(--bg-sidebar)", 
                 color: "#fff", 
                 padding: "32px 24px", 
-                marginBottom: "32px", 
+                marginBottom: "24px", 
                 border: "none",
                 boxShadow: "var(--shadow-md)"
               }}>
@@ -121,11 +181,16 @@ export default function LecturerDashboard() {
                 </div>
               </div>
 
+
+
+              {/* Upcoming Lecture Widget */}
+              <UpcomingLecture entries={entries} />
+
               {/* Stats Cards Row */}
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "24px", marginBottom: "32px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "20px", marginBottom: "32px" }}>
 
                 {/* Modules count - Deep Teal */}
-                <div className="card" style={{ background: "linear-gradient(135deg, #0f766e 0%, #0e9280 100%)", border: "none", boxShadow: "0 8px 24px rgba(15,118,110,0.35)", display: "flex", flexDirection: "column", justifyContent: "center", borderRadius: "16px" }}>
+                <div className="card" style={{ background: "linear-gradient(135deg, #00695c 0%, #009688 100%)", border: "none", boxShadow: "0 8px 24px rgba(0,150,136,0.35)", display: "flex", flexDirection: "column", justifyContent: "center", borderRadius: "16px" }}>
                   <div className="card-body" style={{ padding: "16px 18px", display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", gap: "8px" }}>
                     <div style={{ background: "rgba(255,255,255,0.2)", borderRadius: "50%", width: "44px", height: "44px", display: "flex", alignItems: "center", justifyContent: "center", color: "#ffffff" }}>
                       <BookOpen size={22} />
@@ -138,7 +203,7 @@ export default function LecturerDashboard() {
                 </div>
 
                 {/* Workload Hours - Deep Indigo */}
-                <div className="card" style={{ background: "linear-gradient(135deg, #4338ca 0%, #6d28d9 100%)", border: "none", boxShadow: "0 8px 24px rgba(67,56,202,0.35)", display: "flex", flexDirection: "column", justifyContent: "center", borderRadius: "16px" }}>
+                <div className="card" style={{ background: "linear-gradient(135deg, #00796b 0%, #26a69a 100%)", border: "none", boxShadow: "0 8px 24px rgba(0,121,107,0.35)", display: "flex", flexDirection: "column", justifyContent: "center", borderRadius: "16px" }}>
                   <div className="card-body" style={{ padding: "16px 18px", display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", gap: "8px" }}>
                     <div style={{ background: "rgba(255,255,255,0.2)", borderRadius: "50%", width: "44px", height: "44px", display: "flex", alignItems: "center", justifyContent: "center", color: "#ffffff" }}>
                       <Clock size={22} />
@@ -150,15 +215,15 @@ export default function LecturerDashboard() {
                   </div>
                 </div>
 
-                {/* Scheduled Slots - Deep Amber-Orange */}
-                <div className="card" style={{ background: "linear-gradient(135deg, #b45309 0%, #d97706 100%)", border: "none", boxShadow: "0 8px 24px rgba(180,83,9,0.35)", display: "flex", flexDirection: "column", justifyContent: "center", borderRadius: "16px" }}>
+                {/* Active Teaching Days - Deep Teal/Emerald */}
+                <div className="card" style={{ background: "linear-gradient(135deg, #004d40 0%, #00695c 100%)", border: "none", boxShadow: "0 8px 24px rgba(0,77,64,0.35)", display: "flex", flexDirection: "column", justifyContent: "center", borderRadius: "16px" }}>
                   <div className="card-body" style={{ padding: "16px 18px", display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", gap: "8px" }}>
                     <div style={{ background: "rgba(255,255,255,0.2)", borderRadius: "50%", width: "44px", height: "44px", display: "flex", alignItems: "center", justifyContent: "center", color: "#ffffff" }}>
                       <Calendar size={22} />
                     </div>
                     <div>
-                      <div style={{ fontSize: "26px", fontWeight: "900", color: "#ffffff", lineHeight: 1.1 }}>{entries.length}</div>
-                      <div style={{ fontSize: "10px", color: "rgba(255,255,255,0.85)", fontWeight: "700", marginTop: "4px", textTransform: "uppercase", letterSpacing: "1px" }}>Weekly Scheduled Slots</div>
+                      <div style={{ fontSize: "26px", fontWeight: "900", color: "#ffffff", lineHeight: 1.1 }}>{activeDays} {activeDays === 1 ? "Day" : "Days"}</div>
+                      <div style={{ fontSize: "10px", color: "rgba(255,255,255,0.85)", fontWeight: "700", marginTop: "4px", textTransform: "uppercase", letterSpacing: "1px" }}>Active Teaching Days</div>
                     </div>
                   </div>
                 </div>
