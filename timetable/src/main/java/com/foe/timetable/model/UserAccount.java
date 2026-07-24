@@ -53,6 +53,9 @@ public class UserAccount {
     @Column(name = "profile_picture", columnDefinition = "LONGTEXT")
     private String profilePicture;
 
+    @Column(name = "student_id_number", length = 50)
+    private String studentIdNumber;
+
     public enum Role { admin, lecturer, student }
 
     // Getters and Setters
@@ -80,4 +83,6 @@ public class UserAccount {
     public void setUniversityEmail(String universityEmail) { this.universityEmail = universityEmail; }
     public String getProfilePicture() { return profilePicture; }
     public void setProfilePicture(String profilePicture) { this.profilePicture = profilePicture; }
+    public String getStudentIdNumber() { return studentIdNumber; }
+    public void setStudentIdNumber(String studentIdNumber) { this.studentIdNumber = studentIdNumber; }
 }

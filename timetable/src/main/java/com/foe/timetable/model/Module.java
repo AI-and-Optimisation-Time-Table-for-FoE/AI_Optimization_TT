@@ -48,6 +48,9 @@ public class Module {
     @Column(name = "session_type", nullable = false)
     private SessionType sessionType = SessionType.lecture;
 
+    @Column(name = "needs_computer", nullable = false)
+    private Boolean needsComputer = false;
+
     public enum SessionType { lecture, lab, tutorial, mixed }
 
     // Getters and Setters
@@ -73,4 +76,7 @@ public class Module {
 
     public SessionType getSessionType() { return sessionType; }
     public void setSessionType(SessionType sessionType) { this.sessionType = sessionType; }
+
+    public Boolean getNeedsComputer() { return needsComputer; }
+    public void setNeedsComputer(Boolean needsComputer) { this.needsComputer = needsComputer; }
 }

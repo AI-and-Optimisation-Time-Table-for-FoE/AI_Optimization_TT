@@ -179,30 +179,14 @@ public class TimetableGenerationService {
             
             boolean alreadyScheduledElsewhere = false;
             if (isISModule && departmentId != null) {
-                // Determine if this department is the primary scheduler for this IS module
-                boolean isPrimaryForIS = true;
-                if (bm.getOfferingDeptIds() != null && !bm.getOfferingDeptIds().trim().isEmpty()) {
-                    String[] ids = bm.getOfferingDeptIds().split(",");
-                    if (ids.length > 0) {
-                        try {
-                            Integer primaryDeptId = Integer.parseInt(ids[0].trim());
-                            if (!primaryDeptId.equals(departmentId)) {
-                                isPrimaryForIS = false;
-                            }
-                        } catch (Exception e) {
-                            // ignore parsing errors
-                        }
-                    }
-                }
-                
-                if (!isPrimaryForIS) {
-                    List<TimetableEntry> entries = timetableEntryRepository.findByBatchModule_BatchModuleId(bm.getBatchModuleId());
-                    long count = entries.stream()
-                        .filter(te -> !te.getTimetableId().equals(timetable.getTimetableId()))
-                        .count();
-                    if (count > 0) {
-                        alreadyScheduledElsewhere = true;
-                    }
+                // If the IS module is already scheduled in any other timetable (e.g. by another department),
+                // we should clone it rather than re-scheduling it and creating conflicts.
+                List<TimetableEntry> entries = timetableEntryRepository.findByBatchModule_BatchModuleId(bm.getBatchModuleId());
+                long count = entries.stream()
+                    .filter(te -> !te.getTimetableId().equals(timetable.getTimetableId()))
+                    .count();
+                if (count > 0) {
+                    alreadyScheduledElsewhere = true;
                 }
             }
 
@@ -542,9 +526,10 @@ public class TimetableGenerationService {
                                     entry.setSessionType(te.getSessionType());
                                     entry.setIsRecurring(te.getIsRecurring());
                                      try {
-                                         timetableEntryRepository.save(entry);
+                                         timetableEntryRepository.saveAndFlush(entry);
                                      } catch (Exception e) {
                                          System.out.println("Sync warning: Could not copy IS entry to timetable " + ot.getTimetableId() + ": " + e.getMessage());
+                                         e.printStackTrace();
                                      }
                                 }
                             }
@@ -587,9 +572,10 @@ public class TimetableGenerationService {
                                         entry.setSessionType(te.getSessionType());
                                         entry.setIsRecurring(te.getIsRecurring());
                                         try {
-                                            timetableEntryRepository.save(entry);
+                                            timetableEntryRepository.saveAndFlush(entry);
                                         } catch (Exception e) {
                                             System.out.println("Sync warning: Could not copy linked entry to timetable " + ot.getTimetableId() + ": " + e.getMessage());
+                                            e.printStackTrace();
                                         }
                                     }
                                 }

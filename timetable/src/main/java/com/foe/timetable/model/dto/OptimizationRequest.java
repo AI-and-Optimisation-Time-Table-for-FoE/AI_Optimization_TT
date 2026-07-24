@@ -82,6 +82,14 @@ public class OptimizationRequest {
 
         public Integer getPreferredHallId() { return preferredHallId; }
         public void setPreferredHallId(Integer preferredHallId) { this.preferredHallId = preferredHallId; }
+
+        private Integer studentCount;
+        public Integer getStudentCount() { return studentCount; }
+        public void setStudentCount(Integer studentCount) { this.studentCount = studentCount; }
+
+        private Boolean needsComputer;
+        public Boolean getNeedsComputer() { return needsComputer; }
+        public void setNeedsComputer(Boolean needsComputer) { this.needsComputer = needsComputer; }
     }
 
     public static class HallInput {
@@ -97,6 +105,10 @@ public class OptimizationRequest {
 
         public Integer getCapacity() { return capacity; }
         public void setCapacity(Integer capacity) { this.capacity = capacity; }
+
+        private Boolean isComputerLab;
+        public Boolean getIsComputerLab() { return isComputerLab; }
+        public void setIsComputerLab(Boolean isComputerLab) { this.isComputerLab = isComputerLab; }
     }
 
     public static class TimeSlotInput {

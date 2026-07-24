@@ -24,6 +24,9 @@ public class Department {
     @Column(name = "department_code", unique = true, nullable = false, length = 10)
     private String departmentCode;
 
+    @Column(name = "student_count", nullable = false)
+    private Integer studentCount = 0;
+
     // Getters and Setters
     public Integer getDepartmentId() { return departmentId; }
     public void setDepartmentId(Integer departmentId) { this.departmentId = departmentId; }
@@ -33,4 +36,6 @@ public class Department {
     public void setDepartmentName(String departmentName) { this.departmentName = departmentName; }
     public String getDepartmentCode() { return departmentCode; }
     public void setDepartmentCode(String departmentCode) { this.departmentCode = departmentCode; }
+    public Integer getStudentCount() { return studentCount; }
+    public void setStudentCount(Integer studentCount) { this.studentCount = studentCount; }
 }

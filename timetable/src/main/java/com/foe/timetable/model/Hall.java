@@ -36,6 +36,9 @@ public class Hall {
     @Column(name = "is_active", nullable = false)
     private Boolean isActive = true;
 
+    @Column(name = "is_computer_lab", nullable = false)
+    private Boolean isComputerLab = false;
+
     public enum HallType { lecture, lab, tutorial }
 
     // Getters and Setters
@@ -53,5 +56,7 @@ public class Hall {
     public void setHasProjector(Boolean hasProjector) { this.hasProjector = hasProjector; }
     public Boolean getIsActive() { return isActive; }
     public void setIsActive(Boolean active) { this.isActive = active; }
+    public Boolean getIsComputerLab() { return isComputerLab; }
+    public void setIsComputerLab(Boolean isComputerLab) { this.isComputerLab = isComputerLab; }
 }
 
