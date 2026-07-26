@@ -218,8 +218,20 @@ public class ExamTimetableController {
 
             usedDatesForBatch.add(assignedDate);
 
-            // Determine hall venue allocation and split students if needed
-            int remainingStudents = totalStudentsToDivide;
+            // Determine hall venue allocation and split students if needed per module/department
+            List<UserAccount> targetStudents = registeredStudents;
+            if (mod.getDepartment() != null && !"IS".equalsIgnoreCase(mod.getDepartment().getDepartmentCode())) {
+                Integer modDeptId = mod.getDepartment().getDepartmentId();
+                List<UserAccount> deptStudents = registeredStudents.stream()
+                    .filter(s -> s.getDepartmentId() != null && s.getDepartmentId().equals(modDeptId))
+                    .collect(Collectors.toList());
+                if (!deptStudents.isEmpty()) {
+                    targetStudents = deptStudents;
+                }
+            }
+
+            int totalForThisModule = (!targetStudents.isEmpty()) ? targetStudents.size() : batchStudentCount;
+            int remainingStudents = totalForThisModule;
             int currentStudentIndex = 0;
 
             for (Hall hall : availableHalls) {
@@ -232,11 +244,13 @@ public class ExamTimetableController {
                     continue;
                 }
 
-                int hallCap = (hall.getCapacity() != null && hall.getCapacity() > 0) ? hall.getCapacity() : 100;
+                int rawCap = (hall.getCapacity() != null && hall.getCapacity() > 0) ? hall.getCapacity() : 100;
+                // Exam spacing rule: max 100 students per exam venue to ensure 1-seat spacing
+                int hallCap = Math.min(rawCap, 100);
                 int allocatedForThisHall = Math.min(remainingStudents, hallCap);
 
                 // Compute student ID number range for this venue allocation
-                String idRange = generateStudentIdRange(registeredStudents, currentStudentIndex, allocatedForThisHall, et.getBatch().getBatchId());
+                String idRange = generateStudentIdRange(targetStudents, currentStudentIndex, allocatedForThisHall, et.getBatch().getBatchId());
 
                 ExamEntry entry = new ExamEntry();
                 entry.setExamTimetable(et);
@@ -264,7 +278,7 @@ public class ExamTimetableController {
             // Fallback if no halls were unallocated
             if (remainingStudents > 0 && availableHalls.size() > 0) {
                 Hall fallbackHall = availableHalls.get(0);
-                String idRange = generateStudentIdRange(registeredStudents, 0, batchStudentCount, et.getBatch().getBatchId());
+                String idRange = generateStudentIdRange(targetStudents, 0, remainingStudents, et.getBatch().getBatchId());
 
                 ExamEntry entry = new ExamEntry();
                 entry.setExamTimetable(et);
@@ -275,7 +289,7 @@ public class ExamTimetableController {
                 entry.setEndTime(LocalTime.of(12, 0));
                 entry.setHall(fallbackHall);
                 entry.setStudentIdRange(idRange);
-                entry.setAllocatedCount(batchStudentCount);
+                entry.setAllocatedCount(remainingStudents);
 
                 entries.add(entry);
             }
