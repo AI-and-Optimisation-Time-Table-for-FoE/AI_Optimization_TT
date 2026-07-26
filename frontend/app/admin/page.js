@@ -159,8 +159,9 @@ export default function AdminDashboard() {
     try {
       const selectedBatch = batches.find(b => String(b.batchId) === String(batchId));
       const isDeptRequired = selectedBatch ? selectedBatch.semester >= 3 : false;
-      const data = await fetchBatchModules(Number(batchId), isDeptRequired ? Number(deptId) : null);
-      setBatchModules(data);
+      const validDeptId = (isDeptRequired && deptId && deptId !== "all" && !isNaN(Number(deptId))) ? Number(deptId) : null;
+      const data = await fetchBatchModules(Number(batchId), validDeptId);
+      setBatchModules(Array.isArray(data) ? data : []);
       setChangedAssignments({});
       
       const allData = await fetchBatchModules(Number(batchId), null);
@@ -1702,6 +1703,7 @@ export default function AdminDashboard() {
                                 onChange={(e) => setAssignDeptId(e.target.value)}
                                 style={{ padding: "8px 12px", borderRadius: "var(--radius-sm)", border: "1px solid var(--neutral-300)", outline: "none", minWidth: "200px" }}
                               >
+                                <option value="all">All Departments</option>
                                 {departments.map(d => (
                                   <option key={d.departmentId} value={d.departmentId}>
                                     {d.departmentName} ({d.departmentCode})
