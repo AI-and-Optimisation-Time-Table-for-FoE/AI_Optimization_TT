@@ -611,7 +611,8 @@ function TimetableViewPage() {
 
               {(() => {
                 const selBatch = batches.find(b => String(b.batchId) === String(selectedBatchId));
-                if (selBatch && selBatch.semester >= 3) {
+                const showDeptSelect = user?.role === "admin" || (selBatch && selBatch.semester >= 3);
+                if (showDeptSelect && departments.length > 0) {
                   return (
                     <select
                       className="form-select"
@@ -620,10 +621,10 @@ function TimetableViewPage() {
                         setSelectedDeptId(e.target.value);
                         setSelectedTimetableId("");
                       }}
-                      style={{ minWidth: 200 }}
+                      style={{ minWidth: 220 }}
                     >
                       <option value="">All Departments</option>
-                      {departments.filter(d => d.departmentId !== 6).map(d => (
+                      {departments.map(d => (
                         <option key={d.departmentId} value={d.departmentId}>
                           {d.departmentName} ({d.departmentCode})
                         </option>

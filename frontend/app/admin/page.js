@@ -31,8 +31,18 @@ const SEMESTERS = [
 
 export default function AdminDashboard() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState("batches");
-  
+  // Persistent Tab & Selection States
+  const [activeTab, setActiveTabState] = useState(() => {
+    if (typeof window !== "undefined") {
+      return sessionStorage.getItem("admin_activeTab") || "batches";
+    }
+    return "batches";
+  });
+  const setActiveTab = (tab) => {
+    setActiveTabState(tab);
+    if (typeof window !== "undefined") sessionStorage.setItem("admin_activeTab", tab);
+  };
+
   // Data lists
   const [batches, setBatches] = useState([]);
   const [halls, setHalls] = useState([]);
@@ -43,12 +53,44 @@ export default function AdminDashboard() {
   const [lecturers, setLecturers] = useState([]);
   const [batchModules, setBatchModules] = useState([]);
   const [allBatchModules, setAllBatchModules] = useState([]);
-  const [assignBatchId, setAssignBatchId] = useState("");
-  const [assignDeptId, setAssignDeptId] = useState("");
+  
+  const [assignBatchId, setAssignBatchIdState] = useState(() => {
+    if (typeof window !== "undefined") {
+      return sessionStorage.getItem("admin_assignBatchId") || "";
+    }
+    return "";
+  });
+  const setAssignBatchId = (val) => {
+    setAssignBatchIdState(val);
+    if (typeof window !== "undefined") sessionStorage.setItem("admin_assignBatchId", String(val));
+  };
+
+  const [assignDeptId, setAssignDeptIdState] = useState(() => {
+    if (typeof window !== "undefined") {
+      return sessionStorage.getItem("admin_assignDeptId") || "";
+    }
+    return "";
+  });
+  const setAssignDeptId = (val) => {
+    setAssignDeptIdState(val);
+    if (typeof window !== "undefined") sessionStorage.setItem("admin_assignDeptId", String(val));
+  };
+
   const [assignLoading, setAssignLoading] = useState(false);
   const [changedAssignments, setChangedAssignments] = useState({});
   const [filterDeptId, setFilterDeptId] = useState("all");
-  const [moduleBatchFilterId, setModuleBatchFilterId] = useState("all");
+  
+  const [moduleBatchFilterId, setModuleBatchFilterIdState] = useState(() => {
+    if (typeof window !== "undefined") {
+      return sessionStorage.getItem("admin_moduleBatchFilterId") || "all";
+    }
+    return "all";
+  });
+  const setModuleBatchFilterId = (val) => {
+    setModuleBatchFilterIdState(val);
+    if (typeof window !== "undefined") sessionStorage.setItem("admin_moduleBatchFilterId", String(val));
+  };
+
   const [moduleDeptFilterId, setModuleDeptFilterId] = useState("");
   const [moduleBatchModules, setModuleBatchModules] = useState([]);
   const [assignableModuleId, setAssignableModuleId] = useState("");
@@ -58,7 +100,18 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [optimizing, setOptimizing] = useState(false);
-  const [selectedBatchId, setSelectedBatchId] = useState("");
+  
+  const [selectedBatchId, setSelectedBatchIdState] = useState(() => {
+    if (typeof window !== "undefined") {
+      return sessionStorage.getItem("admin_selectedBatchId") || "";
+    }
+    return "";
+  });
+  const setSelectedBatchId = (val) => {
+    setSelectedBatchIdState(val);
+    if (typeof window !== "undefined") sessionStorage.setItem("admin_selectedBatchId", String(val));
+  };
+
   const [optDeptId, setOptDeptId] = useState("");
   const [labs, setLabs] = useState([]);
   const [labForm, setLabForm] = useState({ batchId: "", dayOfWeek: "Monday", startTime: "08:30", endTime: "10:30", departmentId: "" });
@@ -253,12 +306,12 @@ export default function AdminDashboard() {
         setModuleForm(prev => ({ ...prev, departmentId: dData[0].departmentId }));
         setUserForm(prev => ({ ...prev, departmentId: dData[0].departmentId }));
         setLecturerForm(prev => ({ ...prev, departmentId: defaultLecturerDeptId }));
-        setOptDeptId(dData[0].departmentId.toString());
-        setAssignDeptId(dData[0].departmentId.toString());
+        setOptDeptId(prev => prev || dData[0].departmentId.toString());
+        setAssignDeptId(prev => prev || dData[0].departmentId.toString());
       }
       if (bData.length > 0) {
-        setUserForm(prev => ({ ...prev, batchId: bData[0].batchId }));
-        setLabForm(prev => ({ ...prev, batchId: bData[0].batchId, departmentId: dData[0]?.departmentId?.toString() || "" }));
+        setUserForm(prev => ({ ...prev, batchId: prev.batchId || bData[0].batchId }));
+        setLabForm(prev => ({ ...prev, batchId: prev.batchId || bData[0].batchId, departmentId: prev.departmentId || (dData[0]?.departmentId?.toString() || "") }));
         setSelectedBatchId(prev => prev || String(bData[0].batchId));
         setAssignBatchId(prev => prev || String(bData[0].batchId));
       }
@@ -1515,13 +1568,53 @@ export default function AdminDashboard() {
                             {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"].map(day => <option key={day} value={day}>{day}</option>)}
                           </select>
                         </div>
-                        <div style={{ flex: "1 1 120px" }}>
-                          <label style={{ fontSize: "12px", fontWeight: "600", display: "block", marginBottom: "4px" }}>Start Time</label>
-                          <input type="text" placeholder="e.g. 14:30" value={labForm.startTime} onChange={e => setLabForm({...labForm, startTime: e.target.value})} required style={{ width: "100%", padding: "8px", borderRadius: "var(--radius-sm)", border: "1px solid var(--neutral-300)" }} />
+                        <div style={{ flex: "1 1 180px" }}>
+                          <label style={{ fontSize: "12px", fontWeight: "600", display: "block", marginBottom: "4px" }}>Quick Time Range</label>
+                          <select 
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              if (val) {
+                                const [s, endT] = val.split("-");
+                                setLabForm(prev => ({ ...prev, startTime: s, endTime: endT }));
+                              }
+                            }} 
+                            style={{ width: "100%", padding: "8px", borderRadius: "var(--radius-sm)", border: "1px solid var(--neutral-300)" }}
+                          >
+                            <option value="">Select Preset Range...</option>
+                            <option value="08:30-10:30">Morning 1 (08:30 - 10:30)</option>
+                            <option value="10:30-12:30">Morning 2 (10:30 - 12:30)</option>
+                            <option value="08:30-12:30">Full Morning Lab (08:30 - 12:30)</option>
+                            <option value="13:30-15:30">Afternoon 1 (13:30 - 15:30)</option>
+                            <option value="15:30-17:30">Afternoon 2 (15:30 - 17:30)</option>
+                            <option value="13:30-17:30">Full Afternoon Lab (13:30 - 17:30)</option>
+                            <option value="08:30-16:30">Full Day Lab (08:30 - 16:30)</option>
+                          </select>
                         </div>
-                        <div style={{ flex: "1 1 120px" }}>
+                        <div style={{ flex: "1 1 130px" }}>
+                          <label style={{ fontSize: "12px", fontWeight: "600", display: "block", marginBottom: "4px" }}>Start Time</label>
+                          <select 
+                            value={labForm.startTime} 
+                            onChange={e => setLabForm({...labForm, startTime: e.target.value})} 
+                            required 
+                            style={{ width: "100%", padding: "8px", borderRadius: "var(--radius-sm)", border: "1px solid var(--neutral-300)" }}
+                          >
+                            {["08:00", "08:30", "09:00", "09:30", "10:00", "10:30", "11:00", "11:30", "12:00", "12:30", "13:00", "13:30", "14:00", "14:30", "15:00", "15:30", "16:00", "16:30", "17:00", "17:30"].map(t => (
+                              <option key={t} value={t}>{t}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div style={{ flex: "1 1 130px" }}>
                           <label style={{ fontSize: "12px", fontWeight: "600", display: "block", marginBottom: "4px" }}>End Time</label>
-                          <input type="text" placeholder="e.g. 17:30" value={labForm.endTime} onChange={e => setLabForm({...labForm, endTime: e.target.value})} required style={{ width: "100%", padding: "8px", borderRadius: "var(--radius-sm)", border: "1px solid var(--neutral-300)" }} />
+                          <select 
+                            value={labForm.endTime} 
+                            onChange={e => setLabForm({...labForm, endTime: e.target.value})} 
+                            required 
+                            style={{ width: "100%", padding: "8px", borderRadius: "var(--radius-sm)", border: "1px solid var(--neutral-300)" }}
+                          >
+                            {["09:30", "10:00", "10:30", "11:00", "11:30", "12:00", "12:30", "13:00", "13:30", "14:00", "14:30", "15:00", "15:30", "16:00", "16:30", "17:00", "17:30", "18:00", "18:30"].map(t => (
+                              <option key={t} value={t}>{t}</option>
+                            ))}
+                          </select>
                         </div>
                         <div style={{ flex: "1 1 150px" }}>
                           <button type="submit" disabled={submitting} className="btn btn-primary" style={{ width: "100%", padding: "9px" }}>Add Lab</button>

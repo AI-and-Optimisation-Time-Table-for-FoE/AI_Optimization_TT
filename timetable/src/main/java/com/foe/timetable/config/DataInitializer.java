@@ -28,14 +28,18 @@ public class DataInitializer implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
-        // 1. Seed Departments if empty
+        // 1. Seed Departments if empty or missing Computer Dept
         if (departmentRepository.count() == 0) {
-            Department d1 = new Department(); d1.setDepartmentCode("EIE"); d1.setDepartmentName("Electrical & Information Engineering"); departmentRepository.save(d1);
-            Department d2 = new Department(); d2.setDepartmentCode("EC"); d2.setDepartmentName("Electronic & Telecommunication Engineering"); departmentRepository.save(d2);
-            Department d3 = new Department(); d3.setDepartmentCode("ME"); d3.setDepartmentName("Mechanical & Manufacturing Engineering"); departmentRepository.save(d3);
-            Department d4 = new Department(); d4.setDepartmentCode("CE"); d4.setDepartmentName("Civil & Environmental Engineering"); departmentRepository.save(d4);
-            Department d5 = new Department(); d5.setDepartmentCode("IS"); d5.setDepartmentName("Information System"); departmentRepository.save(d5);
+            Department d1 = new Department(); d1.setFacultyId(1); d1.setDepartmentCode("EIE"); d1.setDepartmentName("Electrical & Information Engineering"); departmentRepository.save(d1);
+            Department d2 = new Department(); d2.setFacultyId(1); d2.setDepartmentCode("EC"); d2.setDepartmentName("Electronic & Telecommunication Engineering"); departmentRepository.save(d2);
+            Department d3 = new Department(); d3.setFacultyId(1); d3.setDepartmentCode("ME"); d3.setDepartmentName("Mechanical & Manufacturing Engineering"); departmentRepository.save(d3);
+            Department d4 = new Department(); d4.setFacultyId(1); d4.setDepartmentCode("CE"); d4.setDepartmentName("Civil & Environmental Engineering"); departmentRepository.save(d4);
+            Department d5 = new Department(); d5.setFacultyId(1); d5.setDepartmentCode("IS"); d5.setDepartmentName("Information System"); departmentRepository.save(d5);
+            Department d6 = new Department(); d6.setFacultyId(1); d6.setDepartmentCode("COM"); d6.setDepartmentName("Computer Department"); departmentRepository.save(d6);
             System.out.println("Seeded default departments into database.");
+        } else if (departmentRepository.findAll().stream().noneMatch(d -> "COM".equalsIgnoreCase(d.getDepartmentCode()) || d.getDepartmentName().toLowerCase().contains("computer"))) {
+            Department d6 = new Department(); d6.setFacultyId(1); d6.setDepartmentCode("COM"); d6.setDepartmentName("Computer Department"); departmentRepository.save(d6);
+            System.out.println("Seeded Computer Department into database.");
         }
 
         // 2. Seed Batches if empty
