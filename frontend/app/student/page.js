@@ -91,7 +91,8 @@ export default function StudentDashboard() {
             ...userData, 
             firstName: profileData.firstName, 
             lastName: profileData.lastName,
-            profilePicture: profileData.profilePicture
+            profilePicture: profileData.profilePicture,
+            studentIdNumber: profileData.studentIdNumber
           };
           setUser(updatedUser);
           localStorage.setItem("user", JSON.stringify(updatedUser));

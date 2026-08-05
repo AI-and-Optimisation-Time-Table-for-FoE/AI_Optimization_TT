@@ -277,11 +277,14 @@ export function fetchLecturerTimetable(lecturerId) {
   return request(`/api/timetable?lecturerId=${lecturerId}`);
 }
 
-export function fetchTimetableStatus(batchId, departmentId) {
+export function fetchTimetableStatus(batchId, departmentId, isAdmin) {
   let query = "";
   if (batchId) query += `?batchId=${batchId}`;
   if (departmentId) {
     query += (query ? `&` : `?`) + `departmentId=${departmentId}`;
+  }
+  if (isAdmin) {
+    query += (query ? `&` : `?`) + `isAdmin=true`;
   }
   return request(`/api/timetable/status${query}`);
 }
@@ -389,6 +392,13 @@ export function deleteExamTimetable(examTimetableId) {
     method: "DELETE",
   });
 }
+
+export function deleteExamEntry(examTimetableId, entryId) {
+  return request(`/api/exam-timetables/${examTimetableId}/entries/${entryId}`, {
+    method: "DELETE",
+  });
+}
+
 
 export function fetchExamHallUnavailabilities() {
   return request("/api/exam-timetables/hall-unavailabilities");

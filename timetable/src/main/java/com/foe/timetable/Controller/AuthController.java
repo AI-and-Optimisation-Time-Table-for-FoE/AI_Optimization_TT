@@ -63,6 +63,7 @@ public class AuthController {
             if (user.getRole() == UserAccount.Role.student) {
                 response.put("batchId", user.getBatchId());
                 response.put("departmentId", user.getDepartmentId());
+                response.put("studentIdNumber", user.getStudentIdNumber());
             } else if (user.getRole() == UserAccount.Role.lecturer) {
                 Optional<Lecturer> lecturerOpt = lecturerRepository.findByUserAccount_UserId(user.getUserId());
                 if (lecturerOpt.isPresent()) {
@@ -98,6 +99,7 @@ public class AuthController {
                 String universityEmail = (String) request.get("universityEmail");
                 Number departmentIdNum = (Number) request.get("departmentId");
                 Integer deptId = (departmentIdNum != null) ? departmentIdNum.intValue() : null;
+                String studentIdNumber = (String) request.get("studentIdNumber");
 
                 if (batchIdNum == null) {
                     return ResponseEntity.badRequest().body(Map.of("message", "batchId is required for students"));
@@ -106,7 +108,7 @@ public class AuthController {
                     return ResponseEntity.badRequest().body(Map.of("message", "First name, last name, and university email are required"));
                 }
                 savedAccount = authService.registerStudent(username, password, batchIdNum.intValue(),
-                        firstName, lastName, universityEmail, deptId);
+                        firstName, lastName, universityEmail, deptId, studentIdNumber);
             } else if (role == UserAccount.Role.lecturer) {
                 String firstName = (String) request.get("firstName");
                 String lastName = (String) request.get("lastName");
@@ -163,6 +165,7 @@ public class AuthController {
                 profile.put("profilePicture", user.getProfilePicture());
                 profile.put("batchId", user.getBatchId());
                 profile.put("departmentId", user.getDepartmentId());
+                profile.put("studentIdNumber", user.getStudentIdNumber());
                 
                 if (user.getRole() == UserAccount.Role.student) {
                     if (user.getBatchId() != null) {
@@ -209,6 +212,7 @@ public class AuthController {
                 if (updates.containsKey("lastName")) user.setLastName((String) updates.get("lastName"));
                 if (updates.containsKey("universityEmail")) user.setUniversityEmail((String) updates.get("universityEmail"));
                 if (updates.containsKey("profilePicture")) user.setProfilePicture((String) updates.get("profilePicture"));
+                if (updates.containsKey("studentIdNumber")) user.setStudentIdNumber((String) updates.get("studentIdNumber"));
                 userAccountRepository.save(user);
                 
                 Map<String, Object> resp = new HashMap<>();
@@ -217,6 +221,7 @@ public class AuthController {
                 resp.put("lastName", user.getLastName());
                 resp.put("universityEmail", user.getUniversityEmail());
                 resp.put("profilePicture", user.getProfilePicture());
+                resp.put("studentIdNumber", user.getStudentIdNumber());
                 
                 if (user.getRole() == UserAccount.Role.lecturer) {
                     lecturerRepository.findByUserAccount_UserId(user.getUserId()).ifPresent(lec -> {

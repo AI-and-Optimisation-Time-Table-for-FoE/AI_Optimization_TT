@@ -37,6 +37,14 @@ public class TimetableEntryController {
             @RequestParam(required = false) Integer timetableId,
             @RequestParam(required = false, defaultValue = "false") boolean isAdmin) {
         if (timetableId != null) {
+            // Non-admins (students) can only view published (active) timetables.
+            // Admins can view any timetable version regardless of status.
+            if (!isAdmin) {
+                java.util.Optional<com.foe.timetable.model.Timetable> ttOpt = timetableRepository.findById(timetableId);
+                if (ttOpt.isEmpty() || !"active".equalsIgnoreCase(ttOpt.get().getStatus())) {
+                    return java.util.Collections.emptyList();
+                }
+            }
             return timetableQueryService.getTimetableByTimetableId(timetableId, departmentId);
         }
         if (lecturerId != null) {
@@ -48,13 +56,20 @@ public class TimetableEntryController {
     @GetMapping("/status")
     public ResponseEntity<?> getTimetableStatus(
             @RequestParam(required = false) Integer batchId,
-            @RequestParam(required = false) Integer departmentId) {
+            @RequestParam(required = false) Integer departmentId,
+            @RequestParam(required = false, defaultValue = "false") boolean isAdmin) {
         java.util.List<com.foe.timetable.model.Timetable> ttList;
         if (batchId != null) {
             if (departmentId != null) {
                 ttList = timetableRepository.findByBatchIdAndDepartmentIdOrderByGeneratedAtDesc(batchId, departmentId);
             } else {
                 ttList = timetableRepository.findByBatchIdAndDepartmentIdIsNullOrderByGeneratedAtDesc(batchId);
+            }
+            // Non-admins (students) should only see the published (active) version
+            if (!isAdmin) {
+                ttList = ttList.stream()
+                    .filter(tt -> "active".equalsIgnoreCase(tt.getStatus()))
+                    .collect(Collectors.toList());
             }
         } else {
             ttList = timetableRepository.findAll().stream()

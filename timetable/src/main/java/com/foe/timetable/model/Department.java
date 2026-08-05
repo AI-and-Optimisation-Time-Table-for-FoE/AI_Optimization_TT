@@ -16,7 +16,7 @@ public class Department {
     private Integer departmentId;
 
     @Column(name = "faculty_id", nullable = false)
-    private Integer facultyId;
+    private Integer facultyId = 1;
 
     @Column(name = "department_name", nullable = false, length = 100)
     private String departmentName;

@@ -25,7 +25,7 @@ public class ExamHallUnavailability {
     @JoinColumn(name = "hall_id", nullable = false)
     private Hall hall;
 
-    @Column(name = "unavailable_date", nullable = false)
+    @Column(name = "unavailable_date", nullable = true)
     private LocalDate unavailableDate;
 
     @Column(name = "start_time", nullable = true)

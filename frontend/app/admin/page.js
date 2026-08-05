@@ -1569,28 +1569,6 @@ export default function AdminDashboard() {
                             {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"].map(day => <option key={day} value={day}>{day}</option>)}
                           </select>
                         </div>
-                        <div style={{ flex: "1 1 180px" }}>
-                          <label style={{ fontSize: "12px", fontWeight: "600", display: "block", marginBottom: "4px" }}>Quick Time Range</label>
-                          <select 
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              if (val) {
-                                const [s, endT] = val.split("-");
-                                setLabForm(prev => ({ ...prev, startTime: s, endTime: endT }));
-                              }
-                            }} 
-                            style={{ width: "100%", padding: "8px", borderRadius: "var(--radius-sm)", border: "1px solid var(--neutral-300)" }}
-                          >
-                            <option value="">Select Preset Range...</option>
-                            <option value="08:30-10:30">Morning 1 (08:30 - 10:30)</option>
-                            <option value="10:30-12:30">Morning 2 (10:30 - 12:30)</option>
-                            <option value="08:30-12:30">Full Morning Lab (08:30 - 12:30)</option>
-                            <option value="13:30-15:30">Afternoon 1 (13:30 - 15:30)</option>
-                            <option value="15:30-17:30">Afternoon 2 (15:30 - 17:30)</option>
-                            <option value="13:30-17:30">Full Afternoon Lab (13:30 - 17:30)</option>
-                            <option value="08:30-16:30">Full Day Lab (08:30 - 16:30)</option>
-                          </select>
-                        </div>
                         <div style={{ flex: "1 1 130px" }}>
                           <label style={{ fontSize: "12px", fontWeight: "600", display: "block", marginBottom: "4px" }}>Start Time</label>
                           <select 

@@ -28,7 +28,8 @@ export default function ProfilePage() {
     role: "",
     batchName: "",
     departmentName: "",
-    maxHoursPerWeek: ""
+    maxHoursPerWeek: "",
+    studentIdNumber: ""
   });
 
   useEffect(() => {
@@ -58,7 +59,8 @@ export default function ProfilePage() {
         role: data.role || "",
         batchName: data.batchName || "N/A",
         departmentName: data.departmentName || data.departmentCode || "Common (General)",
-        maxHoursPerWeek: data.maxHoursPerWeek || ""
+        maxHoursPerWeek: data.maxHoursPerWeek || "",
+        studentIdNumber: data.studentIdNumber || ""
       });
     } catch (err) {
       console.error(err);
@@ -295,6 +297,11 @@ export default function ProfilePage() {
                         <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                           <span style={{ fontSize: "12px", color: "var(--neutral-500)", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.5px" }}>Batch Year</span>
                           <span style={{ fontSize: "15px", color: "var(--neutral-800)", fontWeight: "600" }}>{formData.batchName}</span>
+                        </div>
+
+                        <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                          <span style={{ fontSize: "12px", color: "var(--neutral-500)", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.5px" }}>Registration ID</span>
+                          <span style={{ fontSize: "15px", color: "var(--neutral-800)", fontWeight: "600" }}>{formData.studentIdNumber || "—"}</span>
                         </div>
                       </div>
                     </div>

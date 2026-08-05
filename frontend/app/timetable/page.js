@@ -256,7 +256,7 @@ function TimetableViewPage() {
 
         const [tData, statusData] = await Promise.all([
           fetchTimetable(Number(selectedBatchId), deptIdToFetch, isAdmin, initialParamId ? Number(initialParamId) : null),
-          fetchTimetableStatus(Number(selectedBatchId), deptIdToFetch)
+          fetchTimetableStatus(Number(selectedBatchId), deptIdToFetch, isAdmin)
         ]);
 
         setEntries(Array.isArray(tData) ? tData : []);

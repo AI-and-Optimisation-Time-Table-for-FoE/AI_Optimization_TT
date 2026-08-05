@@ -43,7 +43,19 @@ public class TimetableQueryService {
                 List<com.foe.timetable.model.Timetable> latestTts = timetableRepository.findByBatchIdOrderByGeneratedAtDesc(batchId).stream()
                     .collect(Collectors.groupingBy(tt -> tt.getDepartmentId() == null ? -1 : tt.getDepartmentId()))
                     .values().stream()
-                    .map(list -> list.stream().max(java.util.Comparator.comparing(com.foe.timetable.model.Timetable::getTimetableId)).get())
+                    .map(list -> {
+                        if (onlyActive) {
+                            return list.stream()
+                                .filter(t -> "active".equalsIgnoreCase(t.getStatus()))
+                                .max(java.util.Comparator.comparing(com.foe.timetable.model.Timetable::getTimetableId))
+                                .orElse(null);
+                        } else {
+                            return list.stream()
+                                .max(java.util.Comparator.comparing(com.foe.timetable.model.Timetable::getTimetableId))
+                                .orElse(null);
+                        }
+                    })
+                    .filter(java.util.Objects::nonNull)
                     .toList();
                 java.util.Set<Integer> latestTtIds = latestTts.stream()
                     .map(com.foe.timetable.model.Timetable::getTimetableId)

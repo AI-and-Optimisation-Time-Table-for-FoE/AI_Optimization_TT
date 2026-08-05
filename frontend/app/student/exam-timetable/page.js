@@ -2,13 +2,14 @@
 
 import { useEffect, useState } from "react";
 import Sidebar from "../../components/Sidebar";
-import { fetchStudentExamTimetable, updateUser } from "../../lib/api";
+import { fetchStudentExamTimetable, updateUser, fetchDepartments } from "../../lib/api";
 import { Calendar, Building, Clock, Inbox, BookOpen, Award, User, CheckCircle, Edit2, Save } from "lucide-react";
 
 export default function StudentExamTimetablePage() {
   const [user, setUser] = useState(null);
   const [examTimetable, setExamTimetable] = useState(null);
   const [entries, setEntries] = useState([]);
+  const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -31,6 +32,7 @@ export default function StudentExamTimetablePage() {
     } else {
       setLoading(false);
     }
+    fetchDepartments().then(setDepartments).catch(console.error);
   }, []);
 
   const loadStudentExamSchedule = async (batchId) => {
@@ -70,13 +72,26 @@ export default function StudentExamTimetablePage() {
     }
   };
 
+  const getDisplayStudentId = (u) => {
+    if (!u) return "Official Record";
+    if (u.studentIdNumber && u.studentIdNumber.trim() !== "") {
+      return u.studentIdNumber;
+    }
+    const uname = (u.username || "").trim();
+    const match = uname.match(/^eg(\d{2})(\d{4})/i);
+    if (match) {
+      return `EG/20${match[1]}/${match[2]}`;
+    }
+    return uname || "Official Record";
+  };
+
   const isStudentAssignedToRange = (rangeStr) => {
     if (!user || !rangeStr) return false;
-    const currentId = (user.studentIdNumber || user.username || "").toUpperCase().trim();
+    const currentId = getDisplayStudentId(user).toUpperCase().trim();
     if (!currentId) return false;
 
     // Check if ID range contains numbers
-    if (rangeStr.contains(" - ")) {
+    if (rangeStr.includes(" - ")) {
       const parts = rangeStr.split(" - ").map(s => s.trim().toUpperCase());
       if (parts.length === 2) {
         if (currentId >= parts[0] && currentId <= parts[1]) return true;
@@ -91,6 +106,47 @@ export default function StudentExamTimetablePage() {
       }
     }
     return rangeStr.toUpperCase().includes(currentId);
+  };
+
+  const isModuleForStudent = (entry) => {
+    if (!user) return true;
+    if (user.semester === 1 || user.semester === 2) return true;
+    const studentDeptId = user.departmentId || user.department?.departmentId;
+    const modCode = (entry.module?.moduleCode || "").toUpperCase();
+    if (modCode.startsWith("IS") || modCode.startsWith("COM")) return true;
+
+    let modDeptId = entry.module?.departmentId || entry.module?.department?.departmentId;
+    if (!modDeptId) {
+      const foundDept = departments.find(d => d.departmentCode && modCode.startsWith(d.departmentCode.toUpperCase()));
+      if (foundDept) modDeptId = foundDept.departmentId;
+    }
+
+    if (studentDeptId && modDeptId) {
+      return String(studentDeptId) === String(modDeptId);
+    }
+    return true;
+  };
+
+  const getPersonalizedEntries = () => {
+    const deptFiltered = entries.filter(e => isModuleForStudent(e));
+    const moduleGroups = {};
+    for (const e of deptFiltered) {
+      const key = e.module ? String(e.module.moduleId) : String(e.examEntryId);
+      if (!moduleGroups[key]) moduleGroups[key] = [];
+      moduleGroups[key].push(e);
+    }
+
+    const personalized = [];
+    for (const key in moduleGroups) {
+      const group = moduleGroups[key];
+      const matchingRows = group.filter(e => isStudentAssignedToRange(e.studentIdRange));
+      if (matchingRows.length > 0) {
+        personalized.push(...matchingRows);
+      } else {
+        personalized.push(...group);
+      }
+    }
+    return personalized;
   };
 
   if (loading) {
@@ -144,13 +200,13 @@ export default function StudentExamTimetablePage() {
               </p>
             </div>
 
-            {/* Registration ID Badge (Read-Only Security) */}
+            {/* Registration ID Badge (Read-Only) */}
             <div style={{ background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.25)", padding: "10px 16px", borderRadius: "12px", display: "flex", alignItems: "center", gap: "12px" }}>
               <User size={20} color="#ffffff" />
               <div>
                 <div style={{ fontSize: "11px", opacity: 0.75, textTransform: "uppercase", letterSpacing: "0.5px" }}>Student Registration ID</div>
                 <div style={{ fontSize: "15px", fontWeight: "700" }}>
-                  {user?.studentIdNumber || user?.username || "Official Record"}
+                  {getDisplayStudentId(user)}
                 </div>
               </div>
             </div>
@@ -228,7 +284,7 @@ export default function StudentExamTimetablePage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {entries.map((entry) => {
+                      {getPersonalizedEntries().map((entry) => {
                         const isMatch = isStudentAssignedToRange(entry.studentIdRange);
                         return (
                           <tr key={entry.examEntryId} style={{ background: isMatch ? "#f0fdf4" : undefined }}>
@@ -258,8 +314,8 @@ export default function StudentExamTimetablePage() {
                                     <span>{entry.hall.hallName} (Cap: {entry.hall.capacity})</span>
                                   </div>
                                   {isMatch && (
-                                    <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", background: "#16a34a", color: "#fff", fontSize: "10px", fontWeight: "800", padding: "2px 8px", borderRadius: "10px", marginTop: "4px" }}>
-                                      <CheckCircle size={12} /> YOUR ASSIGNED HALL
+                                    <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", background: "#16a34a", color: "#fff", fontSize: "11px", fontWeight: "800", padding: "3px 10px", borderRadius: "12px", marginTop: "6px" }}>
+                                      <CheckCircle size={13} /> ASSIGNED TO YOU (ID: {getDisplayStudentId(user)})
                                     </span>
                                   )}
                                 </div>
