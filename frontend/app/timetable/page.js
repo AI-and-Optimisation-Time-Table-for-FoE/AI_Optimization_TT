@@ -767,7 +767,7 @@ function TimetableViewPage() {
                   {timeSlots.map((slot) => {
                     const lunchStart = selectedBatch?.lunchStartTime ? selectedBatch.lunchStartTime.substring(0, 5) : "12:30";
                     const lunchEnd = selectedBatch?.lunchEndTime ? selectedBatch.lunchEndTime.substring(0, 5) : "13:30";
-                    const isLunchRow = slot.start < lunchEnd && slot.end > lunchStart;
+                    const isLunchRow = user?.role !== "lecturer" && slot.start < lunchEnd && slot.end > lunchStart;
 
                     if (isLunchRow) {
                       return (
