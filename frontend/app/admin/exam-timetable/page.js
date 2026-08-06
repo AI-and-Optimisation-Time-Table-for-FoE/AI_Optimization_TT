@@ -16,7 +16,7 @@ import {
   fetchExamHallUnavailabilities,
   addExamHallUnavailability,
 } from "../../lib/api";
-import { Calendar, CheckCircle, EyeOff, Plus, Trash2, AlertTriangle, Save, Zap, ChevronDown, ChevronUp, Building2, Tag } from "lucide-react";
+import { Calendar, CheckCircle, EyeOff, Plus, Trash2, AlertTriangle, Save, Zap, ChevronDown, ChevronUp, Building2, Tag, Download } from "lucide-react";
 
 function moduleKey(entry) {
   return entry.module ? String(entry.module.moduleId) : ("nomod_" + (entry._localId || ""));
@@ -772,8 +772,47 @@ export default function AdminExamTimetablePage() {
 
             </div>
           )}
+
+          {/* Download PDF button — visible when exam timetable is loaded */}
+          {examTimetable && (
+            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "16px" }} className="no-print">
+              <button
+                onClick={() => window.print()}
+                style={{
+                  display: "flex", alignItems: "center", gap: "8px",
+                  background: "#1d4ed8", color: "#ffffff",
+                  border: "none", borderRadius: "10px",
+                  padding: "10px 20px", fontSize: "14px",
+                  fontWeight: "600", cursor: "pointer",
+                  boxShadow: "0 2px 8px rgba(29,78,216,0.25)"
+                }}
+              >
+                <Download size={16} /> Download as PDF
+              </button>
+            </div>
+          )}
         </main>
       </div>
     </div>
+    <style>{`
+      @media print {
+        .sidebar, .topbar, .no-print, header, button, .card:first-child {
+          display: none !important;
+        }
+        body, .app-layout, .main-content, .page-content {
+          display: block !important;
+          width: 100% !important;
+          margin: 0 !important;
+          padding: 0 !important;
+          background: #fff !important;
+          color: #000 !important;
+        }
+        .card {
+          box-shadow: none !important;
+          border: 1px solid #ccc !important;
+          page-break-inside: avoid;
+        }
+      }
+    `}</style>
   );
 }

@@ -3,8 +3,8 @@
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Sidebar from "../components/Sidebar";
-import { fetchBatches, fetchTimetable, fetchTimetableStatus, fetchDepartments, fetchTimeSlots, fetchLabSchedules, fetchLecturerTimetable, moveTimetableEntry, fetchTimetableVersions, publishTimetableVersion, unpublishTimetableVersion, fetchMasterLecturerStatus, publishMasterLecturerTimetable, unpublishMasterLecturerTimetable, fetchLecturers } from "../lib/api";
-import { Calendar, Inbox, FlaskConical, GraduationCap, Building, User, CheckCircle, Radio, EyeOff } from "lucide-react";
+import { fetchBatches, fetchTimetable, fetchTimetableStatus, fetchDepartments, fetchTimeSlots, fetchLabSchedules, fetchLecturerTimetable, moveTimetableEntry, fetchTimetableVersions, publishTimetableVersion, unpublishTimetableVersion, fetchMasterLecturerStatus, publishMasterLecturerTimetable, unpublishMasterLecturerTimetable, fetchLecturers, deleteTimetableVersion } from "../lib/api";
+import { Calendar, Inbox, FlaskConical, GraduationCap, Building, User, CheckCircle, Radio, EyeOff, Trash2, Download } from "lucide-react";
 import "./timetable.css";
 
 export default function TimetablePage() {
@@ -349,6 +349,29 @@ function TimetableViewPage() {
     }
   };
 
+  const handleDeleteDraft = async () => {
+    const selectedVer = versions.find(v => String(v.timetableId) === selectedTimetableId);
+    if (!selectedVer) { alert("No version selected."); return; }
+    if (selectedVer.status === "active") { alert("Cannot delete a published timetable. Unpublish it first."); return; }
+    if (!confirm(`Delete this draft timetable (generated ${new Date(selectedVer.generatedAt).toLocaleString()})? This cannot be undone.`)) return;
+    try {
+      setIsPublishing(true);
+      await deleteTimetableVersion(Number(selectedTimetableId));
+      alert("Draft timetable deleted successfully.");
+      const selectedBatch = batches.find(b => String(b.batchId) === String(selectedBatchId));
+      const deptIdToFetch = (selectedBatch?.semester >= 3 && selectedDeptId) ? Number(selectedDeptId) : null;
+      const fetchedVersions = await fetchTimetableVersions(Number(selectedBatchId), deptIdToFetch);
+      setVersions(fetchedVersions);
+      setSelectedTimetableId(fetchedVersions.length > 0 ? String(fetchedVersions[0].timetableId) : "");
+      setEntries([]);
+      setStatus("none");
+    } catch (err) {
+      alert("Failed to delete draft: " + err.message);
+    } finally {
+      setIsPublishing(false);
+    }
+  };
+
   const handleToggleMasterLecturer = async () => {
     try {
       if (masterLecturerStatus.isLecturerPublished) {
@@ -652,40 +675,55 @@ function TimetableViewPage() {
                 </select>
               )}
 
-              {/* Publish / Unpublish Action Button for Batch Timetable */}
+              {/* Publish / Unpublish / Delete Draft Action Buttons */}
               {(() => {
                 const activeVer = versions.find(v => String(v.timetableId) === selectedTimetableId) || versions.find(v => v.status === "active");
                 const targetIdToUse = selectedTimetableId || (activeVer ? String(activeVer.timetableId) : "");
                 
                 if (!targetIdToUse && versions.length === 0) return null;
 
-                const isCurrentActive = (activeVer && String(activeVer.timetableId) === targetIdToUse && activeVer.status === "active") || (status === "active");
+                const selectedVer = versions.find(v => String(v.timetableId) === selectedTimetableId);
+                const isCurrentActive = (selectedVer?.status === "active") || (status === "active");
+                const isDraft = selectedVer && selectedVer.status !== "active";
 
-                if (isCurrentActive) {
-                  return (
-                    <button 
-                      className="btn btn-secondary" 
-                      onClick={handleUnpublishVersion}
-                      disabled={isPublishing}
-                      style={{ display: "flex", alignItems: "center", gap: "6px", background: "#dc2626", color: "#ffffff", border: "none", padding: "8px 16px", borderRadius: "8px", fontWeight: "600", cursor: "pointer" }}
-                    >
-                      <EyeOff size={16} />
-                      {isPublishing ? "Updating..." : "Unpublish Batch Timetable"}
-                    </button>
-                  );
-                } else {
-                  return (
-                    <button 
-                      className="btn btn-primary" 
-                      onClick={handleApprove}
-                      disabled={isPublishing || !targetIdToUse}
-                      style={{ display: "flex", alignItems: "center", gap: "6px", padding: "8px 16px", borderRadius: "8px", fontWeight: "600", cursor: "pointer" }}
-                    >
-                      <CheckCircle size={16} />
-                      {isPublishing ? "Publishing..." : "Publish Batch Timetable"}
-                    </button>
-                  );
-                }
+                return (
+                  <>
+                    {/* Delete Draft button — only for draft versions */}
+                    {isDraft && (
+                      <button
+                        onClick={handleDeleteDraft}
+                        disabled={isPublishing}
+                        style={{ display: "flex", alignItems: "center", gap: "6px", background: "#6b7280", color: "#ffffff", border: "none", padding: "8px 14px", borderRadius: "8px", fontWeight: "600", cursor: "pointer", fontSize: "13px" }}
+                        title="Delete this draft version permanently"
+                      >
+                        <Trash2 size={15} />
+                        Delete Draft
+                      </button>
+                    )}
+                    {/* Publish / Unpublish button */}
+                    {isCurrentActive ? (
+                      <button 
+                        className="btn btn-secondary" 
+                        onClick={handleUnpublishVersion}
+                        disabled={isPublishing}
+                        style={{ display: "flex", alignItems: "center", gap: "6px", background: "#dc2626", color: "#ffffff", border: "none", padding: "8px 16px", borderRadius: "8px", fontWeight: "600", cursor: "pointer" }}
+                      >
+                        <EyeOff size={16} />
+                        {isPublishing ? "Updating..." : "Unpublish Batch Timetable"}
+                      </button>
+                    ) : (
+                      <button 
+                        className="btn btn-primary" 
+                        onClick={handleApprove}
+                        disabled={isPublishing || !targetIdToUse}
+                        style={{ display: "flex", alignItems: "center", gap: "6px", padding: "8px 16px", borderRadius: "8px", fontWeight: "600", cursor: "pointer" }}
+                      >
+                        <CheckCircle size={16} />
+                        {isPublishing ? "Publishing..." : "Publish Batch Timetable"}
+                      </button>
+                    )}
+                  </>
+                );
               })()}
             </div>
           )}
@@ -715,7 +753,7 @@ function TimetableViewPage() {
           )}
 
           {entries.length > 0 && (
-            <div className="timetable-grid-wrap">
+            <div className="timetable-grid-wrap" id="timetable-print-area">
               <table className="timetable-grid">
                 <thead>
                   <tr>
@@ -856,8 +894,60 @@ function TimetableViewPage() {
               </table>
             </div>
           )}
+
+          {/* Download PDF button — shown for all roles when timetable has entries */}
+          {entries.length > 0 && (
+            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "16px" }} className="no-print">
+              <button
+                onClick={() => window.print()}
+                style={{
+                  display: "flex", alignItems: "center", gap: "8px",
+                  background: "var(--primary-600)", color: "#ffffff",
+                  border: "none", borderRadius: "10px",
+                  padding: "10px 20px", fontSize: "14px",
+                  fontWeight: "600", cursor: "pointer",
+                  boxShadow: "0 2px 8px rgba(22,163,74,0.25)"
+                }}
+              >
+                <Download size={16} /> Download as PDF
+              </button>
+            </div>
+          )}
         </main>
       </div>
     </div>
+    <style>{`
+      @media print {
+        .sidebar, .topbar, .timetable-hero, .timetable-actions, .no-print,
+        .card:not(#timetable-print-area), header, button {
+          display: none !important;
+        }
+        body, .app-layout, .main-content, .page-content {
+          display: block !important;
+          width: 100% !important;
+          margin: 0 !important;
+          padding: 0 !important;
+          background: #fff !important;
+        }
+        #timetable-print-area {
+          display: block !important;
+          width: 100% !important;
+          overflow: visible !important;
+          page-break-inside: avoid;
+        }
+        .timetable-grid {
+          width: 100% !important;
+          font-size: 10px !important;
+          border-collapse: collapse !important;
+        }
+        .timetable-grid th, .timetable-grid td {
+          border: 1px solid #ccc !important;
+          padding: 4px 6px !important;
+        }
+        .timetable-session {
+          box-shadow: none !important;
+        }
+      }
+    `}</style>
   );
 }

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Sidebar from "../../components/Sidebar";
 import { fetchStudentExamTimetable, updateUser, fetchDepartments } from "../../lib/api";
-import { Calendar, Building, Clock, Inbox, BookOpen, Award, User, CheckCircle, Edit2, Save } from "lucide-react";
+import { Calendar, Building, Clock, Inbox, BookOpen, Award, User, CheckCircle, Edit2, Save, Download } from "lucide-react";
 
 export default function StudentExamTimetablePage() {
   const [user, setUser] = useState(null);
@@ -344,8 +344,50 @@ export default function StudentExamTimetablePage() {
               </div>
             </div>
           )}
+
+          {/* Download PDF button — shown when exam entries are loaded */}
+          {entries.length > 0 && (
+            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "16px" }} className="no-print">
+              <button
+                onClick={() => window.print()}
+                style={{
+                  display: "flex", alignItems: "center", gap: "8px",
+                  background: "linear-gradient(135deg, #1e3a5f, #2563eb)",
+                  color: "#ffffff",
+                  border: "none", borderRadius: "10px",
+                  padding: "10px 20px", fontSize: "14px",
+                  fontWeight: "600", cursor: "pointer",
+                  boxShadow: "0 2px 8px rgba(37,99,235,0.25)"
+                }}
+              >
+                <Download size={16} /> Download as PDF
+              </button>
+            </div>
+          )}
         </main>
       </div>
     </div>
+    <style>{`
+      @media print {
+        .sidebar, .topbar, .no-print, header, button {
+          display: none !important;
+        }
+        body, .app-layout, .main-content, .page-content {
+          display: block !important;
+          width: 100% !important;
+          margin: 0 !important;
+          padding: 0 !important;
+          background: #fff !important;
+          color: #000 !important;
+        }
+        .card {
+          box-shadow: none !important;
+          border: 1px solid #ccc !important;
+          page-break-inside: avoid;
+        }
+        table { border-collapse: collapse !important; width: 100% !important; }
+        th, td { border: 1px solid #ccc !important; padding: 4px 8px !important; font-size: 11px !important; }
+      }
+    `}</style>
   );
 }
