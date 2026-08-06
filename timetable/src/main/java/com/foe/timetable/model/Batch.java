@@ -33,7 +33,8 @@ public class Batch {
     @Column(length = 20)
     private String status;
 
-    @Column(name = "created_at")
+    @org.hibernate.annotations.CreationTimestamp
+    @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
     @Column(name = "lunch_start_time", length = 10)

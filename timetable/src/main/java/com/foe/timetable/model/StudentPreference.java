@@ -33,8 +33,9 @@ public class StudentPreference {
     @Column(name = "preferred_time", nullable = false, length = 10)
     private String preferredTime;
 
-    @Column(name = "created_at")
-    private LocalDateTime createdAt = LocalDateTime.now();
+    @org.hibernate.annotations.CreationTimestamp
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
 
     public Integer getId() { return id; }
     public void setId(Integer id) { this.id = id; }

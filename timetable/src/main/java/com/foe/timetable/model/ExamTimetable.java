@@ -37,8 +37,9 @@ public class ExamTimetable {
     @Column(name = "published_at", nullable = true)
     private LocalDateTime publishedAt;
 
+    @org.hibernate.annotations.CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt = LocalDateTime.now();
+    private LocalDateTime createdAt;
 
     public ExamTimetable() {}
 

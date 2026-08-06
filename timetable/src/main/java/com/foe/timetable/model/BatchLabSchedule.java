@@ -36,8 +36,9 @@ public class BatchLabSchedule {
     @Column(name = "end_time", nullable = false, length = 10)
     private String endTime;
 
-    @Column(name = "created_at")
-    private LocalDateTime createdAt = LocalDateTime.now();
+    @org.hibernate.annotations.CreationTimestamp
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
 
     public Integer getId() { return id; }
     public void setId(Integer id) { this.id = id; }
