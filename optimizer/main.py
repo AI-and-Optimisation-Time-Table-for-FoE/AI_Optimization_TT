@@ -1,9 +1,20 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from models import OptimizeRequest, OptimizeResponse
 from constraints import solve_hard_constraints
 from genetic_algorithm import optimize_soft_constraints
 
 app = FastAPI(title="Timetable Optimization Service")
+
+# Add CORS middleware to allow the frontend to communicate with AWS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allows all origins (update this to your Render frontend URL in production)
+    allow_credentials=True,
+    allow_methods=["*"],  # Allows all methods
+    allow_headers=["*"],  # Allows all headers
+)
+
 
 @app.post("/optimize", response_model=OptimizeResponse)
 def optimize_timetable(req: OptimizeRequest):

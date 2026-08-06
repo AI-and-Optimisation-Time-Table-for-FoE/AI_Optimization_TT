@@ -1,4 +1,4 @@
-export const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+export const API_BASE = process.env.NODE_ENV === "production" ? "" : "http://localhost:8080";
 
 async function request(path, options = {}) {
   const response = await fetch(`${API_BASE}${path}`, {
