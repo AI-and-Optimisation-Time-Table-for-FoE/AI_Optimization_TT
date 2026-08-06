@@ -18,7 +18,7 @@ try:
     cursor = connection.cursor()
     
     print("Reading SQL backup file...")
-    with open(sql_file, 'r', encoding='utf-8') as f:
+    with open('full_backup.sql', 'r', encoding='utf-8') as f:
         content = f.read()
         
     print("Parsing SQL statements...")
