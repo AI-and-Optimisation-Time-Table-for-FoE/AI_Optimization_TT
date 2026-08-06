@@ -165,6 +165,7 @@ export default function StudentExamTimetablePage() {
   }
 
   return (
+    <>
     <div className="app-layout">
       <Sidebar />
       <div className="main-content">
@@ -389,5 +390,6 @@ export default function StudentExamTimetablePage() {
         th, td { border: 1px solid #ccc !important; padding: 4px 8px !important; font-size: 11px !important; }
       }
     `}</style>
+    </>
   );
 }

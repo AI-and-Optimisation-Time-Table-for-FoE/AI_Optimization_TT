@@ -309,6 +309,7 @@ export default function AdminExamTimetablePage() {
   const groups = groupedModules();
 
   return (
+    <>
     <div className="app-layout">
       <Sidebar />
       <div className="main-content">
@@ -814,5 +815,6 @@ export default function AdminExamTimetablePage() {
         }
       }
     `}</style>
+    </>
   );
 }

@@ -466,6 +466,7 @@ function TimetableViewPage() {
   };
 
   return (
+    <>
     <div className="app-layout">
       <Sidebar />
 
@@ -949,5 +950,6 @@ function TimetableViewPage() {
         }
       }
     `}</style>
+    </>
   );
 }
