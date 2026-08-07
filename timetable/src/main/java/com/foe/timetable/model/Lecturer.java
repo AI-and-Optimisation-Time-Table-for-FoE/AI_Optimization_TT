@@ -42,7 +42,7 @@ public class Lecturer {
     private Department department;
 
     // Added the missing field with the correct cascade type
-    @OneToOne(cascade = CascadeType.ALL)
+    @OneToOne(cascade = {CascadeType.MERGE, CascadeType.PERSIST, CascadeType.REFRESH})
     @JoinColumn(name = "user_id", referencedColumnName = "user_id")
     private UserAccount userAccount;
 
