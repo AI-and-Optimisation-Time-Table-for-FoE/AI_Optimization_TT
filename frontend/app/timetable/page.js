@@ -390,6 +390,25 @@ function TimetableViewPage() {
     }
   };
 
+  const handleDownloadPdf = async () => {
+    const el = document.getElementById("timetable-print-area");
+    if (!el) { alert("Timetable not loaded yet."); return; }
+    try {
+      const { default: html2canvas } = await import("html2canvas");
+      const { default: jsPDF } = await import("jspdf");
+      const canvas = await html2canvas(el, { scale: 1.5, useCORS: true, backgroundColor: "#ffffff" });
+      const imgData = canvas.toDataURL("image/jpeg", 0.9);
+      const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a3" });
+      const pdfW = pdf.internal.pageSize.getWidth();
+      const pdfH = (canvas.height * pdfW) / canvas.width;
+      pdf.addImage(imgData, "JPEG", 0, 0, pdfW, pdfH);
+      const batchLabel = batches.find(b => String(b.batchId) === String(selectedBatchId))?.batchName || "timetable";
+      pdf.save(`timetable-${batchLabel}.pdf`);
+    } catch (err) {
+      alert("PDF export failed: " + err.message);
+    }
+  };
+
   useEffect(() => {
     // Only poll for student and lecturer dashboards to receive live updates
     const userStr = typeof window !== 'undefined' ? localStorage.getItem("user") : null;
@@ -726,6 +745,20 @@ function TimetableViewPage() {
                   </>
                 );
               })()}
+            </div>
+          )}
+
+          {/* PDF Download button — visible to all roles when timetable is loaded */}
+          {entries.length > 0 && (
+            <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "12px" }}>
+              <button
+                onClick={handleDownloadPdf}
+                style={{ display: "flex", alignItems: "center", gap: "8px", background: "linear-gradient(135deg, #0d9488, #0f766e)", color: "#ffffff", border: "none", padding: "10px 20px", borderRadius: "8px", fontWeight: "600", cursor: "pointer", fontSize: "14px", boxShadow: "0 2px 8px rgba(13,148,136,0.35)" }}
+                title="Download timetable as PDF"
+              >
+                <Download size={16} />
+                Download PDF
+              </button>
             </div>
           )}
 
