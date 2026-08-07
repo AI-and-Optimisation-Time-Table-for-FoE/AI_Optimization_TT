@@ -65,9 +65,9 @@ public class DataInitializer implements CommandLineRunner {
         }
 
         // 4. Seed Admin user if empty
-        if (userAccountRepository.findByUsername("admin").isEmpty()) {
-            authService.registerAdmin("admin", "admin");
-            System.out.println("Seeded default admin user (admin / admin).");
+        if (userAccountRepository.findByUsername("rasika@eng.ruh.ac.lk").isEmpty()) {
+            authService.registerAdmin("rasika@eng.ruh.ac.lk", "admin@857$ruh");
+            System.out.println("Seeded default admin user (rasika@eng.ruh.ac.lk / admin@857$ruh).");
         }
     }
 
