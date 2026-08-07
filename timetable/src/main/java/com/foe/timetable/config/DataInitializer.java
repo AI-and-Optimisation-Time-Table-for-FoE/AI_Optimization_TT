@@ -64,10 +64,17 @@ public class DataInitializer implements CommandLineRunner {
             System.out.println("Seeded default main exam halls into database.");
         }
 
-        // 4. Seed Admin user if empty
-        if (userAccountRepository.findByUsername("rasika@eng.ruh.ac.lk").isEmpty()) {
+        // 4. Seed/Migrate Admin user if empty or outdated
+        java.util.Optional<UserAccount> oldAdminOpt = userAccountRepository.findByUsername("admin");
+        if (oldAdminOpt.isPresent()) {
+            UserAccount oldAdmin = oldAdminOpt.get();
+            oldAdmin.setUsername("rasika@eng.ruh.ac.lk");
+            oldAdmin.setPasswordHash(authService.hashPassword("admin@857$ruh"));
+            userAccountRepository.save(oldAdmin);
+            System.out.println("Migrated old 'admin' user to 'rasika@eng.ruh.ac.lk' with updated password.");
+        } else if (userAccountRepository.findByUsername("rasika@eng.ruh.ac.lk").isEmpty()) {
             authService.registerAdmin("rasika@eng.ruh.ac.lk", "admin@857$ruh");
-            System.out.println("Seeded default admin user (rasika@eng.ruh.ac.lk / admin@857$ruh).");
+            System.out.println("Seeded admin user (rasika@eng.ruh.ac.lk / admin@857$ruh).");
         }
     }
 
