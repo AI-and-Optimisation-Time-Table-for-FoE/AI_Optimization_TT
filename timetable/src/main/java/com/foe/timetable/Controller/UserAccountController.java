@@ -32,6 +32,9 @@ public class UserAccountController {
     private com.foe.timetable.repository.LecturerRepository lecturerRepository;
 
     @Autowired
+    private com.foe.timetable.repository.StudentPreferenceRepository studentPreferenceRepository;
+
+    @Autowired
     private AuthService authService;
 
     @GetMapping
@@ -177,11 +180,17 @@ public class UserAccountController {
             return ResponseEntity.notFound().build();
         }
         
-        // Find if any Lecturer is linked to this user account
+        // Delete any StudentPreference records linked to this user
+        java.util.List<com.foe.timetable.model.StudentPreference> prefs = studentPreferenceRepository.findByStudent_UserId(id);
+        if (!prefs.isEmpty()) {
+            studentPreferenceRepository.deleteAll(prefs);
+        }
+        
+        // Find if any Lecturer is linked to this user account and unlink it
         java.util.Optional<com.foe.timetable.model.Lecturer> lecturerOpt = lecturerRepository.findByUserAccount_UserId(id);
         if (lecturerOpt.isPresent()) {
             com.foe.timetable.model.Lecturer lecturer = lecturerOpt.get();
-            lecturer.setUserAccount(null); // Unlink user account
+            lecturer.setUserAccount(null);
             lecturerRepository.save(lecturer);
         }
         
