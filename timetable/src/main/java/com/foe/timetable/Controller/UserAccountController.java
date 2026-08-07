@@ -29,6 +29,9 @@ public class UserAccountController {
     private UserAccountRepository userAccountRepository;
 
     @Autowired
+    private com.foe.timetable.repository.LecturerRepository lecturerRepository;
+
+    @Autowired
     private AuthService authService;
 
     @GetMapping
@@ -168,10 +171,20 @@ public class UserAccountController {
     }
 
     @DeleteMapping("/{id}")
+    @org.springframework.transaction.annotation.Transactional
     public ResponseEntity<?> deleteUser(@PathVariable int id) {
         if (!userAccountRepository.existsById(id)) {
             return ResponseEntity.notFound().build();
         }
+        
+        // Find if any Lecturer is linked to this user account
+        java.util.Optional<com.foe.timetable.model.Lecturer> lecturerOpt = lecturerRepository.findByUserAccount_UserId(id);
+        if (lecturerOpt.isPresent()) {
+            com.foe.timetable.model.Lecturer lecturer = lecturerOpt.get();
+            lecturer.setUserAccount(null); // Unlink user account
+            lecturerRepository.save(lecturer);
+        }
+        
         userAccountRepository.deleteById(id);
         return ResponseEntity.ok(Map.of("message", "User deleted successfully"));
     }
