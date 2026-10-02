@@ -56,24 +56,48 @@ export default function AdminDashboard() {
   
   const [assignBatchId, setAssignBatchIdState] = useState(() => {
     if (typeof window !== "undefined") {
-      return sessionStorage.getItem("admin_assignBatchId") || "";
+      const saved = sessionStorage.getItem("admin_assignBatchId");
+      if (saved && saved !== "NaN" && saved !== "undefined" && !saved.includes("=>") && !saved.includes("function") && !isNaN(Number(saved))) {
+        return saved;
+      }
     }
     return "";
   });
   const setAssignBatchId = (val) => {
-    setAssignBatchIdState(val);
-    if (typeof window !== "undefined") sessionStorage.setItem("admin_assignBatchId", String(val));
+    setAssignBatchIdState(prev => {
+      const next = typeof val === "function" ? val(prev) : val;
+      if (typeof window !== "undefined") {
+        if (next && next !== "NaN" && next !== "undefined" && !String(next).includes("=>") && !String(next).includes("function") && !isNaN(Number(next))) {
+          sessionStorage.setItem("admin_assignBatchId", String(next));
+        } else if (!next) {
+          sessionStorage.removeItem("admin_assignBatchId");
+        }
+      }
+      return next;
+    });
   };
 
   const [assignDeptId, setAssignDeptIdState] = useState(() => {
     if (typeof window !== "undefined") {
-      return sessionStorage.getItem("admin_assignDeptId") || "";
+      const saved = sessionStorage.getItem("admin_assignDeptId");
+      if (saved && saved !== "NaN" && saved !== "undefined" && !saved.includes("=>") && !saved.includes("function")) {
+        return saved;
+      }
     }
     return "";
   });
   const setAssignDeptId = (val) => {
-    setAssignDeptIdState(val);
-    if (typeof window !== "undefined") sessionStorage.setItem("admin_assignDeptId", String(val));
+    setAssignDeptIdState(prev => {
+      const next = typeof val === "function" ? val(prev) : val;
+      if (typeof window !== "undefined") {
+        if (next && next !== "NaN" && next !== "undefined" && !String(next).includes("=>") && !String(next).includes("function")) {
+          sessionStorage.setItem("admin_assignDeptId", String(next));
+        } else if (!next) {
+          sessionStorage.removeItem("admin_assignDeptId");
+        }
+      }
+      return next;
+    });
   };
 
   const [assignLoading, setAssignLoading] = useState(false);
@@ -82,13 +106,23 @@ export default function AdminDashboard() {
   
   const [moduleBatchFilterId, setModuleBatchFilterIdState] = useState(() => {
     if (typeof window !== "undefined") {
-      return sessionStorage.getItem("admin_moduleBatchFilterId") || "all";
+      const saved = sessionStorage.getItem("admin_moduleBatchFilterId");
+      if (saved && saved !== "NaN" && saved !== "undefined" && !saved.includes("=>") && !saved.includes("function")) {
+        return saved;
+      }
     }
     return "all";
   });
   const setModuleBatchFilterId = (val) => {
-    setModuleBatchFilterIdState(val);
-    if (typeof window !== "undefined") sessionStorage.setItem("admin_moduleBatchFilterId", String(val));
+    setModuleBatchFilterIdState(prev => {
+      const next = typeof val === "function" ? val(prev) : val;
+      if (typeof window !== "undefined") {
+        if (next && next !== "NaN" && next !== "undefined" && !String(next).includes("=>") && !String(next).includes("function")) {
+          sessionStorage.setItem("admin_moduleBatchFilterId", String(next));
+        }
+      }
+      return next;
+    });
   };
 
   const [moduleDeptFilterId, setModuleDeptFilterId] = useState("");
@@ -103,13 +137,25 @@ export default function AdminDashboard() {
   
   const [selectedBatchId, setSelectedBatchIdState] = useState(() => {
     if (typeof window !== "undefined") {
-      return sessionStorage.getItem("admin_selectedBatchId") || "";
+      const saved = sessionStorage.getItem("admin_selectedBatchId");
+      if (saved && saved !== "NaN" && saved !== "undefined" && !saved.includes("=>") && !saved.includes("function") && !isNaN(Number(saved))) {
+        return saved;
+      }
     }
     return "";
   });
   const setSelectedBatchId = (val) => {
-    setSelectedBatchIdState(val);
-    if (typeof window !== "undefined") sessionStorage.setItem("admin_selectedBatchId", String(val));
+    setSelectedBatchIdState(prev => {
+      const next = typeof val === "function" ? val(prev) : val;
+      if (typeof window !== "undefined") {
+        if (next && next !== "NaN" && next !== "undefined" && !String(next).includes("=>") && !String(next).includes("function") && !isNaN(Number(next))) {
+          sessionStorage.setItem("admin_selectedBatchId", String(next));
+        } else if (!next) {
+          sessionStorage.removeItem("admin_selectedBatchId");
+        }
+      }
+      return next;
+    });
   };
 
   const [optDeptId, setOptDeptId] = useState("");
@@ -154,7 +200,7 @@ export default function AdminDashboard() {
   }, []);
 
   const loadBatchModules = async (batchId, deptId) => {
-    if (!batchId) return;
+    if (!batchId || isNaN(Number(batchId))) return;
     setAssignLoading(true);
     try {
       const selectedBatch = batches.find(b => String(b.batchId) === String(batchId));
@@ -213,7 +259,7 @@ export default function AdminDashboard() {
   };
 
   const loadModuleBatchModules = async () => {
-    if (moduleBatchFilterId === "all") return;
+    if (!moduleBatchFilterId || moduleBatchFilterId === "all" || isNaN(Number(moduleBatchFilterId))) return;
     setModuleBatchLoading(true);
     try {
       const data = await fetchBatchModules(Number(moduleBatchFilterId), moduleDeptFilterId ? Number(moduleDeptFilterId) : null);
@@ -307,14 +353,14 @@ export default function AdminDashboard() {
         setModuleForm(prev => ({ ...prev, departmentId: dData[0].departmentId }));
         setUserForm(prev => ({ ...prev, departmentId: dData[0].departmentId }));
         setLecturerForm(prev => ({ ...prev, departmentId: defaultLecturerDeptId }));
-        setOptDeptId(prev => prev || dData[0].departmentId.toString());
-        setAssignDeptId(prev => prev || dData[0].departmentId.toString());
+        setOptDeptId(prev => (prev && dData.some(d => String(d.departmentId) === String(prev))) ? prev : dData[0].departmentId.toString());
+        setAssignDeptId(prev => (prev && dData.some(d => String(d.departmentId) === String(prev))) ? prev : dData[0].departmentId.toString());
       }
       if (bData.length > 0) {
         setUserForm(prev => ({ ...prev, batchId: prev.batchId || bData[0].batchId }));
         setLabForm(prev => ({ ...prev, batchId: prev.batchId || bData[0].batchId, departmentId: prev.departmentId || (dData[0]?.departmentId?.toString() || "") }));
-        setSelectedBatchId(prev => prev || String(bData[0].batchId));
-        setAssignBatchId(prev => prev || String(bData[0].batchId));
+        setSelectedBatchId(prev => (prev && !isNaN(Number(prev)) && bData.some(b => String(b.batchId) === String(prev))) ? prev : String(bData[0].batchId));
+        setAssignBatchId(prev => (prev && !isNaN(Number(prev)) && bData.some(b => String(b.batchId) === String(prev))) ? prev : String(bData[0].batchId));
       }
     } catch (err) {
       alert("Error loading dashboard data: " + err.message);
@@ -531,11 +577,15 @@ export default function AdminDashboard() {
   };
 
   const handleOptimize = async () => {
-    if (!selectedBatchId) {
+    if (!selectedBatchId || isNaN(Number(selectedBatchId))) {
       alert("Please select a batch first.");
       return;
     }
     const selectedBatch = batches.find(b => String(b.batchId) === String(selectedBatchId));
+    if (!selectedBatch) {
+      alert("Selected batch not found. Please re-select the batch.");
+      return;
+    }
     const isDeptRequired = selectedBatch ? selectedBatch.semester >= 3 : false;
     
     if (isDeptRequired && !optDeptId) {

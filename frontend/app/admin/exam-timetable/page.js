@@ -557,183 +557,189 @@ export default function AdminExamTimetablePage() {
                           {/* Venue sub-rows */}
                           {!isCollapsed && (
                             <div style={{ background: gIdx % 2 === 0 ? "#f1f5f9" : "#f8fafc", paddingBottom: "10px" }}>
-                              {/* Column headers */}
-                              <div style={{ display: "grid", gridTemplateColumns: "minmax(200px,1fr) minmax(220px,1fr) 50px 36px", gap: "8px", padding: "6px 20px 6px 52px", fontSize: "10px", fontWeight: "800", color: "var(--neutral-400)", textTransform: "uppercase", letterSpacing: "0.06em", borderBottom: "1px solid var(--neutral-200)" }}>
-                                <span>Venue / Hall</span>
-                                <span>Student Registration Range</span>
-                                <span>Count</span>
-                                <span></span>
-                              </div>
-
-                              {group.rows.map((entry) => {
-                                const hallUnavail = isHallUnavailable(entry.hall?.hallId, entry.examDate);
+                              {(() => {
+                                const activeBatch = batches.find(b => String(b.batchId) === String(selectedBatchId));
+                                const showRegRange = activeBatch ? (activeBatch.semester === 1 || activeBatch.semester === 2) : false;
                                 return (
-                                  <div key={entry._localId} style={{ display: "grid", gridTemplateColumns: "minmax(200px,1fr) minmax(220px,1fr) 50px 36px", gap: "8px", padding: "8px 20px 8px 52px", alignItems: "center", borderBottom: "1px solid var(--neutral-100)", background: hallUnavail ? "#fff5f5" : "transparent" }}>
-
-                                    {/* Hall select */}
-                                    <div style={{ position: "relative" }}>
-                                      <div style={{
-                                        position: "absolute",
-                                        left: "10px",
-                                        top: "50%",
-                                        transform: "translateY(-50%)",
-                                        pointerEvents: "none",
-                                        color: "#64748b",
-                                        display: "flex",
-                                        alignItems: "center"
-                                      }}>
-                                        <Building2 size={16} />
-                                      </div>
-                                      <select
-                                        className="form-select"
-                                        value={entry.hall ? entry.hall.hallId : ""}
-                                        onChange={e => {
-                                          const hId = e.target.value;
-                                          const found = halls.find(h => String(h.hallId) === String(hId));
-                                          updateEntry(entry._localId, "hall", found || null);
-                                        }}
-                                        style={{
-                                          width: "100%",
-                                          padding: "8px 12px 8px 34px",
-                                          fontSize: "13px",
-                                          fontWeight: "600",
-                                          color: "#0f172a",
-                                          background: "#ffffff",
-                                          border: "1.5px solid",
-                                          borderColor: hallUnavail ? "#ef4444" : "#cbd5e1",
-                                          borderRadius: "10px",
-                                          boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
-                                          outline: "none",
-                                          transition: "all 0.2s ease"
-                                        }}
-                                      >
-                                        <option value="">— Select Hall / Venue —</option>
-                                        {halls.map(h => (
-                                          <option key={h.hallId} value={h.hallId}>{h.hallName} (Cap: {h.capacity})</option>
-                                        ))}
-                                      </select>
-                                      {hallUnavail && <div style={{ fontSize: "11px", color: "#dc2626", fontWeight: "700", marginTop: "4px", display: "flex", alignItems: "center", gap: "4px" }}><AlertTriangle size={12} /> Unavailable on exam date!</div>}
+                                  <>
+                                    {/* Column headers */}
+                                    <div style={{
+                                      display: "grid",
+                                      gridTemplateColumns: showRegRange ? "minmax(200px,1fr) minmax(220px,1fr) 60px 36px" : "minmax(250px,1fr) 120px 36px",
+                                      gap: "8px",
+                                      padding: "6px 20px 6px 52px",
+                                      fontSize: "10px",
+                                      fontWeight: "800",
+                                      color: "var(--neutral-400)",
+                                      textTransform: "uppercase",
+                                      letterSpacing: "0.06em",
+                                      borderBottom: "1px solid var(--neutral-200)"
+                                    }}>
+                                      <span>Venue / Hall</span>
+                                      {showRegRange && <span>Student Registration Range</span>}
+                                      <span>{showRegRange ? "Count" : "Allocated Seats"}</span>
+                                      <span></span>
                                     </div>
 
-                                    {/* Student range */}
-                                    <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
-                                      {(() => {
-                                        let prefix = null;
-                                        if (entry.studentIdRange && entry.studentIdRange.includes(":")) {
-                                          prefix = entry.studentIdRange.split(":")[0].trim();
-                                        }
-                                        const cfg = prefix ? getDeptBadgeConfig(prefix) : null;
-                                        return (
-                                          <div style={{
-                                            position: "absolute",
-                                            left: "10px",
-                                            display: "flex",
-                                            alignItems: "center",
-                                            pointerEvents: "none",
-                                            zIndex: 2
-                                          }}>
-                                            {cfg ? (
-                                              <span style={{
-                                                background: cfg.bg,
-                                                color: cfg.text,
-                                                border: `1px solid ${cfg.border}`,
-                                                padding: "2px 7px",
-                                                borderRadius: "6px",
-                                                fontSize: "11px",
-                                                fontWeight: "800",
-                                                letterSpacing: "0.04em",
-                                                textTransform: "uppercase",
-                                                boxShadow: "0 1px 2px rgba(0,0,0,0.04)"
-                                              }}>
-                                                {cfg.label}
-                                              </span>
-                                            ) : (
-                                              <Tag size={15} style={{ color: "#3b82f6" }} />
-                                            )}
+                                    {group.rows.map((entry) => {
+                                      const hallUnavail = isHallUnavailable(entry.hall?.hallId, entry.examDate);
+                                      return (
+                                        <div key={entry._localId} style={{
+                                          display: "grid",
+                                          gridTemplateColumns: showRegRange ? "minmax(200px,1fr) minmax(220px,1fr) 60px 36px" : "minmax(250px,1fr) 120px 36px",
+                                          gap: "8px",
+                                          padding: "8px 20px 8px 52px",
+                                          alignItems: "center",
+                                          borderBottom: "1px solid var(--neutral-100)",
+                                          background: hallUnavail ? "#fff5f5" : "transparent"
+                                        }}>
+
+                                          {/* Hall select */}
+                                          <div style={{ position: "relative" }}>
+                                            <div style={{
+                                              position: "absolute",
+                                              left: "10px",
+                                              top: "50%",
+                                              transform: "translateY(-50%)",
+                                              pointerEvents: "none",
+                                              color: "#64748b",
+                                              display: "flex",
+                                              alignItems: "center"
+                                            }}>
+                                              <Building2 size={16} />
+                                            </div>
+                                            <select
+                                              className="form-select"
+                                              value={entry.hall ? entry.hall.hallId : ""}
+                                              onChange={e => {
+                                                const hId = e.target.value;
+                                                const found = halls.find(h => String(h.hallId) === String(hId));
+                                                updateEntry(entry._localId, "hall", found || null);
+                                              }}
+                                              style={{
+                                                width: "100%",
+                                                padding: "8px 12px 8px 34px",
+                                                fontSize: "13px",
+                                                fontWeight: "600",
+                                                color: "#0f172a",
+                                                background: "#ffffff",
+                                                border: "1.5px solid",
+                                                borderColor: hallUnavail ? "#ef4444" : "#cbd5e1",
+                                                borderRadius: "10px",
+                                                boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
+                                                outline: "none",
+                                                transition: "all 0.2s ease"
+                                              }}
+                                            >
+                                              <option value="">— Select Hall / Venue —</option>
+                                              {halls.map(h => (
+                                                <option key={h.hallId} value={h.hallId}>{h.hallName} (Cap: {h.capacity})</option>
+                                              ))}
+                                            </select>
+                                            {hallUnavail && <div style={{ fontSize: "11px", color: "#dc2626", fontWeight: "700", marginTop: "4px", display: "flex", alignItems: "center", gap: "4px" }}><AlertTriangle size={12} /> Unavailable on exam date!</div>}
                                           </div>
-                                        );
-                                      })()}
-                                      <input
-                                        type="text"
-                                        placeholder="e.g. EG/2022/4985 - EG/2023/5085"
-                                        value={entry.studentIdRange || ""}
-                                        onChange={e => {
-                                          const val = e.target.value;
-                                          updateEntry(entry._localId, "studentIdRange", val);
-                                          const calc = calcCountFromRange(val);
-                                          if (calc !== null) updateEntry(entry._localId, "allocatedCount", calc);
-                                        }}
-                                        style={{
-                                          width: "100%",
-                                          padding: "9px 12px",
-                                          paddingLeft: (entry.studentIdRange && entry.studentIdRange.includes(":")) ? "64px" : "36px",
-                                          fontSize: "13px",
-                                          fontFamily: "'JetBrains Mono', 'Fira Code', 'Consolas', monospace",
-                                          fontWeight: "600",
-                                          color: "#0f172a",
-                                          letterSpacing: "0.02em",
-                                          background: "linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)",
-                                          border: "1.5px solid #cbd5e1",
-                                          borderRadius: "10px",
-                                          boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05), inset 0 1px 2px rgba(0, 0, 0, 0.02)",
-                                          outline: "none",
-                                          transition: "all 0.2s ease"
-                                        }}
-                                        onFocus={e => {
-                                          e.target.style.borderColor = "#3b82f6";
-                                          e.target.style.boxShadow = "0 0 0 3px rgba(59, 130, 246, 0.18), inset 0 1px 2px rgba(0, 0, 0, 0.02)";
-                                          e.target.style.background = "#ffffff";
-                                        }}
-                                        onBlur={e => {
-                                          e.target.style.borderColor = "#cbd5e1";
-                                          e.target.style.boxShadow = "0 1px 3px rgba(0, 0, 0, 0.05), inset 0 1px 2px rgba(0, 0, 0, 0.02)";
-                                          e.target.style.background = "linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)";
-                                        }}
-                                      />
-                                    </div>
 
-                                    {/* Count */}
-                                    <div>
-                                      <input
-                                        type="number"
-                                        placeholder="0"
-                                        min={1}
-                                        value={entry.allocatedCount ? entry.allocatedCount : ""}
-                                        onChange={e => {
-                                          const newCount = e.target.value ? Number(e.target.value) : 0;
-                                          updateEntry(entry._localId, "allocatedCount", newCount);
-                                          if (newCount > 0 && entry.studentIdRange) {
-                                            const newRange = calcRangeFromCount(entry.studentIdRange, newCount);
-                                            if (newRange !== entry.studentIdRange) {
-                                              updateEntry(entry._localId, "studentIdRange", newRange);
-                                            }
-                                          }
-                                        }}
-                                        style={{
-                                          width: "56px",
-                                          padding: "8px 4px",
-                                          fontSize: "13px",
-                                          fontWeight: "800",
-                                          fontFamily: "'JetBrains Mono', 'Consolas', monospace",
-                                          color: "#1d4ed8",
-                                          background: "linear-gradient(180deg, #eff6ff 0%, #dbeafe 100%)",
-                                          border: "1.5px solid #93c5fd",
-                                          borderRadius: "10px",
-                                          textAlign: "center",
-                                          boxShadow: "0 1px 2px rgba(37, 99, 235, 0.08)",
-                                          outline: "none",
-                                          transition: "all 0.2s ease"
-                                        }}
-                                        onFocus={e => {
-                                          e.target.style.borderColor = "#2563eb";
-                                          e.target.style.boxShadow = "0 0 0 3px rgba(37, 99, 235, 0.2)";
-                                        }}
-                                        onBlur={e => {
-                                          e.target.style.borderColor = "#93c5fd";
-                                          e.target.style.boxShadow = "0 1px 2px rgba(37, 99, 235, 0.08)";
-                                        }}
-                                      />
-                                    </div>
+                                          {/* Student range (only shown for Semester 1 & 2 batches) */}
+                                          {showRegRange && (
+                                            <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+                                              {(() => {
+                                                let prefix = null;
+                                                if (entry.studentIdRange && entry.studentIdRange.includes(":")) {
+                                                  prefix = entry.studentIdRange.split(":")[0].trim();
+                                                }
+                                                const cfg = prefix ? getDeptBadgeConfig(prefix) : null;
+                                                return (
+                                                  <div style={{
+                                                    position: "absolute",
+                                                    left: "10px",
+                                                    display: "flex",
+                                                    alignItems: "center",
+                                                    pointerEvents: "none",
+                                                    zIndex: 2
+                                                  }}>
+                                                    {cfg ? (
+                                                      <span style={{
+                                                        background: cfg.bg,
+                                                        color: cfg.text,
+                                                        border: `1px solid ${cfg.border}`,
+                                                        padding: "2px 7px",
+                                                        borderRadius: "6px",
+                                                        fontSize: "11px",
+                                                        fontWeight: "800",
+                                                        letterSpacing: "0.04em",
+                                                        textTransform: "uppercase",
+                                                        boxShadow: "0 1px 2px rgba(0,0,0,0.04)"
+                                                      }}>
+                                                        {cfg.label}
+                                                      </span>
+                                                    ) : (
+                                                      <Tag size={15} style={{ color: "#3b82f6" }} />
+                                                    )}
+                                                  </div>
+                                                );
+                                              })()}
+                                              <input
+                                                type="text"
+                                                placeholder="e.g. EG/2025/4001 - EG/2025/4160"
+                                                value={entry.studentIdRange || ""}
+                                                onChange={e => {
+                                                  const val = e.target.value;
+                                                  updateEntry(entry._localId, "studentIdRange", val);
+                                                  const calc = calcCountFromRange(val);
+                                                  if (calc !== null) updateEntry(entry._localId, "allocatedCount", calc);
+                                                }}
+                                                style={{
+                                                  width: "100%",
+                                                  padding: "9px 12px",
+                                                  paddingLeft: (entry.studentIdRange && entry.studentIdRange.includes(":")) ? "64px" : "36px",
+                                                  fontSize: "13px",
+                                                  fontFamily: "'JetBrains Mono', 'Fira Code', 'Consolas', monospace",
+                                                  fontWeight: "600",
+                                                  color: "#0f172a",
+                                                  letterSpacing: "0.02em",
+                                                  background: "linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)",
+                                                  border: "1.5px solid #cbd5e1",
+                                                  borderRadius: "10px",
+                                                  boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05), inset 0 1px 2px rgba(0, 0, 0, 0.02)",
+                                                  outline: "none",
+                                                  transition: "all 0.2s ease"
+                                                }}
+                                              />
+                                            </div>
+                                          )}
+
+                                          {/* Count / Allocated Seats */}
+                                          <div>
+                                            <input
+                                              type="number"
+                                              placeholder="0"
+                                              min={1}
+                                              value={entry.allocatedCount ? entry.allocatedCount : ""}
+                                              onChange={e => {
+                                                const newCount = e.target.value ? Number(e.target.value) : 0;
+                                                updateEntry(entry._localId, "allocatedCount", newCount);
+                                                if (showRegRange && newCount > 0 && entry.studentIdRange) {
+                                                  const newRange = calcRangeFromCount(entry.studentIdRange, newCount);
+                                                  if (newRange !== entry.studentIdRange) {
+                                                    updateEntry(entry._localId, "studentIdRange", newRange);
+                                                  }
+                                                }
+                                              }}
+                                              style={{
+                                                width: showRegRange ? "56px" : "90px",
+                                                padding: "8px 8px",
+                                                fontSize: "13px",
+                                                fontWeight: "800",
+                                                fontFamily: "'JetBrains Mono', 'Consolas', monospace",
+                                                color: "#1d4ed8",
+                                                background: "linear-gradient(180deg, #eff6ff 0%, #dbeafe 100%)",
+                                                border: "1.5px solid #93c5fd",
+                                                borderRadius: "8px",
+                                                textAlign: "center",
+                                                outline: "none"
+                                              }}
+                                            />
+                                          </div>
 
                                     {/* Delete — inline, same row, centered */}
                                     <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -761,8 +767,11 @@ export default function AdminExamTimetablePage() {
                                   <Plus size={13} /> Add Another Venue for this Module
                                 </button>
                               </div>
-                            </div>
-                          )}
+                            </>
+                          );
+                        })()}
+                      </div>
+                    )}
 
                         </div>
                       );

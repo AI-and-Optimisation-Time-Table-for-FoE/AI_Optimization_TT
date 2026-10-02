@@ -91,7 +91,8 @@ function buildTimeSlots(entries, dbTimeSlots, selectedBatch) {
 
 function TimetableViewPage() {
   const searchParams = useSearchParams();
-  const initialBatchId = searchParams.get("batchId");
+  const rawBatchId = searchParams.get("batchId");
+  const initialBatchId = (rawBatchId && rawBatchId !== "NaN" && !isNaN(Number(rawBatchId))) ? rawBatchId : "";
 
   const initialDeptId = searchParams.get("departmentId");
   const [selectedDeptId, setSelectedDeptId] = useState(initialDeptId || "");
@@ -116,6 +117,7 @@ function TimetableViewPage() {
       const oldStart = data.oldStart;
       
       if (!entryId || (oldDay === day && oldStart === slot.start)) return;
+      if (!selectedBatchId || isNaN(Number(selectedBatchId))) return;
       
       setLoading(true);
       await moveTimetableEntry(entryId, day, slot.start, slot.end, null);
@@ -195,7 +197,7 @@ function TimetableViewPage() {
         if (u && u.role === "student") {
           setSelectedBatchId(String(u.batchId));
           setSelectedDeptId(u.departmentId ? String(u.departmentId) : "");
-        } else if (!initialBatchId && data.length > 0) {
+        } else if ((!initialBatchId || isNaN(Number(initialBatchId))) && data.length > 0) {
           setSelectedBatchId(String(data[0].batchId));
         }
       })
@@ -207,7 +209,7 @@ function TimetableViewPage() {
     const currentUser = userStr ? JSON.parse(userStr) : null;
     const isLecturer = currentUser?.role === "lecturer";
 
-    if (!isLecturer && !selectedBatchId) {
+    if (!isLecturer && (!selectedBatchId || isNaN(Number(selectedBatchId)))) {
       setEntries([]);
       setLoading(false);
       return;

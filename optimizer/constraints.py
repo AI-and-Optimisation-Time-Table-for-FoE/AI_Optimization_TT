@@ -54,13 +54,11 @@ def solve_hard_constraints_internal(req: OptimizeRequest, relaxed: bool = False)
     for s_idx in range(num_sessions):
         model.Add(sum(x[s_idx, t.slotId, h.hallId] for t in slots for h in halls) == 1)
         
-    # H2: Strict Hall Rules (Capacity, Computer Needs, 27th Batch, Admin Preference)
+    # H2: Strict Hall Rules (Capacity, Computer Needs, Admin Preference)
     for s_idx, session in enumerate(sessions):
         req_capacity = session.get("studentCount") or req.studentCount
         pref_hall_id = session.get("preferredHallId")
-        needs_computer = session.get("needsComputer")
-        
-        is_27th_batch = (req.batchId == 1)
+        needs_computer = session.get("needsComputer", False)
         
         for h in halls:
             can_use = True
@@ -69,17 +67,12 @@ def solve_hard_constraints_internal(req: OptimizeRequest, relaxed: bool = False)
                 if h.hallId != pref_hall_id:
                     can_use = False
             else:
-                if is_27th_batch:
-                    if needs_computer:
-                        if h.hallId != 51: # NCC
-                            can_use = False
-                    else:
-                        if h.hallId != 35: # Auditorium
-                            can_use = False
-                else:
-                    if h.capacity < req_capacity:
+                if needs_computer:
+                    if not getattr(h, 'isComputerLab', False):
                         can_use = False
-                    if needs_computer and not getattr(h, 'isComputerLab', False):
+                else:
+                    # For general lectures: require hall capacity >= req_capacity unless cohort exceeds largest hall
+                    if req_capacity <= 300 and h.capacity < req_capacity:
                         can_use = False
                         
             if not can_use:

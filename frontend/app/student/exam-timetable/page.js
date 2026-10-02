@@ -136,17 +136,31 @@ export default function StudentExamTimetablePage() {
       moduleGroups[key].push(e);
     }
 
-    const personalized = [];
+    // Merge entries per module: combine all venues into a single row
+    const merged = [];
     for (const key in moduleGroups) {
       const group = moduleGroups[key];
+      const first = group[0];
+
+      // Check if student is assigned to any specific hall via ID range
       const matchingRows = group.filter(e => isStudentAssignedToRange(e.studentIdRange));
-      if (matchingRows.length > 0) {
-        personalized.push(...matchingRows);
-      } else {
-        personalized.push(...group);
-      }
+
+      // Build venues array for merged display
+      const venues = group.map(e => ({
+        hall: e.hall,
+        studentIdRange: e.studentIdRange,
+        allocatedCount: e.allocatedCount,
+        isMatch: isStudentAssignedToRange(e.studentIdRange),
+      }));
+
+      merged.push({
+        ...first,
+        _venues: venues,
+        _hasMatch: matchingRows.length > 0,
+        _matchedHall: matchingRows.length > 0 ? matchingRows[0].hall : null,
+      });
     }
-    return personalized;
+    return merged;
   };
 
   if (loading) {
@@ -280,15 +294,15 @@ export default function StudentExamTimetablePage() {
                         <th style={{ padding: "18px 24px", minWidth: "260px" }}>Module Code & Title</th>
                         <th style={{ padding: "18px 20px", width: "200px" }}>Exam Date</th>
                         <th style={{ padding: "18px 20px", width: "220px" }}>Session / Time</th>
-                        <th style={{ padding: "18px 24px", width: "260px" }}>Assigned Venue (Hall)</th>
-                        <th style={{ padding: "18px 24px", width: "260px" }}>Student ID Range Allocation</th>
+                        <th style={{ padding: "18px 24px", minWidth: "320px" }}>Venue Allocation</th>
                       </tr>
                     </thead>
                     <tbody>
                       {getPersonalizedEntries().map((entry) => {
-                        const isMatch = isStudentAssignedToRange(entry.studentIdRange);
+                        const venues = entry._venues || [{ hall: entry.hall, studentIdRange: entry.studentIdRange, allocatedCount: entry.allocatedCount, isMatch: isStudentAssignedToRange(entry.studentIdRange) }];
+                        const hasAnyMatch = entry._hasMatch || false;
                         return (
-                          <tr key={entry.examEntryId} style={{ background: isMatch ? "#f0fdf4" : undefined }}>
+                          <tr key={entry.examEntryId} style={{ background: hasAnyMatch ? "#f0fdf4" : undefined }}>
                             <td style={{ padding: "18px 24px", verticalAlign: "middle" }}>
                               <div><strong style={{ fontSize: "15px", color: "var(--neutral-900)" }}>{entry.module?.moduleCode}</strong></div>
                               <div style={{ fontSize: "13px", color: "var(--neutral-600)" }}>{entry.module?.moduleName}</div>
@@ -308,31 +322,39 @@ export default function StudentExamTimetablePage() {
                               </div>
                             </td>
                             <td style={{ padding: "18px 24px", verticalAlign: "middle" }}>
-                              {entry.hall ? (
-                                <div>
-                                  <div style={{ display: "flex", alignItems: "center", gap: "6px", color: "#047857", fontWeight: "700" }}>
-                                    <Building size={16} />
-                                    <span>{entry.hall.hallName} (Cap: {entry.hall.capacity})</span>
-                                  </div>
-                                  {isMatch && (
-                                    <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", background: "#16a34a", color: "#fff", fontSize: "11px", fontWeight: "800", padding: "3px 10px", borderRadius: "12px", marginTop: "6px" }}>
-                                      <CheckCircle size={13} /> ASSIGNED TO YOU (ID: {getDisplayStudentId(user)})
-                                    </span>
-                                  )}
-                                </div>
-                              ) : (
+                              {venues.length === 0 ? (
                                 <span style={{ fontSize: "12px", color: "var(--neutral-500)", fontStyle: "italic" }}>
                                   Venue to be announced
                                 </span>
-                              )}
-                            </td>
-                            <td style={{ padding: "18px 24px", verticalAlign: "middle" }}>
-                              <div style={{ fontWeight: "700", color: "var(--primary-800)", fontSize: "13px" }}>
-                                {entry.studentIdRange || "All Batch Students"}
-                              </div>
-                              {entry.allocatedCount && (
-                                <div style={{ fontSize: "11px", color: "var(--neutral-600)" }}>
-                                  Allocated Capacity: {entry.allocatedCount} Students
+                              ) : (
+                                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                                  {venues.map((v, idx) => (
+                                    <div key={idx} style={{
+                                      background: v.isMatch ? "#dcfce7" : "#f8fafc",
+                                      border: v.isMatch ? "1px solid #86efac" : "1px solid #e2e8f0",
+                                      borderRadius: "8px",
+                                      padding: "8px 12px",
+                                    }}>
+                                      {v.hall ? (
+                                        <div>
+                                          <div style={{ display: "flex", alignItems: "center", gap: "6px", color: "#047857", fontWeight: "700", fontSize: "13px" }}>
+                                            <Building size={14} />
+                                            <span>{v.hall.hallName}</span>
+                                          </div>
+                                          <div style={{ fontSize: "12px", color: "var(--neutral-600)", marginTop: "2px" }}>
+                                            {v.studentIdRange || ""}{v.allocatedCount ? ` (${v.allocatedCount} seats)` : ""}
+                                          </div>
+                                          {v.isMatch && (
+                                            <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", background: "#16a34a", color: "#fff", fontSize: "10px", fontWeight: "800", padding: "2px 8px", borderRadius: "10px", marginTop: "4px" }}>
+                                              <CheckCircle size={11} /> YOUR HALL
+                                            </span>
+                                          )}
+                                        </div>
+                                      ) : (
+                                        <span style={{ fontSize: "12px", color: "var(--neutral-500)", fontStyle: "italic" }}>TBA</span>
+                                      )}
+                                    </div>
+                                  ))}
                                 </div>
                               )}
                             </td>

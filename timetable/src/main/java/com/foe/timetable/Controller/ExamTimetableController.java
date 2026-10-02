@@ -409,7 +409,7 @@ public class ExamTimetableController {
             int effectiveCap = getExamCap.apply(selectedHall);
             int allocatedForThisHall = Math.min(remainingStudents, effectiveCap);
 
-            String idRange = generateStudentIdRange(targetStudents, currentStudentIndex, allocatedForThisHall, et.getBatch().getBatchId(), et.getBatch().getAcademicYear(), deptPrefix, totalStudents);
+            String idRange = generateStudentIdRange(targetStudents, currentStudentIndex, allocatedForThisHall, et.getBatch(), deptPrefix, totalStudents);
 
             ExamEntry entry = new ExamEntry();
             entry.setExamTimetable(et);
@@ -448,9 +448,16 @@ public class ExamTimetableController {
             });
     }
 
-    private String generateStudentIdRange(List<UserAccount> students, int startIndex, int count, Integer batchId, Integer academicYear, String deptPrefix, int totalDeptStudents) {
+    private String generateStudentIdRange(List<UserAccount> students, int startIndex, int count, Batch batch, String deptPrefix, int totalDeptStudents) {
+        // Registration number range is ONLY for 1st and 2nd semester batches (e.g. 27th batch)
+        boolean isFirstOrSecondSem = (batch != null && batch.getSemester() != null && (batch.getSemester() == 1 || batch.getSemester() == 2));
+        if (!isFirstOrSecondSem) {
+            return null;
+        }
+
         String prefixStr = (deptPrefix != null && !deptPrefix.isBlank()) ? (deptPrefix + ": ") : "";
 
+        // Use real student accounts when available for 1st/2nd sem
         if (students != null && !students.isEmpty() && startIndex < students.size()) {
             int endIndex = Math.min(startIndex + count - 1, students.size() - 1);
             String startId = students.get(startIndex).getStudentIdNumber();
@@ -462,22 +469,15 @@ public class ExamTimetableController {
             return prefixStr + startId + " - " + endId;
         }
 
-        String year = (academicYear != null) ? String.valueOf(academicYear) : "2026";
-        if (students != null && !students.isEmpty()) {
-            String firstId = students.get(0).getStudentIdNumber();
-            if (firstId != null && firstId.contains("/")) {
-                String[] parts = firstId.split("/");
-                if (parts.length >= 2 && parts[1].length() == 4) {
-                    year = parts[1];
-                }
-            }
-        }
-        int startNum = 4001 + startIndex;
-        int endNum = 4000 + startIndex + count;
-        if (deptPrefix != null && !deptPrefix.isBlank() && count >= totalDeptStudents) {
-            return prefixStr + "All " + count + " Department Students";
-        }
-        return prefixStr + "EG/" + year + "/" + String.format("%04d", startNum) + " - EG/" + year + "/" + String.format("%04d", endNum);
+        // Derive registration year: entry year = academicYear - 1
+        int regYear = (batch.getAcademicYear() != null ? batch.getAcademicYear() : 2026) - 1;
+        String yearStr = String.valueOf(regYear);
+        int startBase = 4001;
+
+        // Synthetic range for whole-batch modules (semesters 1 & 2)
+        int startNum = startBase + startIndex;
+        int endNum = startBase + startIndex + count - 1;
+        return prefixStr + "EG/" + yearStr + "/" + String.format("%04d", startNum) + " - EG/" + yearStr + "/" + String.format("%04d", endNum);
     }
 
     // Save or update exam entries
