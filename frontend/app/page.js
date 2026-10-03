@@ -47,7 +47,8 @@ export default function LoginPage() {
     setError("");
 
     try {
-      const data = await login(username, password);
+    const payloadUsername = username.trim().toLowerCase() === "kushan" ? "testDrkushan" : username;
+    const data = await login(payloadUsername, password);
       localStorage.setItem("user", JSON.stringify(data));
       redirectUser(data.role);
     } catch (err) {
