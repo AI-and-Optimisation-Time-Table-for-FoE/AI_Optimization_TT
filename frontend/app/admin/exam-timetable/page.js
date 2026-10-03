@@ -15,6 +15,7 @@ import {
   deleteExamTimetable,
   fetchExamHallUnavailabilities,
   addExamHallUnavailability,
+  deleteExamHallUnavailability,
 } from "../../lib/api";
 import { Calendar, CheckCircle, EyeOff, Plus, Trash2, AlertTriangle, Save, Zap, ChevronDown, ChevronUp, Building2, Tag, Download } from "lucide-react";
 
