@@ -47,7 +47,9 @@ export default function LoginPage() {
     setError("");
 
     try {
-    const payloadUsername = username.trim().toLowerCase() === "kushan" ? "testDrkushan" : username;
+    const universityEmailForKushan = "testDrkushan@university.edu"; // adjust if needed
+const trimmed = username.trim();
+const payloadUsername = trimmed.toLowerCase() === "kushan" ? universityEmailForKushan : trimmed;
     const data = await login(payloadUsername, password);
       localStorage.setItem("user", JSON.stringify(data));
       redirectUser(data.role);
