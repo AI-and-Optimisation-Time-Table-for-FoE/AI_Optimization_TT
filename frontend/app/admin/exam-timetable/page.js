@@ -439,7 +439,25 @@ export default function AdminExamTimetablePage() {
                           {u.startTime && u.endTime ? `(${String(u.startTime).substring(0, 5)} - ${String(u.endTime).substring(0, 5)})` : "(Full Day)"}
                         </span>
                         {u.reason && <span style={{ color: "#6b7280" }}>[{u.reason}]</span>}
-                        <button onClick={() => { deleteExamHallUnavailability(u.unavailabilityId).then(loadUnavailabilities).catch(e => alert(e.message)); }} style={{ background: "none", border: "none", color: "#dc2626", cursor: "pointer", padding: 0 }}><Trash2 size={12} /></button>
+                        <button
+                          type="button"
+                          onClick={async (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            if (confirm(`Remove unavailability for ${u.hall?.hallName || 'this hall'}?`)) {
+                              try {
+                                await deleteExamHallUnavailability(u.unavailabilityId);
+                                loadUnavailabilities();
+                              } catch (err) {
+                                alert("Failed to delete hall unavailability: " + err.message);
+                              }
+                            }
+                          }}
+                          title="Delete unavailability"
+                          style={{ background: "none", border: "none", color: "#dc2626", cursor: "pointer", padding: "2px", display: "flex", alignItems: "center" }}
+                        >
+                          <Trash2 size={13} />
+                        </button>
                       </div>
                     ))}
                   </div>
