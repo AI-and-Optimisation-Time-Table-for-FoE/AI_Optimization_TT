@@ -438,6 +438,27 @@ export function updateUserProfile(userId, data) {
   });
 }
 
+export function changePassword(userId, currentPassword, newPassword) {
+  return request(`/api/auth/change-password`, {
+    method: "POST",
+    body: JSON.stringify({ userId, currentPassword, newPassword }),
+  });
+}
+
+export function requestPasswordReset(identifier) {
+  return request(`/api/auth/forgot-password`, {
+    method: "POST",
+    body: JSON.stringify({ identifier }),
+  });
+}
+
+export function resetPasswordWithKey(identifier, securityKey, newPassword) {
+  return request(`/api/auth/reset-password`, {
+    method: "POST",
+    body: JSON.stringify({ identifier, securityKey, newPassword }),
+  });
+}
+
 export function moveTimetableEntry(entryId, dayOfWeek, startTime, endTime, venueId) {
   return request(`/api/timetable/entries/${entryId}/move`, {
     method: "PUT",

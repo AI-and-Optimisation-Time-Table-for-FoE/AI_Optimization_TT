@@ -244,4 +244,103 @@ public class AuthController {
             })
             .orElse(ResponseEntity.notFound().build());
     }
+
+    @PostMapping("/change-password")
+    public ResponseEntity<?> changePassword(@RequestBody Map<String, Object> payload) {
+        Number userIdNum = (Number) payload.get("userId");
+        String currentPassword = (String) payload.get("currentPassword");
+        String newPassword = (String) payload.get("newPassword");
+
+        if (userIdNum == null || currentPassword == null || newPassword == null) {
+            return ResponseEntity.badRequest().body(Map.of("message", "User ID, current password, and new password are required"));
+        }
+
+        if (newPassword.trim().length() < 6) {
+            return ResponseEntity.badRequest().body(Map.of("message", "New password must be at least 6 characters long"));
+        }
+
+        Optional<UserAccount> userOpt = userAccountRepository.findById(userIdNum.intValue());
+        if (userOpt.isEmpty()) {
+            return ResponseEntity.status(404).body(Map.of("message", "User not found"));
+        }
+
+        UserAccount user = userOpt.get();
+        String currentHash = authService.hashPassword(currentPassword);
+        if (!user.getPasswordHash().equals(currentPassword) && !user.getPasswordHash().equals(currentHash)) {
+            return ResponseEntity.status(400).body(Map.of("message", "Current password is incorrect"));
+        }
+
+        user.setPasswordHash(authService.hashPassword(newPassword));
+        userAccountRepository.save(user);
+
+        return ResponseEntity.ok(Map.of("message", "Password changed successfully!"));
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<?> forgotPassword(@RequestBody Map<String, String> payload) {
+        String identifier = payload.get("identifier");
+        if (identifier == null || identifier.trim().isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("message", "University email or username is required"));
+        }
+
+        String search = identifier.trim().toLowerCase();
+        Optional<UserAccount> foundUser = userAccountRepository.findAll().stream()
+            .filter(u -> (u.getUsername() != null && u.getUsername().equalsIgnoreCase(search)) ||
+                         (u.getUniversityEmail() != null && u.getUniversityEmail().equalsIgnoreCase(search)))
+            .findFirst();
+
+        if (foundUser.isEmpty()) {
+            return ResponseEntity.status(404).body(Map.of("message", "No account found matching this university email or username"));
+        }
+
+        UserAccount user = foundUser.get();
+        return ResponseEntity.ok(Map.of(
+            "message", "Account identified successfully!",
+            "username", user.getUsername(),
+            "maskedEmail", maskEmail(user.getUniversityEmail()),
+            "role", user.getRole().toString()
+        ));
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@RequestBody Map<String, String> payload) {
+        String identifier = payload.get("identifier");
+        String securityKey = payload.get("securityKey");
+        String newPassword = payload.get("newPassword");
+
+        if (identifier == null || newPassword == null) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Account identifier and new password are required"));
+        }
+
+        if (newPassword.trim().length() < 6) {
+            return ResponseEntity.badRequest().body(Map.of("message", "New password must be at least 6 characters long"));
+        }
+
+        String search = identifier.trim().toLowerCase();
+        Optional<UserAccount> foundUser = userAccountRepository.findAll().stream()
+            .filter(u -> (u.getUsername() != null && u.getUsername().equalsIgnoreCase(search)) ||
+                         (u.getUniversityEmail() != null && u.getUniversityEmail().equalsIgnoreCase(search)))
+            .findFirst();
+
+        if (foundUser.isEmpty()) {
+            return ResponseEntity.status(404).body(Map.of("message", "Account not found"));
+        }
+
+        UserAccount user = foundUser.get();
+        user.setPasswordHash(authService.hashPassword(newPassword));
+        userAccountRepository.save(user);
+
+        return ResponseEntity.ok(Map.of("message", "Password has been reset successfully! You can now sign in with your new password."));
+    }
+
+    private String maskEmail(String email) {
+        if (email == null || !email.contains("@")) return email != null ? email : "";
+        String[] parts = email.split("@");
+        String local = parts[0];
+        String domain = parts[1];
+        if (local.length() <= 2) {
+            return local.charAt(0) + "***@" + domain;
+        }
+        return local.substring(0, 2) + "***" + local.charAt(local.length() - 1) + "@" + domain;
+    }
 }
