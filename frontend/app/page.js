@@ -191,14 +191,14 @@ export default function LoginPage() {
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           <div>
             <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#404040', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-              University Email / Username
+              University Email
             </label>
             <input
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               disabled={loading}
-              placeholder="e.g. user@eng.university.lk"
+              placeholder="user@eng.ruh.ac.lk"
               style={{
                 width: '100%',
                 padding: '12px 16px',
@@ -370,18 +370,18 @@ export default function LoginPage() {
               </div>
             )}
 
-            {/* STEP 1: Enter email / username */}
+            {/* STEP 1: Enter email */}
             {forgotStep === 1 && (
               <form onSubmit={handleForgotIdentify} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#475569', marginBottom: '6px' }}>
-                    University Email or Username
+                    University Email
                   </label>
                   <input
                     type="text"
                     value={forgotIdentifier}
                     onChange={(e) => setForgotIdentifier(e.target.value)}
-                    placeholder="e.g. yourname@eng.university.lk"
+                    placeholder="user@eng.ruh.ac.lk"
                     disabled={forgotLoading}
                     style={{
                       width: '100%',
@@ -396,7 +396,7 @@ export default function LoginPage() {
                     onBlur={(e) => e.target.style.borderColor = '#cbd5e1'}
                   />
                   <p style={{ fontSize: '12px', color: '#64748b', margin: '6px 0 0 0' }}>
-                    We'll look up your profile and allow you to set a new password.
+                    Enter your university email to verify your account and set a new password.
                   </p>
                 </div>
 
@@ -445,10 +445,8 @@ export default function LoginPage() {
               <form onSubmit={handleResetPassword} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 {accountInfo && (
                   <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '12px 14px', fontSize: '13px', color: '#334155' }}>
-                    <div><strong>Account found:</strong> @{accountInfo.username} ({accountInfo.role})</div>
-                    {accountInfo.maskedEmail && (
-                      <div style={{ color: '#64748b', fontSize: '12px', marginTop: '2px' }}>Email: {accountInfo.maskedEmail}</div>
-                    )}
+                    <div><strong>Account Identified:</strong> {forgotIdentifier}</div>
+                    <div style={{ color: '#64748b', fontSize: '12px', marginTop: '2px', textTransform: 'capitalize' }}>Role: {accountInfo.role}</div>
                   </div>
                 )}
 
