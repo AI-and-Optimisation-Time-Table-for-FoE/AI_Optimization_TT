@@ -38,9 +38,14 @@ export default function RegisterPage() {
     // Fetch batches and departments for forms
     fetchBatches()
       .then((data) => {
-        setBatches(data);
-        if (data.length > 0) {
-          const firstBatch = data[0];
+        const sorted = [...(data || [])].sort((a, b) => {
+          const numA = parseInt((a.batchName || "").replace(/\D/g, ""), 10) || a.batchId || 0;
+          const numB = parseInt((b.batchName || "").replace(/\D/g, ""), 10) || b.batchId || 0;
+          return numA - numB;
+        });
+        setBatches(sorted);
+        if (sorted.length > 0) {
+          const firstBatch = sorted[0];
           setBatchId(firstBatch.batchId.toString());
           if (firstBatch.semester === 1 || firstBatch.semester === 2) {
             setDepartmentId("none");
@@ -51,17 +56,10 @@ export default function RegisterPage() {
 
     fetchDepartments()
       .then((data) => {
-        setDepartments(data);
-        if (data.length > 0) {
-          const firstBatch = batches[0];
-          const isS12 = firstBatch ? (firstBatch.semester === 1 || firstBatch.semester === 2) : true;
-          if (!isS12) {
-            setDepartmentId(data[0].departmentId.toString());
-          }
-        }
+        setDepartments(data || []);
       })
       .catch((err) => console.error("Could not fetch departments:", err));
-  }, [batches.length]);
+  }, []);
 
   const handleBatchChange = (val) => {
     setBatchId(val);
@@ -373,7 +371,7 @@ export default function RegisterPage() {
                   <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#404040', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Batch</label>
                   <select value={batchId} onChange={(e) => handleBatchChange(e.target.value)} disabled={loading} style={inputStyle} onFocus={focusStyle} onBlur={blurStyle}>
                     {batches.map(b => (
-                      <option key={b.batchId} value={b.batchId}>{b.batchName} (Sem {b.semester})</option>
+                      <option key={b.batchId} value={b.batchId}>{b.batchName}</option>
                     ))}
                   </select>
                 </div>
