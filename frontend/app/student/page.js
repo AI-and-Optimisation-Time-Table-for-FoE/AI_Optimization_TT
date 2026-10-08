@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Sidebar from "../components/Sidebar";
-import { fetchBatchModules, fetchBatches, fetchUserProfile, fetchTimetable, fetchStudentExamTimetable } from "../lib/api";
+import { fetchBatchModules, fetchBatches, fetchUserProfile, fetchTimetable, fetchStudentExamTimetable, fetchPersonalizedStudentEnrollments } from "../lib/api";
 import { GraduationCap, BookOpen, AlertTriangle, Calendar, ArrowRight } from "lucide-react";
 import UpcomingLecture from "../components/UpcomingLecture";
 import "./student.css";
@@ -59,21 +59,48 @@ export default function StudentDashboard() {
       const currentBatch = batchesList.find((b) => b.batchId === userData.batchId);
       setBatch(currentBatch);
 
-      // 2. Fetch modules for this batch
-      const modulesData = await fetchBatchModules(userData.batchId, userData.departmentId);      
-      setModules(modulesData);
-
-      // 3. Fetch timetable entries for this student
-      const timetableData = await fetchTimetable(userData.batchId, userData.departmentId, false, null);
-      if (Array.isArray(timetableData)) {
-        setEntries(timetableData);
-      } else if (timetableData && timetableData.entries) {
-        setEntries(timetableData.entries);
+      // 2. Fetch personalized enrollments from MIS if available
+      const studentIdentifier = userData.studentIdNumber || userData.universityEmail || userData.username;
+      let personalEnrollments = [];
+      try {
+        if (studentIdentifier) {
+          personalEnrollments = await fetchPersonalizedStudentEnrollments(studentIdentifier);
+        }
+      } catch (enrollErr) {
+        console.log("No personal MIS enrollments recorded yet:", enrollErr);
       }
 
-      // 4. Fetch exam timetable status for this student's batch
+      // 3. Fetch modules for this batch
+      const modulesData = await fetchBatchModules(userData.batchId, userData.departmentId);      
+      if (Array.isArray(personalEnrollments) && personalEnrollments.length > 0) {
+        const enrolledModIds = new Set(personalEnrollments.map(e => e.module?.moduleId));
+        const filteredMods = modulesData.filter(m => enrolledModIds.has(m.moduleId || m.module?.moduleId));
+        setModules(filteredMods.length > 0 ? filteredMods : modulesData);
+      } else {
+        setModules(modulesData);
+      }
+
+      // 4. Fetch timetable entries for this student
+      const timetableData = await fetchTimetable(userData.batchId, userData.departmentId, false, null);
+      let rawEntries = [];
+      if (Array.isArray(timetableData)) {
+        rawEntries = timetableData;
+      } else if (timetableData && timetableData.entries) {
+        rawEntries = timetableData.entries;
+      }
+
+      // If personalized MIS enrollments exist, filter lecture schedule to only their subjects
+      if (Array.isArray(personalEnrollments) && personalEnrollments.length > 0) {
+        const enrolledModCodes = new Set(personalEnrollments.map(e => e.module?.moduleCode?.toUpperCase()));
+        const personalEntries = rawEntries.filter(e => enrolledModCodes.has(e.moduleCode?.toUpperCase()));
+        setEntries(personalEntries.length > 0 ? personalEntries : rawEntries);
+      } else {
+        setEntries(rawEntries);
+      }
+
+      // 5. Fetch exam timetable status for this student's batch
       try {
-        const examData = await fetchStudentExamTimetable(userData.batchId);
+        const examData = await fetchStudentExamTimetable(userData.batchId, studentIdentifier);
         if (examData && examData.status === "published" && examData.entries && examData.entries.length > 0) {
           setIsExamPublished(true);
         } else {

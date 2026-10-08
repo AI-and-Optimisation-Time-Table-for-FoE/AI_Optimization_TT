@@ -16,8 +16,11 @@ import {
   fetchExamHallUnavailabilities,
   addExamHallUnavailability,
   deleteExamHallUnavailability,
+  fetchStudentEnrollments,
+  syncMISStudentEnrollments,
+  clearBatchEnrollments
 } from "../../lib/api";
-import { Calendar, CheckCircle, EyeOff, Plus, Trash2, AlertTriangle, Save, Zap, ChevronDown, ChevronUp, Building2, Tag, Download } from "lucide-react";
+import { Calendar, CheckCircle, EyeOff, Plus, Trash2, AlertTriangle, Save, Zap, ChevronDown, ChevronUp, Building2, Tag, Download, UploadCloud, Users, RefreshCw, FileSpreadsheet } from "lucide-react";
 
 function moduleKey(entry) {
   return entry.module ? String(entry.module.moduleId) : ("nomod_" + (entry._localId || ""));
@@ -94,6 +97,13 @@ export default function AdminExamTimetablePage() {
   const [unavailEndTime, setUnavailEndTime] = useState("16:30");
   const [unavailReason, setUnavailReason] = useState("");
 
+  // MIS Sync State
+  const [enrollments, setEnrollments] = useState([]);
+  const [showMISPanel, setShowMISPanel] = useState(false);
+  const [misJsonInput, setMisJsonInput] = useState("");
+  const [misSyncing, setMisSyncing] = useState(false);
+  const [misSyncResult, setMisSyncResult] = useState("");
+
   useEffect(() => {
     fetchBatches().then(data => {
       setBatches(data);
@@ -107,8 +117,16 @@ export default function AdminExamTimetablePage() {
     fetchExamHallUnavailabilities().then(setUnavailabilities).catch(console.error);
   };
 
+  const loadBatchEnrollments = (batchId) => {
+    if (!batchId) return;
+    fetchStudentEnrollments(batchId).then(setEnrollments).catch(console.error);
+  };
+
   useEffect(() => {
-    if (selectedBatchId) loadBatchExamTimetable(Number(selectedBatchId));
+    if (selectedBatchId) {
+      loadBatchExamTimetable(Number(selectedBatchId));
+      loadBatchEnrollments(Number(selectedBatchId));
+    }
   }, [selectedBatchId]);
 
   const loadBatchExamTimetable = async (batchId) => {
@@ -296,6 +314,68 @@ export default function AdminExamTimetablePage() {
     }
   };
 
+  const handleSyncMIS = async () => {
+    if (!selectedBatchId) { alert("Please select a batch."); return; }
+    if (!misJsonInput.trim()) { alert("Please enter MIS registration records in JSON or CSV format."); return; }
+
+    setMisSyncing(true);
+    setMisSyncResult("");
+    try {
+      let parsedRecords = [];
+      const trimmed = misJsonInput.trim();
+
+      // Check if CSV format
+      if (trimmed.includes(",") && !trimmed.startsWith("[")) {
+        const lines = trimmed.split("\n").map(l => l.trim()).filter(l => l.length > 0);
+        // Header detection
+        let startIdx = 0;
+        if (lines[0].toLowerCase().includes("reg") || lines[0].toLowerCase().includes("student")) {
+          startIdx = 1;
+        }
+        for (let i = startIdx; i < lines.length; i++) {
+          const parts = lines[i].split(",").map(p => p.trim());
+          if (parts.length >= 2) {
+            parsedRecords.push({
+              studentRegNo: parts[0],
+              moduleCode: parts[1],
+              enrollmentType: parts[2] || "regular",
+              studentEmail: parts[3] || null
+            });
+          }
+        }
+      } else {
+        // JSON format
+        parsedRecords = JSON.parse(trimmed);
+      }
+
+      if (!Array.isArray(parsedRecords) || parsedRecords.length === 0) {
+        throw new Error("No valid enrollment records found.");
+      }
+
+      const res = await syncMISStudentEnrollments(Number(selectedBatchId), parsedRecords);
+      setMisSyncResult(`Successfully imported ${res.importedCount} student course registrations from MIS!`);
+      setMisJsonInput("");
+      loadBatchEnrollments(Number(selectedBatchId));
+    } catch (err) {
+      alert("MIS Import Error: " + err.message);
+    } finally {
+      setMisSyncing(false);
+    }
+  };
+
+  const handleClearMIS = async () => {
+    if (!selectedBatchId) return;
+    if (confirm("Clear all student course registrations for this batch?")) {
+      try {
+        await clearBatchEnrollments(Number(selectedBatchId));
+        setEnrollments([]);
+        setMisSyncResult("Batch enrollments cleared.");
+      } catch (err) {
+        alert("Error: " + err.message);
+      }
+    }
+  };
+
   const isHallUnavailable = (hallId, examDate) => {
     if (!hallId || !examDate) return false;
     return unavailabilities.some(u => {
@@ -462,6 +542,86 @@ export default function AdminExamTimetablePage() {
                     ))}
                   </div>
                 )}
+              </div>
+            )}
+          </div>
+
+          {/* ─── MIS Student Course Registrations (Electives, IS, Repeats) ─── */}
+          <div className="card" style={{ marginBottom: "20px" }}>
+            <div className="card-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <h3 style={{ margin: 0, fontSize: "15px", fontWeight: "700", display: "flex", alignItems: "center", gap: "8px" }}>
+                <Users size={16} style={{ color: "var(--primary-600)" }} /> MIS Student Course Registrations (TE, IS, Repeats)
+                {enrollments.length > 0 && (
+                  <span style={{ background: "#dcfce7", color: "#166534", fontSize: "11px", padding: "1px 7px", borderRadius: "10px", fontWeight: "700" }}>
+                    {enrollments.length} Records
+                  </span>
+                )}
+              </h3>
+              <div style={{ display: "flex", gap: "8px" }}>
+                {enrollments.length > 0 && (
+                  <button onClick={handleClearMIS} style={{ background: "#fee2e2", color: "#dc2626", border: "1px solid #fecaca", borderRadius: "6px", padding: "6px 12px", cursor: "pointer", fontSize: "12px", fontWeight: "600" }}>
+                    Clear
+                  </button>
+                )}
+                <button onClick={() => setShowMISPanel(!showMISPanel)} style={{ background: "var(--primary-600)", color: "#fff", border: "none", borderRadius: "6px", padding: "6px 12px", cursor: "pointer", fontSize: "12px", fontWeight: "600", display: "flex", alignItems: "center", gap: "6px" }}>
+                  <UploadCloud size={14} /> {showMISPanel ? "Hide MIS Sync" : "Import / Sync from MIS"}
+                </button>
+              </div>
+            </div>
+
+            {showMISPanel && (
+              <div className="card-body" style={{ borderTop: "1px solid var(--neutral-200)", background: "#f8fafc" }}>
+                {misSyncResult && (
+                  <div style={{ background: "#dcfce7", border: "1px solid #bbf7d0", color: "#166534", padding: "10px 14px", borderRadius: "8px", fontSize: "13px", marginBottom: "14px", fontWeight: "600" }}>
+                    ✓ {misSyncResult}
+                  </div>
+                )}
+
+                <div style={{ marginBottom: "12px" }}>
+                  <label style={{ display: "block", fontSize: "13px", fontWeight: "700", color: "#334155", marginBottom: "6px" }}>
+                    Paste MIS Course Registration Data (CSV or JSON format):
+                  </label>
+                  <p style={{ fontSize: "12px", color: "#64748b", margin: "0 0 8px 0" }}>
+                    <strong>CSV Format:</strong> <code>StudentRegNo, ModuleCode, EnrollmentType (regular / technical_elective / is_module / repeat), StudentEmail</code>
+                  </p>
+                  <textarea
+                    rows={4}
+                    value={misJsonInput}
+                    onChange={e => setMisJsonInput(e.target.value)}
+                    placeholder={`EG/2021/4001, EC5010, technical_elective, student1@eng.ruh.ac.lk\nEG/2021/4002, IS3020, is_module, student2@eng.ruh.ac.lk\nEG/2020/3805, CE4010, repeat, student3@eng.ruh.ac.lk`}
+                    style={{
+                      width: "100%",
+                      fontFamily: "monospace",
+                      fontSize: "12px",
+                      padding: "10px 12px",
+                      borderRadius: "8px",
+                      border: "1.5px solid #cbd5e1",
+                      outline: "none",
+                      boxSizing: "border-box"
+                    }}
+                  />
+                </div>
+
+                <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMisJsonInput(`EG/2021/4001, EC5010, technical_elective, student1@eng.ruh.ac.lk\nEG/2021/4002, IS3020, is_module, student2@eng.ruh.ac.lk\nEG/2020/3850, EE3010, repeat, repeat_std@eng.ruh.ac.lk`);
+                    }}
+                    style={{ background: "#e2e8f0", color: "#475569", border: "none", borderRadius: "8px", padding: "8px 14px", fontSize: "12px", fontWeight: "600", cursor: "pointer" }}
+                  >
+                    Load Sample MIS Data
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSyncMIS}
+                    disabled={misSyncing}
+                    style={{ background: "var(--primary-600)", color: "#fff", border: "none", borderRadius: "8px", padding: "8px 16px", fontSize: "12px", fontWeight: "600", cursor: misSyncing ? "not-allowed" : "pointer", display: "flex", alignItems: "center", gap: "6px" }}
+                  >
+                    <RefreshCw size={14} className={misSyncing ? "animate-spin" : ""} />
+                    {misSyncing ? "Syncing with Database..." : "Sync MIS Registrations"}
+                  </button>
+                </div>
               </div>
             )}
           </div>

@@ -422,8 +422,31 @@ export function deleteExamHallUnavailability(id) {
   });
 }
 
-export function fetchStudentExamTimetable(batchId) {
-  return request(`/api/exam-timetables/student?batchId=${batchId}`);
+export function fetchStudentExamTimetable(batchId, identifier = null) {
+  const query = identifier ? `batchId=${batchId}&identifier=${encodeURIComponent(identifier)}` : `batchId=${batchId}`;
+  return request(`/api/exam-timetables/student?${query}`);
+}
+
+// === MIS STUDENT ENROLLMENT SYNC & PERSONALIZATION ===
+export function fetchStudentEnrollments(batchId) {
+  return request(`/api/student-enrollments/batch/${batchId}`);
+}
+
+export function fetchPersonalizedStudentEnrollments(identifier) {
+  return request(`/api/student-enrollments/student?identifier=${encodeURIComponent(identifier)}`);
+}
+
+export function syncMISStudentEnrollments(batchId, records) {
+  return request(`/api/student-enrollments/sync`, {
+    method: "POST",
+    body: JSON.stringify({ batchId, records }),
+  });
+}
+
+export function clearBatchEnrollments(batchId) {
+  return request(`/api/student-enrollments/batch/${batchId}`, {
+    method: "DELETE",
+  });
 }
 
 // === USER PROFILE ===

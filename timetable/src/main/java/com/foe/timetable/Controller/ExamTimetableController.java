@@ -48,6 +48,9 @@ public class ExamTimetableController {
     @Autowired
     private DepartmentRepository departmentRepository;
 
+    @Autowired
+    private StudentModuleEnrollmentRepository studentModuleEnrollmentRepository;
+
     // Get all exam timetables for a batch
     @GetMapping
     public ResponseEntity<?> getExamTimetables(@RequestParam(required = false) Integer batchId) {
@@ -690,21 +693,72 @@ public class ExamTimetableController {
         return ResponseEntity.ok(Map.of("message", "Hall unavailability record deleted."));
     }
 
-    // Student view endpoint for published exam timetable
+    // Student view endpoint for published exam timetable (with personalized MIS enrollment filtering & repeat exams)
     @GetMapping("/student")
-    public ResponseEntity<?> getStudentPublishedExamTimetable(@RequestParam Integer batchId) {
+    public ResponseEntity<?> getStudentPublishedExamTimetable(
+            @RequestParam Integer batchId,
+            @RequestParam(required = false) String identifier) {
+        
         Optional<ExamTimetable> publishedOpt = examTimetableRepository.findFirstByBatch_BatchIdAndStatusOrderByCreatedAtDesc(batchId, "published");
         if (publishedOpt.isEmpty()) {
             return ResponseEntity.ok(Map.of("status", "none", "entries", Collections.emptyList(), "message", "No published exam timetable available for your batch yet."));
         }
 
         ExamTimetable et = publishedOpt.get();
-        List<ExamEntry> entries = examEntryRepository.findByExamTimetable_ExamTimetableIdOrderByExamDateAscStartTimeAsc(et.getExamTimetableId());
+        List<ExamEntry> allEntries = examEntryRepository.findByExamTimetable_ExamTimetableIdOrderByExamDateAscStartTimeAsc(et.getExamTimetableId());
+
+        // If student identifier (Reg No or Email) is provided and student has specific MIS enrollments, filter personalized modules
+        if (identifier != null && !identifier.trim().isEmpty()) {
+            List<StudentModuleEnrollment> enrollments = studentModuleEnrollmentRepository.findByIdentifier(identifier.trim());
+            if (!enrollments.isEmpty()) {
+                Set<Integer> enrolledModuleIds = enrollments.stream()
+                        .map(e -> e.getModule().getModuleId())
+                        .collect(Collectors.toSet());
+
+                // Filter batch entries to only enrolled modules (TEs, IS, Core)
+                List<ExamEntry> filteredEntries = allEntries.stream()
+                        .filter(e -> e.getModule() != null && enrolledModuleIds.contains(e.getModule().getModuleId()))
+                        .collect(Collectors.toList());
+
+                // Also check if student has repeat modules in OTHER batches and include their published exam entries!
+                List<StudentModuleEnrollment> repeatEnrollments = enrollments.stream()
+                        .filter(e -> e.getEnrollmentType() == StudentModuleEnrollment.EnrollmentType.repeat || e.getEnrollmentType() == StudentModuleEnrollment.EnrollmentType.resit)
+                        .toList();
+
+                for (StudentModuleEnrollment rep : repeatEnrollments) {
+                    if (rep.getBatch() != null && !rep.getBatch().getBatchId().equals(batchId)) {
+                        Optional<ExamTimetable> otherBatchPublished = examTimetableRepository.findFirstByBatch_BatchIdAndStatusOrderByCreatedAtDesc(rep.getBatch().getBatchId(), "published");
+                        if (otherBatchPublished.isPresent()) {
+                            List<ExamEntry> otherEntries = examEntryRepository.findByExamTimetable_ExamTimetableIdOrderByExamDateAscStartTimeAsc(otherBatchPublished.get().getExamTimetableId());
+                            for (ExamEntry repEntry : otherEntries) {
+                                if (repEntry.getModule() != null && repEntry.getModule().getModuleId().equals(rep.getModule().getModuleId())) {
+                                    if (!filteredEntries.contains(repEntry)) {
+                                        filteredEntries.add(repEntry);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Sort combined personalized schedule by date & time
+                filteredEntries.sort(Comparator.comparing(ExamEntry::getExamDate).thenComparing(ExamEntry::getStartTime));
+
+                return ResponseEntity.ok(Map.of(
+                    "examTimetable", et,
+                    "status", "published",
+                    "isPersonalized", true,
+                    "enrolledCount", enrollments.size(),
+                    "entries", filteredEntries
+                ));
+            }
+        }
 
         return ResponseEntity.ok(Map.of(
             "examTimetable", et,
             "status", "published",
-            "entries", entries
+            "isPersonalized", false,
+            "entries", allEntries
         ));
     }
 

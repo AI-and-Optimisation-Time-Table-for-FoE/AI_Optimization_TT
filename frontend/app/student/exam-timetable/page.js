@@ -35,17 +35,24 @@ export default function StudentExamTimetablePage() {
     fetchDepartments().then(setDepartments).catch(console.error);
   }, []);
 
-  const loadStudentExamSchedule = async (batchId) => {
+  const [isPersonalized, setIsPersonalized] = useState(false);
+  const [enrolledCount, setEnrolledCount] = useState(0);
+
+  const loadStudentExamSchedule = async (batchId, overrideIdentifier = null) => {
     setLoading(true);
     setError("");
     try {
-      const data = await fetchStudentExamTimetable(batchId);
+      const idToUse = overrideIdentifier || studentIdInput || (user?.studentIdNumber || user?.universityEmail || user?.username);
+      const data = await fetchStudentExamTimetable(batchId, idToUse);
       if (data && data.status === "published") {
         setExamTimetable(data.examTimetable);
         setEntries(data.entries || []);
+        setIsPersonalized(!!data.isPersonalized);
+        setEnrolledCount(data.enrolledCount || 0);
       } else {
         setExamTimetable(null);
         setEntries([]);
+        setIsPersonalized(false);
       }
     } catch (err) {
       console.error(err);
