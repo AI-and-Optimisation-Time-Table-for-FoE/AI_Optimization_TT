@@ -4,11 +4,15 @@ import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { fetchBatches, fetchDepartments, register } from "../lib/api";
+import { Eye, EyeOff, Check, X, ShieldCheck } from "lucide-react";
 
 export default function RegisterPage() {
   const router = useRouter();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [role, setRole] = useState("student");
   
   // Shared name & email fields
@@ -87,10 +91,41 @@ export default function RegisterPage() {
     return selectedBatchObj ? (selectedBatchObj.semester === 1 || selectedBatchObj.semester === 2) : true;
   }, [selectedBatchObj]);
 
+  const passwordRules = useMemo(() => {
+    return {
+      minLength: password.length >= 8,
+      hasUpper: /[A-Z]/.test(password),
+      hasLower: /[a-z]/.test(password),
+      hasNumber: /[0-9]/.test(password),
+      hasSpecial: /[!@#$%^&*(),.?":{}|<>]/.test(password),
+      match: password.length > 0 && password === confirmPassword,
+    };
+  }, [password, confirmPassword]);
+
+  const isPasswordStrong = useMemo(() => {
+    return (
+      passwordRules.minLength &&
+      passwordRules.hasUpper &&
+      passwordRules.hasLower &&
+      passwordRules.hasNumber &&
+      passwordRules.hasSpecial
+    );
+  }, [passwordRules]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!firstName || !lastName || !universityEmail || !password) {
-      setError("First name, last name, university email, and password are required.");
+    if (!firstName || !lastName || !universityEmail || !password || !confirmPassword) {
+      setError("Please fill in all required fields including password confirmation.");
+      return;
+    }
+
+    if (!isPasswordStrong) {
+      setError("Please ensure your password meets all security requirements (min 8 characters, uppercase, lowercase, number, and special character).");
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError("Passwords do not match. Please re-enter your confirm password.");
       return;
     }
 
@@ -239,10 +274,91 @@ export default function RegisterPage() {
             <input type="email" value={universityEmail} onChange={(e) => setUniversityEmail(e.target.value)} disabled={loading} placeholder={role === "student" ? "student@engug.ruh.ac.lk" : "lecture@eie.ruh.ac.lk"} style={inputStyle} onFocus={focusStyle} onBlur={blurStyle} />
           </div>
 
-          <div>
-            <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#404040', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Password</label>
-            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} disabled={loading} placeholder="••••••••" style={inputStyle} onFocus={focusStyle} onBlur={blurStyle} />
+          <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+            <div style={{ flex: '1 1 200px' }}>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#404040', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Password</label>
+              <div style={{ position: 'relative' }}>
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  disabled={loading}
+                  placeholder="Min 8 chars, Aa1@"
+                  style={{ ...inputStyle, paddingRight: '40px' }}
+                  onFocus={focusStyle}
+                  onBlur={blurStyle}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+            </div>
+
+            <div style={{ flex: '1 1 200px' }}>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#404040', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Confirm Password</label>
+              <div style={{ position: 'relative' }}>
+                <input
+                  type={showConfirmPassword ? "text" : "password"}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  disabled={loading}
+                  placeholder="Re-enter password"
+                  style={{ ...inputStyle, paddingRight: '40px' }}
+                  onFocus={focusStyle}
+                  onBlur={blurStyle}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}
+                >
+                  {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+            </div>
           </div>
+
+          {/* Password Security Requirement Hints */}
+          {password.length > 0 && (
+            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '12px 14px', fontSize: '12px' }}>
+              <div style={{ fontWeight: '700', color: '#334155', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <ShieldCheck size={14} style={{ color: isPasswordStrong ? '#16a34a' : '#64748b' }} />
+                <span>Password Security Requirements:</span>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '6px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: passwordRules.minLength ? '#16a34a' : '#94a3b8' }}>
+                  {passwordRules.minLength ? <Check size={13} /> : <X size={13} />}
+                  <span>At least 8 characters</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: passwordRules.hasUpper ? '#16a34a' : '#94a3b8' }}>
+                  {passwordRules.hasUpper ? <Check size={13} /> : <X size={13} />}
+                  <span>Uppercase letter (A-Z)</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: passwordRules.hasLower ? '#16a34a' : '#94a3b8' }}>
+                  {passwordRules.hasLower ? <Check size={13} /> : <X size={13} />}
+                  <span>Lowercase letter (a-z)</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: passwordRules.hasNumber ? '#16a34a' : '#94a3b8' }}>
+                  {passwordRules.hasNumber ? <Check size={13} /> : <X size={13} />}
+                  <span>At least 1 number (0-9)</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: passwordRules.hasSpecial ? '#16a34a' : '#94a3b8' }}>
+                  {passwordRules.hasSpecial ? <Check size={13} /> : <X size={13} />}
+                  <span>Special char (!@#$%...)</span>
+                </div>
+                {confirmPassword.length > 0 && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: passwordRules.match ? '#16a34a' : '#dc2626', fontWeight: '600' }}>
+                    {passwordRules.match ? <Check size={13} /> : <X size={13} />}
+                    <span>{passwordRules.match ? "Passwords match" : "Passwords do not match"}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Role Specific Fields */}
           {role === "student" && (
