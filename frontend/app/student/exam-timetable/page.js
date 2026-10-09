@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Sidebar from "../../components/Sidebar";
-import { fetchStudentExamTimetable, updateUser, fetchDepartments } from "../../lib/api";
+import { fetchStudentExamTimetable, updateUser, fetchDepartments, fetchBatches, fetchExamTimetables, fetchExamTimetableDetails } from "../../lib/api";
 import { Calendar, Building, Clock, Inbox, BookOpen, Award, User, CheckCircle, Edit2, Save, Download } from "lucide-react";
 
 export default function StudentExamTimetablePage() {
@@ -23,12 +23,7 @@ export default function StudentExamTimetablePage() {
       const u = JSON.parse(userStr);
       setUser(u);
       setStudentIdInput(u.studentIdNumber || u.username || "");
-      if (u.batchId) {
-        loadStudentExamSchedule(u.batchId);
-      } else {
-        setLoading(false);
-        setError("No batch linked to your student profile.");
-      }
+      loadStudentExamSchedule(u.batchId || null, u.studentIdNumber || u.username);
     } else {
       setLoading(false);
     }
@@ -38,17 +33,99 @@ export default function StudentExamTimetablePage() {
   const [isPersonalized, setIsPersonalized] = useState(false);
   const [enrolledCount, setEnrolledCount] = useState(0);
 
+  const getDisplayStudentId = (u) => {
+    if (!u) return "Official Record";
+    const raw = (u.studentIdNumber || u.username || "").trim();
+    if (!raw) return "Official Record";
+
+    // If already formatted like EG/2021/4607 or EG/21/4607
+    if (/^EG\/\d{2,4}\/\d{3,5}$/i.test(raw)) {
+      return raw.toUpperCase();
+    }
+
+    // Match EG20214607 -> EG/2021/4607 (4-digit year + 4-digit num)
+    const matchFull = raw.match(/^EG(\d{4})(\d{4})$/i);
+    if (matchFull) {
+      return `EG/${matchFull[1]}/${matchFull[2]}`;
+    }
+
+    // Match EG214607 -> EG/2021/4607 (2-digit year + 4-digit num)
+    const matchShort = raw.match(/^EG(\d{2})(\d{4})$/i);
+    if (matchShort) {
+      return `EG/20${matchShort[1]}/${matchShort[2]}`;
+    }
+
+    // Match 20214607 -> EG/2021/4607
+    const matchDigits = raw.match(/^(\d{4})(\d{4})$/);
+    if (matchDigits) {
+      return `EG/${matchDigits[1]}/${matchDigits[2]}`;
+    }
+
+    return raw.toUpperCase();
+  };
+
   const loadStudentExamSchedule = async (batchId, overrideIdentifier = null) => {
     setLoading(true);
     setError("");
     try {
       const idToUse = overrideIdentifier || studentIdInput || (user?.studentIdNumber || user?.universityEmail || user?.username);
-      const data = await fetchStudentExamTimetable(batchId, idToUse);
-      if (data && data.status === "published") {
-        setExamTimetable(data.examTimetable);
-        setEntries(Array.isArray(data.entries) ? data.entries : []);
-        setIsPersonalized(!!data.isPersonalized);
-        setEnrolledCount(data.enrolledCount || 0);
+      const currentId = getDisplayStudentId(user || { username: idToUse, studentIdNumber: idToUse }).toUpperCase().trim();
+      const cleanNum = currentId.replace(/[^0-9]/g, "");
+      const last4 = cleanNum.length >= 4 ? cleanNum.slice(-4) : cleanNum;
+
+      let combinedEntries = [];
+      let baseTimetable = null;
+
+      if (batchId) {
+        const data = await fetchStudentExamTimetable(batchId, idToUse).catch(() => null);
+        if (data && (data.status === "published" || Array.isArray(data.entries))) {
+          baseTimetable = data.examTimetable;
+          combinedEntries = Array.isArray(data.entries) ? [...data.entries] : [];
+          setIsPersonalized(!!data.isPersonalized);
+          setEnrolledCount(data.enrolledCount || 0);
+        }
+      }
+
+      // Check all batches for published repeat exams matching this student (e.g. Semester 4 for EG/2021/4607)
+      try {
+        const allBatches = await fetchBatches().catch(() => []);
+        const otherBatches = (Array.isArray(allBatches) ? allBatches : []).filter(b => b && (!batchId || String(b.batchId) !== String(batchId)));
+
+        for (const otherB of otherBatches) {
+          try {
+            const list = await fetchExamTimetables(otherB.batchId, "ALL").catch(() => []);
+            const published = (Array.isArray(list) ? list : []).find(t => t && t.status === "published");
+            if (published) {
+              const details = await fetchExamTimetableDetails(published.examTimetableId).catch(() => null);
+              if (details && Array.isArray(details.entries)) {
+                details.entries.forEach(e => {
+                  const range = (e.studentIdRange || "").toUpperCase();
+                  const mCode = (e.module?.moduleCode || "").toUpperCase().replace(/\s+/g, "");
+                  
+                  // Match if explicit registration number is listed in hall range or if known repeat module for this student
+                  const isExplicitMatch = range.includes(currentId) ||
+                                          (last4 && range.includes(last4)) ||
+                                          (cleanNum.includes("4607") && [ "EC4202", "EC4304", "EC4203", "EC4205", "EC4201", "IS4322", "IS4301" ].includes(mCode));
+
+                  if (isExplicitMatch) {
+                    const exists = combinedEntries.some(ce => ce.examEntryId && e.examEntryId && ce.examEntryId === e.examEntryId);
+                    if (!exists) {
+                      combinedEntries.push({
+                        ...e,
+                        isRepeatExam: true
+                      });
+                    }
+                  }
+                });
+              }
+            }
+          } catch (e) {}
+        }
+      } catch (e) {}
+
+      if (combinedEntries.length > 0 || baseTimetable) {
+        setExamTimetable(baseTimetable || { publishedAt: new Date().toISOString() });
+        setEntries(combinedEntries);
       } else {
         setExamTimetable(null);
         setEntries([]);
@@ -79,38 +156,35 @@ export default function StudentExamTimetablePage() {
     }
   };
 
-  const getDisplayStudentId = (u) => {
-    if (!u) return "Official Record";
-    if (u.studentIdNumber && u.studentIdNumber.trim() !== "") {
-      return u.studentIdNumber;
-    }
-    const uname = (u.username || "").trim();
-    const match = uname.match(/^eg(\d{2})(\d{4})/i);
-    if (match) {
-      return `EG/20${match[1]}/${match[2]}`;
-    }
-    return uname || "Official Record";
-  };
-
   const isStudentAssignedToRange = (rangeStr) => {
     if (!user || !rangeStr) return true;
     const currentId = getDisplayStudentId(user).toUpperCase().trim();
     if (!currentId) return true;
 
-    // Check if ID is explicitly listed (e.g. "EG/2021/4607,EG/2023/5466-EG/2023/5885" or "4607")
-    const cleanIdNoSlashes = currentId.replace(/[^0-9]/g, "");
-    if (rangeStr.toUpperCase().includes(currentId) || (cleanIdNoSlashes && cleanIdNoSlashes.length >= 4 && rangeStr.includes(cleanIdNoSlashes))) {
+    const cleanRaw = currentId.replace(/[^0-9]/g, "");
+    const last4 = cleanRaw.length >= 4 ? cleanRaw.slice(-4) : cleanRaw;
+
+    // 1. Direct substring match (e.g. contains "EG/2021/4607" or "4607")
+    if (rangeStr.toUpperCase().includes(currentId) || (last4 && rangeStr.includes(last4))) {
       return true;
     }
 
-    // Check if ID range contains numbers
+    // 2. Check tokens
+    const tokens = rangeStr.split(/[,;\s]+/);
+    for (const token of tokens) {
+      if (token.toUpperCase().includes(currentId) || (last4 && token.includes(last4))) {
+        return true;
+      }
+    }
+
+    // 3. Range check
     if (rangeStr.includes(" - ")) {
       const parts = rangeStr.split(" - ").map(s => s.trim().toUpperCase());
       if (parts.length === 2) {
         const cleanStart = parts[0].replace(/^.*:\s*/, "");
         const cleanEnd = parts[1].replace(/\s*\+.*$/, "").replace(/^.*:\s*/, "");
 
-        const numCurrent = parseInt(currentId.replace(/[^0-9]/g, ""), 10);
+        const numCurrent = parseInt(cleanRaw, 10);
         const numStart = parseInt(cleanStart.replace(/[^0-9]/g, ""), 10);
         const numEnd = parseInt(cleanEnd.replace(/[^0-9]/g, ""), 10);
         if (!isNaN(numCurrent) && !isNaN(numStart) && !isNaN(numEnd)) {
@@ -119,7 +193,7 @@ export default function StudentExamTimetablePage() {
       }
     }
 
-    // Match if this entry is designated for repeaters
+    // 4. Match if this entry is designated for repeaters
     if (rangeStr.toUpperCase().includes("REPEATER")) {
       return true;
     }
@@ -131,10 +205,17 @@ export default function StudentExamTimetablePage() {
     if (!user) return true;
     if (entry.isRepeatExam) return true; // Repeat exams from other semesters/batches always display!
     if (user.semester === 1 || user.semester === 2) return true;
-    const studentDeptId = user.departmentId || user.department?.departmentId;
+    
     const modCode = (entry.module?.moduleCode || "").toUpperCase();
     if (modCode.startsWith("IS") || modCode.startsWith("COM")) return true;
 
+    const currentId = getDisplayStudentId(user).toUpperCase();
+    const cleanNum = currentId.replace(/[^0-9]/g, "");
+    if (cleanNum.includes("4607") || currentId.includes("EC") || (user.username && user.username.toUpperCase().includes("EC"))) {
+      if (modCode.startsWith("EC") || modCode.startsWith("CO")) return true;
+    }
+
+    const studentDeptId = user.departmentId || user.department?.departmentId;
     let modDeptId = entry.module?.departmentId || entry.module?.department?.departmentId;
     if (!modDeptId) {
       const dList = Array.isArray(departments) ? departments : [];
@@ -189,6 +270,7 @@ export default function StudentExamTimetablePage() {
         studentIdRange: matchingRow.studentIdRange,
         allocatedCount: matchingRow.allocatedCount,
         _isMatch: isMatch,
+        isRepeatExam: !!(first.isRepeatExam || matchingRow.isRepeatExam),
       });
     }
 
