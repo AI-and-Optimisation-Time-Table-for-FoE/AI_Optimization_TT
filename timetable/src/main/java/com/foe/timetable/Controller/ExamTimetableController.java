@@ -190,12 +190,16 @@ public class ExamTimetableController {
                 if (!isThirdYear || "ALL".equals(streamScope)) {
                     include = true;
                 } else if ("EC".equals(streamScope)) {
-                    include = deptCode.equals("EC") || mCode.startsWith("EC") || mCode.startsWith("COM");
+                    include = deptCode.equals("EC") || deptCode.equals("COM") || mCode.startsWith("EC") || mCode.startsWith("COM") || mCode.startsWith("CO");
                 } else if ("MN".equals(streamScope)) {
                     include = deptCode.equals("MN") || mCode.startsWith("MN");
+                } else if ("EC_MN".equals(streamScope)) {
+                    include = deptCode.equals("EC") || deptCode.equals("COM") || deptCode.equals("MN") ||
+                              mCode.startsWith("EC") || mCode.startsWith("COM") || mCode.startsWith("CO") || mCode.startsWith("MN");
                 } else if ("MAIN".equals(streamScope)) {
                     // Main stream: CE, EE, ME (and general non-EC/non-MN)
-                    include = !deptCode.equals("EC") && !deptCode.equals("MN") && !mCode.startsWith("EC") && !mCode.startsWith("MN") && !mCode.startsWith("COM");
+                    include = !deptCode.equals("EC") && !deptCode.equals("COM") && !deptCode.equals("MN") &&
+                              !mCode.startsWith("EC") && !mCode.startsWith("MN") && !mCode.startsWith("COM") && !mCode.startsWith("CO");
                 }
 
                 if (include) {
@@ -209,8 +213,16 @@ public class ExamTimetableController {
         List<ExamHallUnavailability> unavailabilities = examHallUnavailabilityRepository.findAll();
 
         int batchStudentCount = (batch.getStudentCount() != null && batch.getStudentCount() > 0) ? batch.getStudentCount() : 100;
-        if (isThirdYear && ("EC".equals(streamScope) || "MN".equals(streamScope))) {
-            batchStudentCount = Math.min(batchStudentCount, 120);
+        if (isThirdYear) {
+            if ("EC".equals(streamScope)) {
+                batchStudentCount = Math.min(batchStudentCount, 120);
+            } else if ("MN".equals(streamScope)) {
+                batchStudentCount = Math.min(batchStudentCount, 60);
+            } else if ("EC_MN".equals(streamScope)) {
+                batchStudentCount = Math.min(batchStudentCount, 180);
+            } else if ("MAIN".equals(streamScope)) {
+                batchStudentCount = Math.max(100, batchStudentCount - 180);
+            }
         }
 
         List<ExamEntry> optimizedEntries = generateOptimizedSchedule(et, modules, halls, unavailabilities, batchStudentCount);
@@ -862,13 +874,23 @@ public class ExamTimetableController {
         if (studentDeptId != null && semester != null && (semester == 5 || semester == 6)) {
             Department dept = departmentRepository.findById(studentDeptId).orElse(null);
             String dCode = dept != null ? dept.getDepartmentCode().toUpperCase().trim() : "";
-            String targetScope = "MAIN";
-            if ("EC".equals(dCode)) targetScope = "EC";
-            else if ("MN".equals(dCode)) targetScope = "MN";
 
-            Optional<ExamTimetable> streamEt = examTimetableRepository.findFirstByBatch_BatchIdAndStreamScopeAndStatusOrderByCreatedAtDesc(batchId, targetScope, "published");
-            if (streamEt.isPresent()) {
-                et = streamEt.get();
+            if ("EC".equals(dCode) || "COM".equals(dCode)) {
+                Optional<ExamTimetable> streamEt = examTimetableRepository.findFirstByBatch_BatchIdAndStreamScopeAndStatusOrderByCreatedAtDesc(batchId, "EC", "published");
+                if (streamEt.isEmpty()) {
+                    streamEt = examTimetableRepository.findFirstByBatch_BatchIdAndStreamScopeAndStatusOrderByCreatedAtDesc(batchId, "EC_MN", "published");
+                }
+                if (streamEt.isPresent()) et = streamEt.get();
+            } else if ("MN".equals(dCode)) {
+                Optional<ExamTimetable> streamEt = examTimetableRepository.findFirstByBatch_BatchIdAndStreamScopeAndStatusOrderByCreatedAtDesc(batchId, "MN", "published");
+                if (streamEt.isEmpty()) {
+                    streamEt = examTimetableRepository.findFirstByBatch_BatchIdAndStreamScopeAndStatusOrderByCreatedAtDesc(batchId, "EC_MN", "published");
+                }
+                if (streamEt.isPresent()) et = streamEt.get();
+            } else {
+                // CE, EE, ME
+                Optional<ExamTimetable> streamEt = examTimetableRepository.findFirstByBatch_BatchIdAndStreamScopeAndStatusOrderByCreatedAtDesc(batchId, "MAIN", "published");
+                if (streamEt.isPresent()) et = streamEt.get();
             }
         }
 

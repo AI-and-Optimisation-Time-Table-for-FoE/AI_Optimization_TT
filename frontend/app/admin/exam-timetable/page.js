@@ -166,7 +166,7 @@ const SESSION_OPTIONS = [
 export default function AdminExamTimetablePage() {
   const [batches, setBatches] = useState([]);
   const [halls, setHalls] = useState([]);
-  const [selectedBatchId, setSelectedBatchId] = useState("");
+  const [selectedTargetKey, setSelectedTargetKey] = useState("");
   const [selectedDeptFilter, setSelectedDeptFilter] = useState("ALL");
   const [examTimetable, setExamTimetable] = useState(null);
   const [entries, setEntries] = useState([]);
@@ -194,10 +194,69 @@ export default function AdminExamTimetablePage() {
   const [misSyncing, setMisSyncing] = useState(false);
   const [misSyncResult, setMisSyncResult] = useState("");
 
+  const parseTargetKey = (key) => {
+    if (!key) return { batchId: null, streamScope: "ALL" };
+    const parts = key.split("_");
+    const bId = parseInt(parts[0], 10);
+    const sScope = parts.slice(1).join("_") || "ALL";
+    return { batchId: bId, streamScope: sScope };
+  };
+
+  const getBatchOptions = () => {
+    const options = [];
+    batches.forEach(b => {
+      const is3rdYear = (b.semester === 5 || b.semester === 6);
+      if (is3rdYear) {
+        options.push({
+          key: `${b.batchId}_MAIN`,
+          batchId: b.batchId,
+          streamScope: "MAIN",
+          label: `${b.batchName} Batch (Sem ${b.semester}) — General Stream (CE, EE, ME)`,
+          shortLabel: `${b.batchName} (General Stream)`
+        });
+        options.push({
+          key: `${b.batchId}_EC_MN`,
+          batchId: b.batchId,
+          streamScope: "EC_MN",
+          label: `${b.batchName} Batch (Sem ${b.semester}) — Computer & Marine Depts (EC, MN)`,
+          shortLabel: `${b.batchName} (EC & MN Depts)`
+        });
+        options.push({
+          key: `${b.batchId}_EC`,
+          batchId: b.batchId,
+          streamScope: "EC",
+          label: `${b.batchName} Batch (Sem ${b.semester}) — Computer Engineering (EC)`,
+          shortLabel: `${b.batchName} (Computer Dept)`
+        });
+        options.push({
+          key: `${b.batchId}_MN`,
+          batchId: b.batchId,
+          streamScope: "MN",
+          label: `${b.batchName} Batch (Sem ${b.semester}) — Marine Engineering (MN)`,
+          shortLabel: `${b.batchName} (Marine Dept)`
+        });
+      } else {
+        options.push({
+          key: `${b.batchId}_ALL`,
+          batchId: b.batchId,
+          streamScope: "ALL",
+          label: `${b.batchName} Batch (Semester ${b.semester})`,
+          shortLabel: `${b.batchName} Batch`
+        });
+      }
+    });
+    return options;
+  };
+
   useEffect(() => {
     fetchBatches().then(data => {
       setBatches(data);
-      if (data.length > 0) setSelectedBatchId(String(data[0].batchId));
+      if (data.length > 0) {
+        const first = data[0];
+        const is3rd = (first.semester === 5 || first.semester === 6);
+        const defaultKey = is3rd ? `${first.batchId}_MAIN` : `${first.batchId}_ALL`;
+        setSelectedTargetKey(defaultKey);
+      }
     }).catch(console.error);
     fetchHalls().then(setHalls).catch(console.error);
     loadUnavailabilities();
@@ -213,17 +272,20 @@ export default function AdminExamTimetablePage() {
   };
 
   useEffect(() => {
-    if (selectedBatchId) {
-      loadBatchExamTimetable(Number(selectedBatchId));
-      loadBatchEnrollments(Number(selectedBatchId));
+    if (selectedTargetKey) {
+      const { batchId, streamScope } = parseTargetKey(selectedTargetKey);
+      if (batchId) {
+        loadBatchExamTimetable(batchId, streamScope);
+        loadBatchEnrollments(batchId);
+      }
     }
-  }, [selectedBatchId]);
+  }, [selectedTargetKey]);
 
-  const loadBatchExamTimetable = async (batchId) => {
+  const loadBatchExamTimetable = async (batchId, streamScope = "ALL") => {
     setLoading(true);
     setError("");
     try {
-      const list = await fetchExamTimetables(batchId);
+      const list = await fetchExamTimetables(batchId, streamScope);
       if (list && list.length > 0) {
         const latest = list[0];
         const details = await fetchExamTimetableDetails(latest.examTimetableId);
@@ -338,7 +400,8 @@ export default function AdminExamTimetablePage() {
   };
 
   const handleAddVenue = (key, templateEntry) => {
-    const activeBatch = batches.find(b => String(b.batchId) === String(selectedBatchId));
+    const { batchId } = parseTargetKey(selectedTargetKey);
+    const activeBatch = batches.find(b => String(b.batchId) === String(batchId));
     const cfg = getBatchConfig(activeBatch);
     const existingForMod = entries.filter(e => moduleKey(e) === key);
     let nextStart = cfg.start;
@@ -393,17 +456,18 @@ export default function AdminExamTimetablePage() {
   };
 
   const handleCreate = async () => {
-    if (!selectedBatchId || !startDate) { alert("Please select a batch and start date."); return; }
+    const { batchId, streamScope } = parseTargetKey(selectedTargetKey);
+    if (!batchId || !startDate) { alert("Please select a batch and start date."); return; }
     setLoading(true);
     try {
       await createExamTimetable({
-        batchId: Number(selectedBatchId),
+        batchId: Number(batchId),
         startDate,
         durationWeeks: Number(durationWeeks),
-        streamScope: "ALL"
+        streamScope: streamScope || "ALL"
       });
       alert("Exam timetable auto-optimized and created!");
-      await loadBatchExamTimetable(Number(selectedBatchId));
+      await loadBatchExamTimetable(Number(batchId), streamScope);
     } catch (err) {
       alert("Error: " + err.message);
     } finally {
@@ -413,12 +477,13 @@ export default function AdminExamTimetablePage() {
 
   const handleReoptimize = async () => {
     if (!examTimetable) return;
+    const { batchId, streamScope } = parseTargetKey(selectedTargetKey);
     if (confirm("Re-run optimization? This will recalculate all dates, sessions, and venues.")) {
       setLoading(true);
       try {
         await reoptimizeExamTimetable(examTimetable.examTimetableId);
         alert("Exam schedule re-optimized!");
-        await loadBatchExamTimetable(Number(selectedBatchId));
+        await loadBatchExamTimetable(Number(batchId), streamScope);
       } catch (err) {
         alert("Error: " + err.message);
       } finally {
@@ -429,6 +494,7 @@ export default function AdminExamTimetablePage() {
 
   const handleSaveEntries = async () => {
     if (!examTimetable) return;
+    const { batchId, streamScope } = parseTargetKey(selectedTargetKey);
     setSaving(true);
     try {
       const payload = entries.map(e => ({
@@ -446,7 +512,7 @@ export default function AdminExamTimetablePage() {
       }));
       await saveExamEntries(examTimetable.examTimetableId, payload);
       alert("Exam schedule saved successfully!");
-      await loadBatchExamTimetable(Number(selectedBatchId));
+      await loadBatchExamTimetable(Number(batchId), streamScope);
     } catch (err) {
       alert("Error saving: " + err.message);
     } finally {
@@ -456,17 +522,18 @@ export default function AdminExamTimetablePage() {
 
   const handleTogglePublish = async () => {
     if (!examTimetable) return;
+    const { batchId, streamScope } = parseTargetKey(selectedTargetKey);
     try {
       if (examTimetable.status === "published") {
         if (confirm("Unpublish this timetable? Students will no longer see it.")) {
           await unpublishExamTimetable(examTimetable.examTimetableId);
           alert("Unpublished!");
-          await loadBatchExamTimetable(Number(selectedBatchId));
+          await loadBatchExamTimetable(Number(batchId), streamScope);
         }
       } else {
         await publishExamTimetable(examTimetable.examTimetableId);
         alert("Published to students!");
-        await loadBatchExamTimetable(Number(selectedBatchId));
+        await loadBatchExamTimetable(Number(batchId), streamScope);
       }
     } catch (err) {
       alert("Error: " + err.message);
@@ -475,11 +542,12 @@ export default function AdminExamTimetablePage() {
 
   const handleDeleteTimetable = async () => {
     if (!examTimetable) return;
+    const { batchId, streamScope } = parseTargetKey(selectedTargetKey);
     if (confirm("Delete this exam timetable draft?")) {
       try {
         await deleteExamTimetable(examTimetable.examTimetableId);
         alert("Deleted!");
-        await loadBatchExamTimetable(Number(selectedBatchId));
+        await loadBatchExamTimetable(Number(batchId), streamScope);
       } catch (err) {
         alert("Error: " + err.message);
       }
@@ -503,7 +571,8 @@ export default function AdminExamTimetablePage() {
   };
 
   const handleSyncMIS = async () => {
-    if (!selectedBatchId) { alert("Please select a batch."); return; }
+    const { batchId } = parseTargetKey(selectedTargetKey);
+    if (!batchId) { alert("Please select a batch."); return; }
     if (!misJsonInput.trim()) { alert("Please enter MIS registration records in JSON or CSV format."); return; }
 
     setMisSyncing(true);
@@ -540,10 +609,10 @@ export default function AdminExamTimetablePage() {
         throw new Error("No valid enrollment records found.");
       }
 
-      const res = await syncMISStudentEnrollments(Number(selectedBatchId), parsedRecords);
+      const res = await syncMISStudentEnrollments(Number(batchId), parsedRecords);
       setMisSyncResult(`Successfully imported ${res.importedCount} student course registrations from MIS!`);
       setMisJsonInput("");
-      loadBatchEnrollments(Number(selectedBatchId));
+      loadBatchEnrollments(Number(batchId));
     } catch (err) {
       alert("MIS Import Error: " + err.message);
     } finally {
@@ -552,10 +621,11 @@ export default function AdminExamTimetablePage() {
   };
 
   const handleClearMIS = async () => {
-    if (!selectedBatchId) return;
+    const { batchId } = parseTargetKey(selectedTargetKey);
+    if (!batchId) return;
     if (confirm("Clear all student course registrations for this batch?")) {
       try {
-        await clearBatchEnrollments(Number(selectedBatchId));
+        await clearBatchEnrollments(Number(batchId));
         setEnrollments([]);
         setMisSyncResult("Batch enrollments cleared.");
       } catch (err) {
@@ -633,10 +703,12 @@ export default function AdminExamTimetablePage() {
             <div className="card-body">
 
               <div style={{ display: "flex", flexWrap: "wrap", gap: "16px", alignItems: "flex-end" }}>
-                <div style={{ flex: "1 1 200px" }}>
-                  <label className="form-label" style={{ fontWeight: "700", color: "#334155" }}>Batch</label>
-                  <select className="form-select" value={selectedBatchId} onChange={e => setSelectedBatchId(e.target.value)} style={{ borderRadius: "10px", border: "1.5px solid #cbd5e1", fontWeight: "600", fontSize: "13px", padding: "8px 12px", background: "#f8fafc", boxShadow: "0 1px 2px rgba(0,0,0,0.04)" }}>
-                    {batches.map(b => <option key={b.batchId} value={b.batchId}>{b.batchName}</option>)}
+                <div style={{ flex: "1 1 300px" }}>
+                  <label className="form-label" style={{ fontWeight: "700", color: "#334155" }}>Batch / Exam Stream</label>
+                  <select className="form-select" value={selectedTargetKey} onChange={e => setSelectedTargetKey(e.target.value)} style={{ borderRadius: "10px", border: "1.5px solid #cbd5e1", fontWeight: "600", fontSize: "13px", padding: "8px 12px", background: "#f8fafc", boxShadow: "0 1px 2px rgba(0,0,0,0.04)" }}>
+                    {getBatchOptions().map(opt => (
+                      <option key={opt.key} value={opt.key}>{opt.label}</option>
+                    ))}
                   </select>
                 </div>
                 <div style={{ flex: "1 1 160px" }}>
@@ -884,7 +956,8 @@ export default function AdminExamTimetablePage() {
 
               {/* ─── Batch Candidates Summary Bar ─── */}
               {(() => {
-                const activeBatch = batches.find(b => String(b.batchId) === String(selectedBatchId));
+                const { batchId } = parseTargetKey(selectedTargetKey);
+                const activeBatch = batches.find(b => String(b.batchId) === String(batchId));
                 // Authoritative batch headcount (e.g., 530 students for 25th batch)
                 const batchRegularStudents = activeBatch?.studentCount || (groups.length > 0 ? Math.max(...groups.map(g => g.rows.reduce((sum, r) => sum + (Number(r.allocatedCount) || 0), 0))) : 530);
                 let totalRepeaters = 0;
