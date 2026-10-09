@@ -807,10 +807,9 @@ export default function AdminDashboard() {
                         </thead>
                         <tbody>
                           {batches.slice().sort((a, b) => {
-                            if (a.semester !== b.semester) {
-                              return a.semester - b.semester;
-                            }
-                            return a.batchName.localeCompare(b.batchName);
+                            const numA = parseInt((a.batchName || "").replace(/\D/g, ""), 10) || a.batchId || 0;
+                            const numB = parseInt((b.batchName || "").replace(/\D/g, ""), 10) || b.batchId || 0;
+                            return numA - numB;
                           }).map((b) => (
                             <tr key={b.batchId}>
                               <td>{b.batchId}</td>

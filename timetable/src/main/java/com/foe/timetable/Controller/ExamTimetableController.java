@@ -412,7 +412,8 @@ public class ExamTimetableController {
             int effectiveCap = getExamCap.apply(selectedHall);
             int allocatedForThisHall = Math.min(remainingStudents, effectiveCap);
 
-            String idRange = generateStudentIdRange(targetStudents, currentStudentIndex, allocatedForThisHall, et.getBatch(), deptPrefix, totalStudents);
+            boolean isLastHall = (remainingStudents <= effectiveCap);
+            String idRange = generateStudentIdRange(targetStudents, currentStudentIndex, allocatedForThisHall, et.getBatch(), deptPrefix, totalStudents, isLastHall);
 
             ExamEntry entry = new ExamEntry();
             entry.setExamTimetable(et);
@@ -451,16 +452,10 @@ public class ExamTimetableController {
             });
     }
 
-    private String generateStudentIdRange(List<UserAccount> students, int startIndex, int count, Batch batch, String deptPrefix, int totalDeptStudents) {
-        // Registration number range is ONLY for 1st and 2nd semester batches (e.g. 27th batch)
-        boolean isFirstOrSecondSem = (batch != null && batch.getSemester() != null && (batch.getSemester() == 1 || batch.getSemester() == 2));
-        if (!isFirstOrSecondSem) {
-            return null;
-        }
+    private String generateStudentIdRange(List<UserAccount> students, int startIndex, int count, Batch batch, String deptPrefix, int totalDeptStudents, boolean isLastHall) {
+        String prefixStr = (deptPrefix != null && !deptPrefix.isBlank() && !"ALL".equalsIgnoreCase(deptPrefix)) ? (deptPrefix + ": ") : "";
 
-        String prefixStr = (deptPrefix != null && !deptPrefix.isBlank()) ? (deptPrefix + ": ") : "";
-
-        // Use real student accounts when available for 1st/2nd sem
+        // 1. If real student accounts exist in database
         if (students != null && !students.isEmpty() && startIndex < students.size()) {
             int endIndex = Math.min(startIndex + count - 1, students.size() - 1);
             String startId = students.get(startIndex).getStudentIdNumber();
@@ -469,18 +464,63 @@ public class ExamTimetableController {
             String endId = students.get(endIndex).getStudentIdNumber();
             if (endId == null || endId.isBlank()) endId = students.get(endIndex).getUsername();
 
-            return prefixStr + startId + " - " + endId;
+            String res = prefixStr + startId + " - " + endId;
+            if (isLastHall) {
+                res += " + Repeaters";
+            }
+            return res;
         }
 
-        // Derive registration year: entry year = academicYear - 1
-        int regYear = (batch.getAcademicYear() != null ? batch.getAcademicYear() : 2026) - 1;
-        String yearStr = String.valueOf(regYear);
-        int startBase = 4001;
+        // 2. Official Faculty Batch Registration Configurations
+        int batchNum = 27;
+        if (batch != null && batch.getBatchName() != null) {
+            String numOnly = batch.getBatchName().replaceAll("\\D+", "");
+            if (!numOnly.isEmpty()) {
+                try {
+                    batchNum = Integer.parseInt(numOnly);
+                } catch (Exception ignored) {}
+            }
+        }
 
-        // Synthetic range for whole-batch modules (semesters 1 & 2)
+        int regYear;
+        int startBase;
+        int endBase;
+
+        switch (batchNum) {
+            case 23:
+                regYear = 2021;
+                startBase = 4376;
+                endBase = 4894;
+                break;
+            case 24:
+                regYear = 2022;
+                startBase = 4904;
+                endBase = 5453;
+                break;
+            case 25:
+                regYear = 2023;
+                startBase = 5456;
+                endBase = 5998;
+                break;
+            case 27:
+            default:
+                regYear = 2025;
+                startBase = 6560;
+                endBase = 7112;
+                break;
+        }
+
         int startNum = startBase + startIndex;
-        int endNum = startBase + startIndex + count - 1;
-        return prefixStr + "EG/" + yearStr + "/" + String.format("%04d", startNum) + " - EG/" + yearStr + "/" + String.format("%04d", endNum);
+        int endNum = Math.min(startBase + startIndex + count - 1, endBase);
+        if (startNum > endBase) {
+            startNum = endBase;
+        }
+
+        String rangeStr = prefixStr + "EG/" + regYear + "/" + String.format("%04d", startNum) + " - EG/" + regYear + "/" + String.format("%04d", endNum);
+        if (isLastHall) {
+            rangeStr += " + Repeaters";
+        }
+        return rangeStr;
     }
 
     // Save or update exam entries
@@ -707,7 +747,27 @@ public class ExamTimetableController {
         ExamTimetable et = publishedOpt.get();
         List<ExamEntry> allEntries = examEntryRepository.findByExamTimetable_ExamTimetableIdOrderByExamDateAscStartTimeAsc(et.getExamTimetableId());
 
-        // If student identifier (Reg No or Email) is provided and student has specific MIS enrollments, filter personalized modules
+        // Resolve student account if identifier provided
+        String studentRegNo = null;
+        Integer studentDeptId = null;
+        if (identifier != null && !identifier.trim().isEmpty()) {
+            String search = identifier.trim().toLowerCase();
+            Optional<UserAccount> uOpt = userAccountRepository.findAll().stream()
+                .filter(u -> (u.getUsername() != null && u.getUsername().equalsIgnoreCase(search)) ||
+                             (u.getUniversityEmail() != null && u.getUniversityEmail().equalsIgnoreCase(search)) ||
+                             (u.getStudentIdNumber() != null && u.getStudentIdNumber().equalsIgnoreCase(search)))
+                .findFirst();
+            if (uOpt.isPresent()) {
+                studentRegNo = uOpt.get().getStudentIdNumber();
+                studentDeptId = uOpt.get().getDepartmentId();
+            } else if (identifier.toUpperCase().contains("EG/")) {
+                studentRegNo = identifier.trim().toUpperCase();
+            }
+        }
+
+        List<ExamEntry> candidateEntries = new ArrayList<>();
+
+        // If student identifier (Reg No or Email) is provided and student has specific MIS enrollments
         if (identifier != null && !identifier.trim().isEmpty()) {
             List<StudentModuleEnrollment> enrollments = studentModuleEnrollmentRepository.findByIdentifier(identifier.trim());
             if (!enrollments.isEmpty()) {
@@ -716,9 +776,11 @@ public class ExamTimetableController {
                         .collect(Collectors.toSet());
 
                 // Filter batch entries to only enrolled modules (TEs, IS, Core)
-                List<ExamEntry> filteredEntries = allEntries.stream()
-                        .filter(e -> e.getModule() != null && enrolledModuleIds.contains(e.getModule().getModuleId()))
-                        .collect(Collectors.toList());
+                for (ExamEntry e : allEntries) {
+                    if (e.getModule() != null && enrolledModuleIds.contains(e.getModule().getModuleId())) {
+                        candidateEntries.add(e);
+                    }
+                }
 
                 // Also check if student has repeat modules in OTHER batches and include their published exam entries!
                 List<StudentModuleEnrollment> repeatEnrollments = enrollments.stream()
@@ -732,34 +794,104 @@ public class ExamTimetableController {
                             List<ExamEntry> otherEntries = examEntryRepository.findByExamTimetable_ExamTimetableIdOrderByExamDateAscStartTimeAsc(otherBatchPublished.get().getExamTimetableId());
                             for (ExamEntry repEntry : otherEntries) {
                                 if (repEntry.getModule() != null && repEntry.getModule().getModuleId().equals(rep.getModule().getModuleId())) {
-                                    if (!filteredEntries.contains(repEntry)) {
-                                        filteredEntries.add(repEntry);
+                                    if (!candidateEntries.contains(repEntry)) {
+                                        candidateEntries.add(repEntry);
                                     }
                                 }
                             }
                         }
                     }
                 }
+            } else {
+                candidateEntries.addAll(allEntries);
+            }
+        } else {
+            candidateEntries.addAll(allEntries);
+        }
 
-                // Sort combined personalized schedule by date & time
-                filteredEntries.sort(Comparator.comparing(ExamEntry::getExamDate).thenComparing(ExamEntry::getStartTime));
+        // Deduplicate multi-hall allocations to student's exact matching hall!
+        List<ExamEntry> personalizedEntries = new ArrayList<>();
+        Map<String, List<ExamEntry>> groupedByModuleAndSlot = candidateEntries.stream()
+            .collect(Collectors.groupingBy(e -> (e.getExamDate() != null ? e.getExamDate().toString() : "") + "_" + 
+                                                (e.getStartTime() != null ? e.getStartTime().toString() : "") + "_" + 
+                                                (e.getModule() != null ? e.getModule().getModuleId() : 0)));
 
-                return ResponseEntity.ok(Map.of(
-                    "examTimetable", et,
-                    "status", "published",
-                    "isPersonalized", true,
-                    "enrolledCount", enrollments.size(),
-                    "entries", filteredEntries
-                ));
+        for (List<ExamEntry> group : groupedByModuleAndSlot.values()) {
+            if (group.size() == 1 || studentRegNo == null) {
+                personalizedEntries.addAll(group);
+            } else {
+                // Find matching hall for student's registration number
+                final String sReg = studentRegNo;
+                ExamEntry matchedEntry = group.stream()
+                    .filter(entry -> matchesStudentRange(entry, sReg, false))
+                    .findFirst()
+                    .orElse(group.get(0)); // Fallback to first if not explicitly partitioned
+                personalizedEntries.add(matchedEntry);
             }
         }
+
+        // Sort combined personalized schedule by date & time
+        personalizedEntries.sort(Comparator.comparing(ExamEntry::getExamDate, Comparator.nullsLast(Comparator.naturalOrder()))
+                                           .thenComparing(ExamEntry::getStartTime, Comparator.nullsLast(Comparator.naturalOrder())));
 
         return ResponseEntity.ok(Map.of(
             "examTimetable", et,
             "status", "published",
-            "isPersonalized", false,
-            "entries", allEntries
+            "isPersonalized", (studentRegNo != null),
+            "studentRegNo", studentRegNo != null ? studentRegNo : "",
+            "entries", personalizedEntries
         ));
+    }
+
+    private boolean matchesStudentRange(ExamEntry entry, String studentId, boolean isRepeater) {
+        String rangeStr = entry.getStudentIdRange();
+        if (rangeStr == null || rangeStr.trim().isEmpty()) {
+            return true;
+        }
+        if (studentId == null || studentId.trim().isEmpty()) {
+            return true;
+        }
+
+        String cleanStudentId = studentId.trim().toUpperCase();
+
+        if (rangeStr.toUpperCase().contains(cleanStudentId)) {
+            return true;
+        }
+
+        if (isRepeater && (rangeStr.toLowerCase().contains("repeater") || rangeStr.toLowerCase().contains("+ repeater"))) {
+            return true;
+        }
+
+        int studentNum = extractTrailingNumber(cleanStudentId);
+        if (studentNum <= 0) {
+            return true;
+        }
+
+        java.util.regex.Pattern p = java.util.regex.Pattern.compile("(\\d{4,5})\\s*-\\s*.*?(\\d{4,5})");
+        java.util.regex.Matcher m = p.matcher(rangeStr);
+        if (m.find()) {
+            try {
+                int startNum = Integer.parseInt(m.group(1));
+                int endNum = Integer.parseInt(m.group(2));
+                if (studentNum >= startNum && studentNum <= endNum) {
+                    return true;
+                }
+            } catch (Exception ignored) {}
+        }
+
+        return false;
+    }
+
+    private int extractTrailingNumber(String str) {
+        if (str == null) return -1;
+        java.util.regex.Pattern p = java.util.regex.Pattern.compile("(\\d{4,5})$");
+        java.util.regex.Matcher m = p.matcher(str.trim());
+        if (m.find()) {
+            try {
+                return Integer.parseInt(m.group(1));
+            } catch (Exception ignored) {}
+        }
+        return -1;
     }
 
     private boolean isDepartmentSpecificHall(Hall hall) {

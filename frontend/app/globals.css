@@ -948,8 +948,8 @@ body {
   top: 14px;
   left: 16px;
   z-index: 101;
-  width: 36px;
-  height: 36px;
+  width: 38px;
+  height: 38px;
   border-radius: var(--radius-sm);
   background: var(--neutral-0);
   border: 1px solid var(--neutral-200);
@@ -974,11 +974,79 @@ body {
   animation: fadeIn 200ms ease;
 }
 
+/* ===== PHONE & SMALL SCREEN OPTIMIZATIONS ===== */
 @media (max-width: 768px) {
   .mobile-menu-toggle {
     display: flex;
   }
   .sidebar-overlay.open {
     display: block;
+  }
+  .table-responsive {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  table.data-table,
+  table.table {
+    min-width: 600px;
+  }
+}
+
+@media (max-width: 640px) {
+  html {
+    font-size: 15px;
+  }
+  .page-content {
+    padding: 14px 10px;
+  }
+  .topbar {
+    padding-left: 58px;
+    padding-right: 12px;
+    height: 58px;
+  }
+  .mobile-menu-toggle {
+    top: 10px;
+    left: 12px;
+  }
+  .card {
+    border-radius: var(--radius-md);
+    padding: 14px !important;
+    margin-bottom: 14px;
+  }
+  .modal {
+    width: 96%;
+    max-height: 90vh;
+    border-radius: var(--radius-lg);
+  }
+  .modal-header,
+  .modal-body,
+  .modal-footer {
+    padding: 14px 16px;
+  }
+  /* Prevent iOS zoom on input focus */
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+  /* Action bars & button groups wrap on phone */
+  .btn-group,
+  .action-bar {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .btn {
+    padding: 8px 14px;
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 480px) {
+  .page-content {
+    padding: 10px 8px;
+  }
+  .card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
   }
 }

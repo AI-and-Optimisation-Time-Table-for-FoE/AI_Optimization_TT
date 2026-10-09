@@ -18,8 +18,9 @@ export default function LoginPage() {
 
   // Forgot password modal state
   const [showForgotModal, setShowForgotModal] = useState(false);
-  const [forgotStep, setForgotStep] = useState(1); // 1 = enter email, 2 = set new password
+  const [forgotStep, setForgotStep] = useState(1); // 1 = enter email, 2 = enter code & set new password, 3 = success
   const [forgotIdentifier, setForgotIdentifier] = useState("");
+  const [verificationCode, setVerificationCode] = useState("");
   const [accountInfo, setAccountInfo] = useState(null);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -93,7 +94,7 @@ export default function LoginPage() {
   const handleForgotIdentify = async (e) => {
     e.preventDefault();
     if (!forgotIdentifier.trim()) {
-      setForgotError("Please enter your university email or username.");
+      setForgotError("Please enter your university email.");
       return;
     }
 
@@ -104,7 +105,22 @@ export default function LoginPage() {
       setAccountInfo(resp);
       setForgotStep(2);
     } catch (err) {
-      setForgotError(err.message || "No account found matching this identifier.");
+      setForgotError(err.message || "No account found matching this university email.");
+    } finally {
+      setForgotLoading(false);
+    }
+  };
+
+  const handleResendCode = async () => {
+    if (!forgotIdentifier.trim()) return;
+    setForgotLoading(true);
+    setForgotError("");
+    try {
+      await requestPasswordReset(forgotIdentifier.trim());
+      setForgotError("");
+      alert("A new 6-digit verification code has been sent to your university email.");
+    } catch (err) {
+      setForgotError(err.message || "Could not resend verification code.");
     } finally {
       setForgotLoading(false);
     }
@@ -112,6 +128,10 @@ export default function LoginPage() {
 
   const handleResetPassword = async (e) => {
     e.preventDefault();
+    if (!verificationCode || verificationCode.trim().length !== 6) {
+      setForgotError("Please enter the 6-digit verification code sent to your email.");
+      return;
+    }
     if (!newPassword || !confirmPassword) {
       setForgotError("Please enter and confirm your new password.");
       return;
@@ -128,11 +148,11 @@ export default function LoginPage() {
     setForgotLoading(true);
     setForgotError("");
     try {
-      const resp = await resetPasswordWithKey(forgotIdentifier.trim(), "direct_reset", newPassword);
+      const resp = await resetPasswordWithKey(forgotIdentifier.trim(), verificationCode.trim(), newPassword);
       setForgotSuccess(resp.message || "Password reset successfully!");
       setForgotStep(3);
     } catch (err) {
-      setForgotError(err.message || "Failed to reset password. Please try again.");
+      setForgotError(err.message || "Failed to reset password. Please verify the code and try again.");
     } finally {
       setForgotLoading(false);
     }
@@ -142,6 +162,7 @@ export default function LoginPage() {
     setShowForgotModal(false);
     setForgotStep(1);
     setForgotIdentifier("");
+    setVerificationCode("");
     setAccountInfo(null);
     setNewPassword("");
     setConfirmPassword("");
@@ -370,7 +391,7 @@ export default function LoginPage() {
               </div>
             )}
 
-            {/* STEP 1: Enter email */}
+            {/* STEP 1: Enter university email */}
             {forgotStep === 1 && (
               <form onSubmit={handleForgotIdentify} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 <div>
@@ -378,7 +399,7 @@ export default function LoginPage() {
                     University Email
                   </label>
                   <input
-                    type="text"
+                    type="email"
                     value={forgotIdentifier}
                     onChange={(e) => setForgotIdentifier(e.target.value)}
                     placeholder="user@eng.ruh.ac.lk"
@@ -396,7 +417,7 @@ export default function LoginPage() {
                     onBlur={(e) => e.target.style.borderColor = '#cbd5e1'}
                   />
                   <p style={{ fontSize: '12px', color: '#64748b', margin: '6px 0 0 0' }}>
-                    Enter your university email to verify your account and set a new password.
+                    A 6-digit verification code will be sent to your official university email.
                   </p>
                 </div>
 
@@ -434,21 +455,59 @@ export default function LoginPage() {
                       cursor: forgotLoading ? 'not-allowed' : 'pointer'
                     }}
                   >
-                    {forgotLoading ? "Finding Account..." : "Continue"}
+                    {forgotLoading ? "Sending Code..." : "Send Verification Code"}
                   </button>
                 </div>
               </form>
             )}
 
-            {/* STEP 2: Set New Password */}
+            {/* STEP 2: Enter Verification Code & Set New Password */}
             {forgotStep === 2 && (
               <form onSubmit={handleResetPassword} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                {accountInfo && (
-                  <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '12px 14px', fontSize: '13px', color: '#334155' }}>
-                    <div><strong>Account Identified:</strong> {forgotIdentifier}</div>
-                    <div style={{ color: '#64748b', fontSize: '12px', marginTop: '2px', textTransform: 'capitalize' }}>Role: {accountInfo.role}</div>
+                <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '10px', padding: '12px 14px', fontSize: '13px', color: '#166534' }}>
+                  <div style={{ fontWeight: '700', marginBottom: '2px' }}>✉️ Verification Code Dispatched!</div>
+                  <div style={{ fontSize: '12px', color: '#15803d' }}>
+                    Enter the 6-digit code sent to <strong>{accountInfo?.maskedEmail || forgotIdentifier}</strong>
                   </div>
-                )}
+                </div>
+
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                    <label style={{ fontSize: '13px', fontWeight: '600', color: '#475569' }}>
+                      6-Digit Verification Code
+                    </label>
+                    <button
+                      type="button"
+                      onClick={handleResendCode}
+                      disabled={forgotLoading}
+                      style={{ background: 'none', border: 'none', color: 'var(--primary-600)', fontSize: '12px', fontWeight: '600', cursor: 'pointer', padding: 0 }}
+                    >
+                      Resend Code
+                    </button>
+                  </div>
+                  <input
+                    type="text"
+                    maxLength={6}
+                    value={verificationCode}
+                    onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, ''))}
+                    placeholder="123456"
+                    disabled={forgotLoading}
+                    style={{
+                      width: '100%',
+                      padding: '12px 14px',
+                      borderRadius: '10px',
+                      border: '2px solid #cbd5e1',
+                      fontSize: '18px',
+                      fontWeight: '700',
+                      letterSpacing: '6px',
+                      textAlign: 'center',
+                      outline: 'none',
+                      boxSizing: 'border-box'
+                    }}
+                    onFocus={(e) => e.target.style.borderColor = 'var(--primary-600)'}
+                    onBlur={(e) => e.target.style.borderColor = '#cbd5e1'}
+                  />
+                </div>
 
                 <div>
                   <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#475569', marginBottom: '6px' }}>
@@ -550,7 +609,7 @@ export default function LoginPage() {
                       cursor: forgotLoading ? 'not-allowed' : 'pointer'
                     }}
                   >
-                    {forgotLoading ? "Resetting..." : "Save New Password"}
+                    {forgotLoading ? "Verifying..." : "Verify & Reset Password"}
                   </button>
                 </div>
               </form>

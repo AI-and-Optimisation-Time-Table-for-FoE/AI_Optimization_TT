@@ -475,10 +475,17 @@ export function requestPasswordReset(identifier) {
   });
 }
 
-export function resetPasswordWithKey(identifier, securityKey, newPassword) {
+export function verifyResetCode(email, verificationCode) {
+  return request(`/api/auth/verify-reset-code`, {
+    method: "POST",
+    body: JSON.stringify({ email, verificationCode }),
+  });
+}
+
+export function resetPasswordWithKey(identifier, verificationCode, newPassword) {
   return request(`/api/auth/reset-password`, {
     method: "POST",
-    body: JSON.stringify({ identifier, securityKey, newPassword }),
+    body: JSON.stringify({ identifier, verificationCode, newPassword }),
   });
 }
 

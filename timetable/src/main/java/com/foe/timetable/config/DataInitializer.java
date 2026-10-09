@@ -42,12 +42,11 @@ public class DataInitializer implements CommandLineRunner {
             System.out.println("Seeded Computer Department into database.");
         }
 
-        // 2. Seed Batches if empty
-        if (batchRepository.count() == 0) {
-            Batch b1 = new Batch(); b1.setBatchName("Batch 24"); b1.setAcademicYear(2024); b1.setSemester(4); b1.setStudentCount(160); batchRepository.save(b1);
-            Batch b2 = new Batch(); b2.setBatchName("Batch 27"); b2.setAcademicYear(2025); b2.setSemester(1); b2.setStudentCount(180); batchRepository.save(b2);
-            System.out.println("Seeded default batches into database.");
-        }
+        // 2. Seed or Update Official Batches with Exact Faculty Data
+        syncOrAddBatch("23rd", 2021, 8, 519);
+        syncOrAddBatch("24th", 2022, 6, 550);
+        syncOrAddBatch("25th", 2023, 4, 543);
+        syncOrAddBatch("27th", 2025, 2, 553);
 
         // 3. Seed Halls if empty
         if (hallRepository.count() == 0) {
@@ -75,6 +74,41 @@ public class DataInitializer implements CommandLineRunner {
         } else if (userAccountRepository.findByUsername("rasika@eng.ruh.ac.lk").isEmpty()) {
             authService.registerAdmin("rasika@eng.ruh.ac.lk", "admin@857$ruh");
             System.out.println("Seeded admin user (rasika@eng.ruh.ac.lk / admin@857$ruh).");
+        }
+    }
+
+    private void syncOrAddBatch(String batchName, int academicYear, int semester, int studentCount) {
+        java.util.List<Batch> existingBatches = batchRepository.findAll();
+        Batch matched = existingBatches.stream()
+            .filter(b -> {
+                if (b.getBatchName() == null) return false;
+                String bName = b.getBatchName().toLowerCase().replaceAll("\\s+", "");
+                String target = batchName.toLowerCase().replaceAll("\\s+", "");
+                return bName.equals(target) || bName.equals("batch" + target) || bName.equals(target.replace("rd", "").replace("th", "")) ||
+                       bName.equals("batch" + target.replace("rd", "").replace("th", ""));
+            })
+            .findFirst()
+            .orElse(null);
+
+        if (matched != null) {
+            matched.setBatchName(batchName);
+            matched.setAcademicYear(academicYear);
+            matched.setSemester(semester);
+            matched.setStudentCount(studentCount);
+            matched.setStatus("active");
+            batchRepository.save(matched);
+            System.out.println("Synchronized batch " + batchName + " size: " + studentCount + " students.");
+        } else {
+            Batch b = new Batch();
+            b.setBatchName(batchName);
+            b.setAcademicYear(academicYear);
+            b.setSemester(semester);
+            b.setStudentCount(studentCount);
+            b.setStatus("active");
+            b.setLunchStartTime("12:30");
+            b.setLunchEndTime("13:30");
+            batchRepository.save(b);
+            System.out.println("Created official batch " + batchName + " with " + studentCount + " students.");
         }
     }
 

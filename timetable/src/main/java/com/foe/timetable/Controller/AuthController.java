@@ -20,6 +20,7 @@ import com.foe.timetable.model.UserAccount;
 import com.foe.timetable.repository.LecturerRepository;
 import com.foe.timetable.repository.UserAccountRepository;
 import com.foe.timetable.service.AuthService;
+import com.foe.timetable.service.EmailService;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 @RestController
@@ -29,6 +30,9 @@ public class AuthController {
 
     @Autowired
     private AuthService authService;
+
+    @Autowired
+    private EmailService emailService;
 
     @Autowired
     private LecturerRepository lecturerRepository;
@@ -294,22 +298,43 @@ public class AuthController {
         }
 
         UserAccount user = foundUser.get();
+        String targetEmail = user.getUniversityEmail() != null ? user.getUniversityEmail() : user.getUsername();
+        String generatedCode = emailService.generateAndSendResetCode(targetEmail, user.getUserId(), user.getFirstName());
+
         return ResponseEntity.ok(Map.of(
-            "message", "Account identified successfully!",
+            "message", "A 6-digit verification code has been sent to your university email.",
             "username", user.getUsername(),
-            "maskedEmail", maskEmail(user.getUniversityEmail()),
+            "email", targetEmail,
+            "maskedEmail", maskEmail(targetEmail),
             "role", user.getRole().toString()
         ));
+    }
+
+    @PostMapping("/verify-reset-code")
+    public ResponseEntity<?> verifyResetCode(@RequestBody Map<String, String> payload) {
+        String email = payload.get("email");
+        String verificationCode = payload.get("verificationCode");
+
+        if (email == null || verificationCode == null) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Email and verification code are required"));
+        }
+
+        boolean isValid = emailService.verifyResetCode(email, verificationCode);
+        if (!isValid) {
+            return ResponseEntity.status(400).body(Map.of("message", "Invalid or expired verification code. Please check your email or request a new code."));
+        }
+
+        return ResponseEntity.ok(Map.of("message", "Verification code confirmed successfully!", "valid", true));
     }
 
     @PostMapping("/reset-password")
     public ResponseEntity<?> resetPassword(@RequestBody Map<String, String> payload) {
         String identifier = payload.get("identifier");
-        String securityKey = payload.get("securityKey");
+        String verificationCode = payload.get("verificationCode");
         String newPassword = payload.get("newPassword");
 
         if (identifier == null || newPassword == null) {
-            return ResponseEntity.badRequest().body(Map.of("message", "Account identifier and new password are required"));
+            return ResponseEntity.badRequest().body(Map.of("message", "Account email and new password are required"));
         }
 
         if (newPassword.trim().length() < 6) {
@@ -327,8 +352,19 @@ public class AuthController {
         }
 
         UserAccount user = foundUser.get();
+        String targetEmail = user.getUniversityEmail() != null ? user.getUniversityEmail() : user.getUsername();
+
+        // Verify OTP if provided
+        if (verificationCode != null && !verificationCode.trim().isEmpty()) {
+            boolean isValid = emailService.verifyResetCode(targetEmail, verificationCode);
+            if (!isValid) {
+                return ResponseEntity.status(400).body(Map.of("message", "Invalid or expired verification code. Please request a new code."));
+            }
+        }
+
         user.setPasswordHash(authService.hashPassword(newPassword));
         userAccountRepository.save(user);
+        emailService.clearResetCode(targetEmail);
 
         return ResponseEntity.ok(Map.of("message", "Password has been reset successfully! You can now sign in with your new password."));
     }
