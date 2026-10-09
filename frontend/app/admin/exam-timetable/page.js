@@ -226,6 +226,7 @@ export default function AdminExamTimetablePage() {
       if (list && list.length > 0) {
         const latest = list[0];
         const details = await fetchExamTimetableDetails(latest.examTimetableId);
+        setExamTimetable(details.examTimetable);
         const loaded = (details.entries || []).map(e => {
           const repCount = (e.repeaterCount !== null && e.repeaterCount !== undefined) ? Number(e.repeaterCount) : 0;
           return {
