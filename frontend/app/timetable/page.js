@@ -277,7 +277,7 @@ function TimetableViewPage() {
       }
     } catch (err) {
       console.error(err);
-      setError("Could not load timetable from the database. Make sure the backend is running on port 8080.");
+      setError("Could not load timetable from the database. Make sure the backend is running on port 5000.");
       setEntries([]);
       setStatus("none");
     } finally {
