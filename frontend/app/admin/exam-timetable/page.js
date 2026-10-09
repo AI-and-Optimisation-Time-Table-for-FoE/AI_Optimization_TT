@@ -167,6 +167,7 @@ export default function AdminExamTimetablePage() {
   const [batches, setBatches] = useState([]);
   const [halls, setHalls] = useState([]);
   const [selectedBatchId, setSelectedBatchId] = useState("");
+  const [selectedStreamScope, setSelectedStreamScope] = useState("ALL");
   const [examTimetable, setExamTimetable] = useState(null);
   const [entries, setEntries] = useState([]);
   const [collapsedModules, setCollapsedModules] = useState({});
@@ -213,16 +214,21 @@ export default function AdminExamTimetablePage() {
 
   useEffect(() => {
     if (selectedBatchId) {
-      loadBatchExamTimetable(Number(selectedBatchId));
+      const activeBatch = batches.find(b => String(b.batchId) === String(selectedBatchId));
+      const is3rdYear = activeBatch && (activeBatch.semester === 5 || activeBatch.semester === 6);
+      const initialScope = is3rdYear ? "MAIN" : "ALL";
+      setSelectedStreamScope(initialScope);
+      loadBatchExamTimetable(Number(selectedBatchId), initialScope);
       loadBatchEnrollments(Number(selectedBatchId));
     }
   }, [selectedBatchId]);
 
-  const loadBatchExamTimetable = async (batchId) => {
+  const loadBatchExamTimetable = async (batchId, streamScope = null) => {
     setLoading(true);
     setError("");
     try {
-      const list = await fetchExamTimetables(batchId);
+      const scopeToUse = streamScope !== null ? streamScope : selectedStreamScope;
+      const list = await fetchExamTimetables(batchId, (scopeToUse && scopeToUse !== "ALL") ? scopeToUse : null);
       if (list && list.length > 0) {
         const latest = list[0];
         const details = await fetchExamTimetableDetails(latest.examTimetableId);
@@ -395,9 +401,14 @@ export default function AdminExamTimetablePage() {
     if (!selectedBatchId || !startDate) { alert("Please select a batch and start date."); return; }
     setLoading(true);
     try {
-      await createExamTimetable({ batchId: Number(selectedBatchId), startDate, durationWeeks: Number(durationWeeks) });
-      alert("Exam timetable auto-optimized and created!");
-      await loadBatchExamTimetable(Number(selectedBatchId));
+      await createExamTimetable({
+        batchId: Number(selectedBatchId),
+        startDate,
+        durationWeeks: Number(durationWeeks),
+        streamScope: selectedStreamScope
+      });
+      alert("Exam timetable auto-optimized and created for " + (selectedStreamScope === "ALL" ? "All Departments" : selectedStreamScope + " stream") + "!");
+      await loadBatchExamTimetable(Number(selectedBatchId), selectedStreamScope);
     } catch (err) {
       alert("Error: " + err.message);
     } finally {
@@ -625,6 +636,64 @@ export default function AdminExamTimetablePage() {
               <h3 style={{ margin: 0, fontSize: "15px", fontWeight: "700" }}>Batch &amp; Schedule Settings</h3>
             </div>
             <div className="card-body">
+              {(() => {
+                const activeBatch = batches.find(b => String(b.batchId) === String(selectedBatchId));
+                const is3rdYear = activeBatch && (activeBatch.semester === 5 || activeBatch.semester === 6);
+                if (!is3rdYear) return null;
+                return (
+                  <div style={{
+                    marginBottom: "16px",
+                    padding: "12px 16px",
+                    background: "linear-gradient(135deg, #eff6ff 0%, #f0fdf4 100%)",
+                    borderRadius: "12px",
+                    border: "1.5px solid #bfdbfe"
+                  }}>
+                    <div style={{ fontSize: "12px", fontWeight: "800", color: "#1e3a8a", marginBottom: "8px", display: "flex", alignItems: "center", gap: "6px" }}>
+                      <Tag size={14} style={{ color: "#2563eb" }} />
+                      3rd Year (Semester 5 &amp; 6) Department Isolation &amp; Exam Streams:
+                    </div>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                      {[
+                        { scope: "MAIN", label: "🏛️ General Stream (CE, EE, ME)", desc: "Central Faculty Halls" },
+                        { scope: "EC", label: "💻 Computer Engineering (EC)", desc: "Shifted Timeline / Dedicated Stream" },
+                        { scope: "MN", label: "⚓ Marine Engineering (MN)", desc: "Marine Dept Complex Halls" },
+                        { scope: "ALL", label: "🌐 All Departments", desc: "Combined Faculty Schedule" },
+                      ].map(tab => {
+                        const isSelected = selectedStreamScope === tab.scope;
+                        return (
+                          <button
+                            key={tab.scope}
+                            type="button"
+                            onClick={() => {
+                              setSelectedStreamScope(tab.scope);
+                              loadBatchExamTimetable(Number(selectedBatchId), tab.scope);
+                            }}
+                            style={{
+                              padding: "8px 14px",
+                              borderRadius: "8px",
+                              border: isSelected ? "2px solid #2563eb" : "1.5px solid #cbd5e1",
+                              background: isSelected ? "#2563eb" : "#ffffff",
+                              color: isSelected ? "#ffffff" : "#334155",
+                              fontWeight: "700",
+                              fontSize: "12px",
+                              cursor: "pointer",
+                              boxShadow: isSelected ? "0 2px 6px rgba(37,99,235,0.25)" : "0 1px 2px rgba(0,0,0,0.03)",
+                              transition: "all 0.15s ease",
+                              display: "flex",
+                              flexDirection: "column",
+                              alignItems: "flex-start"
+                            }}
+                          >
+                            <span>{tab.label}</span>
+                            <span style={{ fontSize: "10px", opacity: isSelected ? 0.9 : 0.65, fontWeight: "500" }}>{tab.desc}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()}
+
               <div style={{ display: "flex", flexWrap: "wrap", gap: "16px", alignItems: "flex-end" }}>
                 <div style={{ flex: "1 1 200px" }}>
                   <label className="form-label" style={{ fontWeight: "700", color: "#334155" }}>Batch</label>

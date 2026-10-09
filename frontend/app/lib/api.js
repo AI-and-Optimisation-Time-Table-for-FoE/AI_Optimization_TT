@@ -350,9 +350,11 @@ export function unpublishMasterLecturerTimetable() {
   });
 }
 
-// === EXAM TIMETABLE ===
-export function fetchExamTimetables(batchId) {
-  let query = batchId ? `?batchId=${batchId}` : "";
+export function fetchExamTimetables(batchId, streamScope) {
+  let params = [];
+  if (batchId) params.push(`batchId=${batchId}`);
+  if (streamScope) params.push(`streamScope=${encodeURIComponent(streamScope)}`);
+  const query = params.length > 0 ? `?${params.join("&")}` : "";
   return request(`/api/exam-timetables${query}`);
 }
 

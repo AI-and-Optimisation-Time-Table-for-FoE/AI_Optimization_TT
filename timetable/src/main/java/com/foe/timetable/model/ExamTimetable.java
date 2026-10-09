@@ -34,6 +34,9 @@ public class ExamTimetable {
     @Column(name = "status", nullable = false, length = 20)
     private String status = "draft";
 
+    @Column(name = "stream_scope", nullable = true, length = 50)
+    private String streamScope = "ALL";
+
     @Column(name = "published_at", nullable = true)
     private LocalDateTime publishedAt;
 
@@ -81,6 +84,14 @@ public class ExamTimetable {
 
     public void setStatus(String status) {
         this.status = status;
+    }
+
+    public String getStreamScope() {
+        return streamScope;
+    }
+
+    public void setStreamScope(String streamScope) {
+        this.streamScope = streamScope;
     }
 
     public LocalDateTime getPublishedAt() {

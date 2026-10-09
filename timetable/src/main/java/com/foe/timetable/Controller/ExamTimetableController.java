@@ -51,10 +51,13 @@ public class ExamTimetableController {
     @Autowired
     private StudentModuleEnrollmentRepository studentModuleEnrollmentRepository;
 
-    // Get all exam timetables for a batch
+    // Get all exam timetables for a batch (optionally filtered by streamScope)
     @GetMapping
-    public ResponseEntity<?> getExamTimetables(@RequestParam(required = false) Integer batchId) {
+    public ResponseEntity<?> getExamTimetables(@RequestParam(required = false) Integer batchId, @RequestParam(required = false) String streamScope) {
         if (batchId != null) {
+            if (streamScope != null && !streamScope.trim().isEmpty()) {
+                return ResponseEntity.ok(examTimetableRepository.findByBatch_BatchIdAndStreamScopeOrderByCreatedAtDesc(batchId, streamScope.trim().toUpperCase()));
+            }
             return ResponseEntity.ok(examTimetableRepository.findByBatch_BatchIdOrderByCreatedAtDesc(batchId));
         }
         return ResponseEntity.ok(examTimetableRepository.findAll());
@@ -125,6 +128,7 @@ public class ExamTimetableController {
         Number batchIdNum = (Number) payload.get("batchId");
         String startDateStr = (String) payload.get("startDate");
         Number durationWeeksNum = (Number) payload.get("durationWeeks");
+        String streamScope = (String) payload.get("streamScope");
 
         if (batchIdNum == null || startDateStr == null) {
             return ResponseEntity.badRequest().body(Map.of("message", "batchId and startDate are required"));
@@ -140,6 +144,7 @@ public class ExamTimetableController {
         et.setStartDate(LocalDate.parse(startDateStr));
         et.setDurationWeeks(durationWeeksNum != null ? durationWeeksNum.intValue() : 2);
         et.setStatus("draft");
+        et.setStreamScope((streamScope != null && !streamScope.trim().isEmpty()) ? streamScope.trim().toUpperCase() : "ALL");
 
         ExamTimetable saved = examTimetableRepository.save(et);
 
@@ -167,13 +172,36 @@ public class ExamTimetableController {
     private void runOptimizationForTimetable(ExamTimetable et) {
         Batch batch = et.getBatch();
         List<BatchModule> batchModules = batchModuleRepository.findByBatch_BatchId(batch.getBatchId());
-        
+
+        String streamScope = et.getStreamScope() != null ? et.getStreamScope().toUpperCase().trim() : "ALL";
+        Integer semester = batch.getSemester();
+        boolean isThirdYear = (semester != null && (semester == 5 || semester == 6));
+
         Set<Integer> moduleIds = new HashSet<>();
         List<Module> modules = new ArrayList<>();
         for (BatchModule bm : batchModules) {
             if (bm.getModule() != null && !moduleIds.contains(bm.getModule().getModuleId())) {
-                moduleIds.add(bm.getModule().getModuleId());
-                modules.add(bm.getModule());
+                Module mod = bm.getModule();
+                String mCode = mod.getModuleCode() != null ? mod.getModuleCode().toUpperCase().replaceAll("\\s+", "") : "";
+                String deptCode = (mod.getDepartment() != null && mod.getDepartment().getDepartmentCode() != null)
+                        ? mod.getDepartment().getDepartmentCode().toUpperCase().trim() : "";
+
+                boolean include = false;
+                if (!isThirdYear || "ALL".equals(streamScope)) {
+                    include = true;
+                } else if ("EC".equals(streamScope)) {
+                    include = deptCode.equals("EC") || mCode.startsWith("EC") || mCode.startsWith("COM");
+                } else if ("MN".equals(streamScope)) {
+                    include = deptCode.equals("MN") || mCode.startsWith("MN");
+                } else if ("MAIN".equals(streamScope)) {
+                    // Main stream: CE, EE, ME (and general non-EC/non-MN)
+                    include = !deptCode.equals("EC") && !deptCode.equals("MN") && !mCode.startsWith("EC") && !mCode.startsWith("MN") && !mCode.startsWith("COM");
+                }
+
+                if (include) {
+                    moduleIds.add(mod.getModuleId());
+                    modules.add(mod);
+                }
             }
         }
 
@@ -181,6 +209,9 @@ public class ExamTimetableController {
         List<ExamHallUnavailability> unavailabilities = examHallUnavailabilityRepository.findAll();
 
         int batchStudentCount = (batch.getStudentCount() != null && batch.getStudentCount() > 0) ? batch.getStudentCount() : 100;
+        if (isThirdYear && ("EC".equals(streamScope) || "MN".equals(streamScope))) {
+            batchStudentCount = Math.min(batchStudentCount, 120);
+        }
 
         List<ExamEntry> optimizedEntries = generateOptimizedSchedule(et, modules, halls, unavailabilities, batchStudentCount);
         for (ExamEntry entry : optimizedEntries) {
@@ -231,11 +262,27 @@ public class ExamTimetableController {
         }
         int totalRegistered = registeredStudents.size();
 
-        // Filter main faculty exam halls (excluding department-specific halls for general exams)
-        List<Hall> availableHalls = halls.stream()
-                .filter(h -> !isDepartmentSpecificHall(h))
-                .sorted(Comparator.comparingInt((Hall h) -> h.getCapacity() != null ? h.getCapacity() : 0).reversed())
-                .collect(Collectors.toList());
+        // Filter main faculty exam halls or Marine department halls based on stream
+        String streamScope = et.getStreamScope() != null ? et.getStreamScope().toUpperCase().trim() : "ALL";
+        List<Hall> availableHalls;
+        if ("MN".equalsIgnoreCase(streamScope)) {
+            List<Hall> mnHalls = halls.stream()
+                    .filter(h -> h.getHallName().toLowerCase().contains("marine") || h.getHallName().toLowerCase().contains("mn"))
+                    .collect(Collectors.toList());
+            if (!mnHalls.isEmpty()) {
+                availableHalls = mnHalls;
+            } else {
+                availableHalls = halls.stream()
+                        .filter(h -> !isDepartmentSpecificHall(h))
+                        .sorted(Comparator.comparingInt((Hall h) -> h.getCapacity() != null ? h.getCapacity() : 0).reversed())
+                        .collect(Collectors.toList());
+            }
+        } else {
+            availableHalls = halls.stream()
+                    .filter(h -> !isDepartmentSpecificHall(h))
+                    .sorted(Comparator.comparingInt((Hall h) -> h.getCapacity() != null ? h.getCapacity() : 0).reversed())
+                    .collect(Collectors.toList());
+        }
         if (availableHalls.isEmpty()) {
             availableHalls = new ArrayList<>(halls);
         }
@@ -790,14 +837,6 @@ public class ExamTimetableController {
             @RequestParam Integer batchId,
             @RequestParam(required = false) String identifier) {
         
-        Optional<ExamTimetable> publishedOpt = examTimetableRepository.findFirstByBatch_BatchIdAndStatusOrderByCreatedAtDesc(batchId, "published");
-        if (publishedOpt.isEmpty()) {
-            return ResponseEntity.ok(Map.of("status", "none", "entries", Collections.emptyList(), "message", "No published exam timetable available for your batch yet."));
-        }
-
-        ExamTimetable et = publishedOpt.get();
-        List<ExamEntry> allEntries = examEntryRepository.findByExamTimetable_ExamTimetableIdOrderByExamDateAscStartTimeAsc(et.getExamTimetableId());
-
         // Resolve student account if identifier provided
         String studentRegNo = null;
         Integer studentDeptId = null;
@@ -815,6 +854,33 @@ public class ExamTimetableController {
                 studentRegNo = identifier.trim().toUpperCase();
             }
         }
+
+        Batch batch = batchRepository.findById(batchId).orElse(null);
+        Integer semester = batch != null ? batch.getSemester() : null;
+
+        ExamTimetable et = null;
+        if (studentDeptId != null && semester != null && (semester == 5 || semester == 6)) {
+            Department dept = departmentRepository.findById(studentDeptId).orElse(null);
+            String dCode = dept != null ? dept.getDepartmentCode().toUpperCase().trim() : "";
+            String targetScope = "MAIN";
+            if ("EC".equals(dCode)) targetScope = "EC";
+            else if ("MN".equals(dCode)) targetScope = "MN";
+
+            Optional<ExamTimetable> streamEt = examTimetableRepository.findFirstByBatch_BatchIdAndStreamScopeAndStatusOrderByCreatedAtDesc(batchId, targetScope, "published");
+            if (streamEt.isPresent()) {
+                et = streamEt.get();
+            }
+        }
+
+        if (et == null) {
+            Optional<ExamTimetable> publishedOpt = examTimetableRepository.findFirstByBatch_BatchIdAndStatusOrderByCreatedAtDesc(batchId, "published");
+            if (publishedOpt.isEmpty()) {
+                return ResponseEntity.ok(Map.of("status", "none", "entries", Collections.emptyList(), "message", "No published exam timetable available for your batch yet."));
+            }
+            et = publishedOpt.get();
+        }
+
+        List<ExamEntry> allEntries = examEntryRepository.findByExamTimetable_ExamTimetableIdOrderByExamDateAscStartTimeAsc(et.getExamTimetableId());
 
         List<ExamEntry> candidateEntries = new ArrayList<>();
 
