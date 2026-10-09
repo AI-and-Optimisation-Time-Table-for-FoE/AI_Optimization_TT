@@ -883,7 +883,9 @@ export default function AdminExamTimetablePage() {
 
               {/* ─── Batch Candidates Summary Bar ─── */}
               {(() => {
-                const totalRegular = entries.reduce((sum, e) => sum + (Number(e.allocatedCount) || 0), 0);
+                const activeBatch = batches.find(b => String(b.batchId) === String(selectedBatchId));
+                // Authoritative batch headcount (e.g., 530 students for 25th batch)
+                const batchRegularStudents = activeBatch?.studentCount || (groups.length > 0 ? Math.max(...groups.map(g => g.rows.reduce((sum, r) => sum + (Number(r.allocatedCount) || 0), 0))) : 530);
                 let totalRepeaters = 0;
                 let modsWithRepeaters = 0;
 
@@ -910,8 +912,8 @@ export default function AdminExamTimetablePage() {
                       <div style={{ fontSize: "18px", fontWeight: "800", color: "#0f172a", marginTop: "2px" }}>{groups.length} <span style={{ fontSize: "12px", color: "#64748b", fontWeight: "500" }}>modules</span></div>
                     </div>
                     <div style={{ background: "#ffffff", padding: "10px 14px", borderRadius: "10px", border: "1px solid #bfdbfe", boxShadow: "0 1px 2px rgba(0,0,0,0.03)" }}>
-                      <div style={{ fontSize: "11px", fontWeight: "700", color: "#1e40af", textTransform: "uppercase" }}>Regular Candidate Seats</div>
-                      <div style={{ fontSize: "18px", fontWeight: "800", color: "#1d4ed8", marginTop: "2px" }}>{totalRegular} <span style={{ fontSize: "12px", color: "#3b82f6", fontWeight: "500" }}>students</span></div>
+                      <div style={{ fontSize: "11px", fontWeight: "700", color: "#1e40af", textTransform: "uppercase" }}>Batch Regular Students</div>
+                      <div style={{ fontSize: "18px", fontWeight: "800", color: "#1d4ed8", marginTop: "2px" }}>{batchRegularStudents} <span style={{ fontSize: "12px", color: "#3b82f6", fontWeight: "500" }}>students</span></div>
                     </div>
                     <div style={{ background: "#fffbeb", padding: "10px 14px", borderRadius: "10px", border: "1.5px solid #fde68a", boxShadow: "0 1px 2px rgba(245, 158, 11, 0.06)" }}>
                       <div style={{ fontSize: "11px", fontWeight: "700", color: "#92400e", textTransform: "uppercase", display: "flex", alignItems: "center", gap: "4px" }}>
@@ -922,8 +924,8 @@ export default function AdminExamTimetablePage() {
                       </div>
                     </div>
                     <div style={{ background: "#ffffff", padding: "10px 14px", borderRadius: "10px", border: "1px solid #86efac", boxShadow: "0 1px 2px rgba(0,0,0,0.03)" }}>
-                      <div style={{ fontSize: "11px", fontWeight: "700", color: "#15803d", textTransform: "uppercase" }}>Combined Total Capacity</div>
-                      <div style={{ fontSize: "18px", fontWeight: "800", color: "#16a34a", marginTop: "2px" }}>{totalRegular + totalRepeaters} <span style={{ fontSize: "12px", color: "#15803d", fontWeight: "500" }}>total examinees</span></div>
+                      <div style={{ fontSize: "11px", fontWeight: "700", color: "#15803d", textTransform: "uppercase" }}>Total Batch Examinees</div>
+                      <div style={{ fontSize: "18px", fontWeight: "800", color: "#16a34a", marginTop: "2px" }}>{batchRegularStudents + totalRepeaters} <span style={{ fontSize: "12px", color: "#15803d", fontWeight: "500" }}>examinees</span></div>
                     </div>
                   </div>
                 );

@@ -91,45 +91,10 @@ export default function LoginPage() {
     }
   };
 
-  const handleForgotIdentify = async (e) => {
-    e.preventDefault();
-    if (!forgotIdentifier.trim()) {
-      setForgotError("Please enter your university email.");
-      return;
-    }
-
-    setForgotLoading(true);
-    setForgotError("");
-    try {
-      const resp = await requestPasswordReset(forgotIdentifier.trim());
-      setAccountInfo(resp);
-      setForgotStep(2);
-    } catch (err) {
-      setForgotError(err.message || "No account found matching this university email.");
-    } finally {
-      setForgotLoading(false);
-    }
-  };
-
-  const handleResendCode = async () => {
-    if (!forgotIdentifier.trim()) return;
-    setForgotLoading(true);
-    setForgotError("");
-    try {
-      await requestPasswordReset(forgotIdentifier.trim());
-      setForgotError("");
-      alert("A new 6-digit verification code has been sent to your university email.");
-    } catch (err) {
-      setForgotError(err.message || "Could not resend verification code.");
-    } finally {
-      setForgotLoading(false);
-    }
-  };
-
   const handleResetPassword = async (e) => {
     e.preventDefault();
-    if (!verificationCode || verificationCode.trim().length !== 6) {
-      setForgotError("Please enter the 6-digit verification code sent to your email.");
+    if (!forgotIdentifier.trim()) {
+      setForgotError("Please enter your university email or username.");
       return;
     }
     if (!newPassword || !confirmPassword) {
@@ -148,11 +113,11 @@ export default function LoginPage() {
     setForgotLoading(true);
     setForgotError("");
     try {
-      const resp = await resetPasswordWithKey(forgotIdentifier.trim(), verificationCode.trim(), newPassword);
+      const resp = await resetPasswordWithKey(forgotIdentifier.trim(), null, newPassword);
       setForgotSuccess(resp.message || "Password reset successfully!");
-      setForgotStep(3);
+      setForgotStep(2);
     } catch (err) {
-      setForgotError(err.message || "Failed to reset password. Please verify the code and try again.");
+      setForgotError(err.message || "Failed to reset password. Please check your email and try again.");
     } finally {
       setForgotLoading(false);
     }
@@ -391,116 +356,26 @@ export default function LoginPage() {
               </div>
             )}
 
-            {/* STEP 1: Enter university email */}
+            {/* STEP 1: Enter email and set new password directly */}
             {forgotStep === 1 && (
-              <form onSubmit={handleForgotIdentify} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <form onSubmit={handleResetPassword} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#475569', marginBottom: '6px' }}>
-                    University Email
+                    University Email or Username
                   </label>
                   <input
-                    type="email"
+                    type="text"
                     value={forgotIdentifier}
                     onChange={(e) => setForgotIdentifier(e.target.value)}
-                    placeholder="user@eng.ruh.ac.lk"
+                    placeholder="user@eng.ruh.ac.lk or username"
                     disabled={forgotLoading}
+                    required
                     style={{
                       width: '100%',
                       padding: '11px 14px',
                       borderRadius: '10px',
                       border: '1.5px solid #cbd5e1',
                       fontSize: '14px',
-                      outline: 'none',
-                      boxSizing: 'border-box'
-                    }}
-                    onFocus={(e) => e.target.style.borderColor = 'var(--primary-600)'}
-                    onBlur={(e) => e.target.style.borderColor = '#cbd5e1'}
-                  />
-                  <p style={{ fontSize: '12px', color: '#64748b', margin: '6px 0 0 0' }}>
-                    A 6-digit verification code will be sent to your official university email.
-                  </p>
-                </div>
-
-                <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
-                  <button
-                    type="button"
-                    onClick={resetForgotState}
-                    disabled={forgotLoading}
-                    style={{
-                      flex: 1,
-                      padding: '11px',
-                      background: '#f1f5f9',
-                      color: '#475569',
-                      border: 'none',
-                      borderRadius: '10px',
-                      fontSize: '14px',
-                      fontWeight: '600',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={forgotLoading}
-                    style={{
-                      flex: 1.5,
-                      padding: '11px',
-                      background: 'var(--primary-600)',
-                      color: '#ffffff',
-                      border: 'none',
-                      borderRadius: '10px',
-                      fontSize: '14px',
-                      fontWeight: '600',
-                      cursor: forgotLoading ? 'not-allowed' : 'pointer'
-                    }}
-                  >
-                    {forgotLoading ? "Sending Code..." : "Send Verification Code"}
-                  </button>
-                </div>
-              </form>
-            )}
-
-            {/* STEP 2: Enter Verification Code & Set New Password */}
-            {forgotStep === 2 && (
-              <form onSubmit={handleResetPassword} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '10px', padding: '12px 14px', fontSize: '13px', color: '#166534' }}>
-                  <div style={{ fontWeight: '700', marginBottom: '2px' }}>✉️ Verification Code Dispatched!</div>
-                  <div style={{ fontSize: '12px', color: '#15803d' }}>
-                    Enter the 6-digit code sent to <strong>{accountInfo?.maskedEmail || forgotIdentifier}</strong>
-                  </div>
-                </div>
-
-                <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                    <label style={{ fontSize: '13px', fontWeight: '600', color: '#475569' }}>
-                      6-Digit Verification Code
-                    </label>
-                    <button
-                      type="button"
-                      onClick={handleResendCode}
-                      disabled={forgotLoading}
-                      style={{ background: 'none', border: 'none', color: 'var(--primary-600)', fontSize: '12px', fontWeight: '600', cursor: 'pointer', padding: 0 }}
-                    >
-                      Resend Code
-                    </button>
-                  </div>
-                  <input
-                    type="text"
-                    maxLength={6}
-                    value={verificationCode}
-                    onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, ''))}
-                    placeholder="123456"
-                    disabled={forgotLoading}
-                    style={{
-                      width: '100%',
-                      padding: '12px 14px',
-                      borderRadius: '10px',
-                      border: '2px solid #cbd5e1',
-                      fontSize: '18px',
-                      fontWeight: '700',
-                      letterSpacing: '6px',
-                      textAlign: 'center',
                       outline: 'none',
                       boxSizing: 'border-box'
                     }}
@@ -520,6 +395,7 @@ export default function LoginPage() {
                       onChange={(e) => setNewPassword(e.target.value)}
                       placeholder="Minimum 6 characters"
                       disabled={forgotLoading}
+                      required
                       style={{
                         width: '100%',
                         padding: '11px 40px 11px 14px',
@@ -561,6 +437,7 @@ export default function LoginPage() {
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="Re-enter new password"
                     disabled={forgotLoading}
+                    required
                     style={{
                       width: '100%',
                       padding: '11px 14px',
@@ -578,7 +455,7 @@ export default function LoginPage() {
                 <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
                   <button
                     type="button"
-                    onClick={() => setForgotStep(1)}
+                    onClick={resetForgotState}
                     disabled={forgotLoading}
                     style={{
                       flex: 1,
@@ -592,7 +469,7 @@ export default function LoginPage() {
                       cursor: 'pointer'
                     }}
                   >
-                    Back
+                    Cancel
                   </button>
                   <button
                     type="submit"
@@ -609,14 +486,14 @@ export default function LoginPage() {
                       cursor: forgotLoading ? 'not-allowed' : 'pointer'
                     }}
                   >
-                    {forgotLoading ? "Verifying..." : "Verify & Reset Password"}
+                    {forgotLoading ? "Resetting..." : "Reset Password"}
                   </button>
                 </div>
               </form>
             )}
 
-            {/* STEP 3: Success message */}
-            {forgotStep === 3 && (
+            {/* STEP 2: Success confirmation */}
+            {forgotStep === 2 && (
               <div style={{ textAlign: 'center', padding: '10px 0' }}>
                 <div style={{ width: '48px', height: '48px', background: '#dcfce7', color: '#16a34a', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px auto' }}>
                   <CheckCircle2 size={28} />
@@ -625,11 +502,14 @@ export default function LoginPage() {
                   Password Reset Complete!
                 </h3>
                 <p style={{ fontSize: '13px', color: '#64748b', margin: '0 0 20px 0' }}>
-                  {forgotSuccess || "You can now sign in to your dashboard with your new password."}
+                  {forgotSuccess || "Your password has been updated. You can now sign in with your new password."}
                 </p>
                 <button
                   type="button"
-                  onClick={resetForgotState}
+                  onClick={() => {
+                    setUsername(forgotIdentifier.trim());
+                    resetForgotState();
+                  }}
                   style={{
                     width: '100%',
                     padding: '12px',

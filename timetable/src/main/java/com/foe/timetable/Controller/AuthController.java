@@ -331,11 +331,10 @@ public class AuthController {
     @PostMapping("/reset-password")
     public ResponseEntity<?> resetPassword(@RequestBody Map<String, String> payload) {
         String identifier = payload.get("identifier");
-        String verificationCode = payload.get("verificationCode");
         String newPassword = payload.get("newPassword");
 
-        if (identifier == null || newPassword == null) {
-            return ResponseEntity.badRequest().body(Map.of("message", "Account email and new password are required"));
+        if (identifier == null || identifier.trim().isEmpty() || newPassword == null || newPassword.trim().isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("message", "University email or username and new password are required"));
         }
 
         if (newPassword.trim().length() < 6) {
@@ -345,29 +344,23 @@ public class AuthController {
         String search = identifier.trim().toLowerCase();
         Optional<UserAccount> foundUser = userAccountRepository.findAll().stream()
             .filter(u -> (u.getUsername() != null && u.getUsername().equalsIgnoreCase(search)) ||
-                         (u.getUniversityEmail() != null && u.getUniversityEmail().equalsIgnoreCase(search)))
+                         (u.getUniversityEmail() != null && u.getUniversityEmail().equalsIgnoreCase(search)) ||
+                         (u.getStudentIdNumber() != null && u.getStudentIdNumber().equalsIgnoreCase(search)))
             .findFirst();
 
         if (foundUser.isEmpty()) {
-            return ResponseEntity.status(404).body(Map.of("message", "Account not found"));
+            return ResponseEntity.status(404).body(Map.of("message", "No account found matching this university email or username"));
         }
 
         UserAccount user = foundUser.get();
-        String targetEmail = user.getUniversityEmail() != null ? user.getUniversityEmail() : user.getUsername();
-
-        // Verify OTP if provided
-        if (verificationCode != null && !verificationCode.trim().isEmpty()) {
-            boolean isValid = emailService.verifyResetCode(targetEmail, verificationCode);
-            if (!isValid) {
-                return ResponseEntity.status(400).body(Map.of("message", "Invalid or expired verification code. Please request a new code."));
-            }
-        }
-
-        user.setPasswordHash(authService.hashPassword(newPassword));
+        user.setPasswordHash(authService.hashPassword(newPassword.trim()));
         userAccountRepository.save(user);
-        emailService.clearResetCode(targetEmail);
 
-        return ResponseEntity.ok(Map.of("message", "Password has been reset successfully! You can now sign in with your new password."));
+        return ResponseEntity.ok(Map.of(
+            "message", "Password has been reset successfully! You can now sign in with your new password.",
+            "username", user.getUsername(),
+            "role", user.getRole().toString()
+        ));
     }
 
     private String maskEmail(String email) {

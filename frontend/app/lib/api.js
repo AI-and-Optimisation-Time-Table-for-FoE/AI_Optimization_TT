@@ -482,10 +482,17 @@ export function verifyResetCode(email, verificationCode) {
   });
 }
 
+export function resetPasswordDirect(identifier, newPassword) {
+  return request(`/api/auth/reset-password`, {
+    method: "POST",
+    body: JSON.stringify({ identifier, newPassword }),
+  });
+}
+
 export function resetPasswordWithKey(identifier, verificationCode, newPassword) {
   return request(`/api/auth/reset-password`, {
     method: "POST",
-    body: JSON.stringify({ identifier, verificationCode, newPassword }),
+    body: JSON.stringify({ identifier, newPassword }),
   });
 }
 
