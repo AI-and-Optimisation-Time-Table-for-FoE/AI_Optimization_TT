@@ -8,6 +8,7 @@ import {
   fetchExamTimetables,
   fetchExamTimetableDetails,
   createExamTimetable,
+  reoptimizeExamTimetable,
   saveExamEntries,
   deleteExamEntry,
   publishExamTimetable,
@@ -1163,7 +1164,8 @@ export default function AdminExamTimetablePage() {
                           {!isCollapsed && (
                             <div style={{ background: gIdx % 2 === 0 ? "#f1f5f9" : "#f8fafc", paddingBottom: "10px" }}>
                               {(() => {
-                                const activeBatch = batches.find(b => String(b.batchId) === String(selectedBatchId));
+                                const { batchId } = parseTargetKey(selectedTargetKey);
+                                const activeBatch = batches.find(b => String(b.batchId) === String(batchId));
                                 const showRegRange = true; // Enabled for all batches (Sem 2, 4, 6, 8)
                                 return (
                                   <>
