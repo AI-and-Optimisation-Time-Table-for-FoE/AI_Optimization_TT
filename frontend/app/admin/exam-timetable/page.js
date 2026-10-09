@@ -204,7 +204,9 @@ export default function AdminExamTimetablePage() {
 
   const getBatchOptions = () => {
     const options = [];
-    batches.forEach(b => {
+    const bList = Array.isArray(batches) ? batches : (batches?.value || []);
+    bList.forEach(b => {
+      if (!b) return;
       const is3rdYear = (b.semester === 5 || b.semester === 6);
       if (is3rdYear) {
         options.push({
@@ -250,25 +252,35 @@ export default function AdminExamTimetablePage() {
 
   useEffect(() => {
     fetchBatches().then(data => {
-      setBatches(data);
-      if (data.length > 0) {
-        const first = data[0];
-        const is3rd = (first.semester === 5 || first.semester === 6);
+      const bList = Array.isArray(data) ? data : (data?.value || []);
+      setBatches(bList);
+      if (bList.length > 0) {
+        const first = bList[0];
+        const is3rd = (first && (first.semester === 5 || first.semester === 6));
         const defaultKey = is3rd ? `${first.batchId}_MAIN` : `${first.batchId}_ALL`;
         setSelectedTargetKey(defaultKey);
       }
+    }).catch(err => {
+      console.error(err);
+      setError("Failed to load batches from backend.");
+    });
+    fetchHalls().then(data => {
+      setHalls(Array.isArray(data) ? data : (data?.value || []));
     }).catch(console.error);
-    fetchHalls().then(setHalls).catch(console.error);
     loadUnavailabilities();
   }, []);
 
   const loadUnavailabilities = () => {
-    fetchExamHallUnavailabilities().then(setUnavailabilities).catch(console.error);
+    fetchExamHallUnavailabilities().then(data => {
+      setUnavailabilities(Array.isArray(data) ? data : (data?.value || []));
+    }).catch(console.error);
   };
 
   const loadBatchEnrollments = (batchId) => {
     if (!batchId) return;
-    fetchStudentEnrollments(batchId).then(setEnrollments).catch(console.error);
+    fetchStudentEnrollments(batchId).then(data => {
+      setEnrollments(Array.isArray(data) ? data : (data?.value || []));
+    }).catch(console.error);
   };
 
   useEffect(() => {
@@ -285,18 +297,22 @@ export default function AdminExamTimetablePage() {
     setLoading(true);
     setError("");
     try {
-      const list = await fetchExamTimetables(batchId, streamScope);
+      const data = await fetchExamTimetables(batchId, streamScope);
+      const list = Array.isArray(data) ? data : (data?.value || []);
       if (list && list.length > 0) {
         const latest = list[0];
         const details = await fetchExamTimetableDetails(latest.examTimetableId);
         setExamTimetable(details.examTimetable);
 
-        const activeBatch = batches.find(b => String(b.batchId) === String(batchId));
+        const bList = Array.isArray(batches) ? batches : [];
+        const activeBatch = bList.find(b => b && String(b.batchId) === String(batchId));
         const cfg = getBatchConfig(activeBatch || latest.batch);
 
         // Group by module to guarantee single-hall repeater assignment and continuous reg ranges
         const byMod = {};
-        (details.entries || []).forEach(e => {
+        const detailEntries = Array.isArray(details.entries) ? details.entries : [];
+        detailEntries.forEach(e => {
+          if (!e) return;
           const mId = e.module ? String(e.module.moduleId) : ("nomod_" + (e.examEntryId || ""));
           if (!byMod[mId]) byMod[mId] = [];
           byMod[mId].push(e);
@@ -366,7 +382,9 @@ export default function AdminExamTimetablePage() {
   const groupedModules = () => {
     const groups = [];
     const seen = {};
-    for (const entry of entries) {
+    const eList = Array.isArray(entries) ? entries : [];
+    for (const entry of eList) {
+      if (!entry) continue;
       const key = moduleKey(entry);
       if (!seen[key]) {
         seen[key] = true;
@@ -375,7 +393,7 @@ export default function AdminExamTimetablePage() {
     }
     return groups.map(key => ({
       key,
-      rows: entries.filter(e => moduleKey(e) === key)
+      rows: eList.filter(e => e && moduleKey(e) === key)
     }));
   };
 

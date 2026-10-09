@@ -32,7 +32,7 @@ export default function StudentExamTimetablePage() {
     } else {
       setLoading(false);
     }
-    fetchDepartments().then(setDepartments).catch(console.error);
+    fetchDepartments().then(data => setDepartments(Array.isArray(data) ? data : (data?.value || []))).catch(console.error);
   }, []);
 
   const [isPersonalized, setIsPersonalized] = useState(false);
@@ -46,7 +46,7 @@ export default function StudentExamTimetablePage() {
       const data = await fetchStudentExamTimetable(batchId, idToUse);
       if (data && data.status === "published") {
         setExamTimetable(data.examTimetable);
-        setEntries(data.entries || []);
+        setEntries(Array.isArray(data.entries) ? data.entries : []);
         setIsPersonalized(!!data.isPersonalized);
         setEnrolledCount(data.enrolledCount || 0);
       } else {
@@ -130,7 +130,8 @@ export default function StudentExamTimetablePage() {
 
     let modDeptId = entry.module?.departmentId || entry.module?.department?.departmentId;
     if (!modDeptId) {
-      const foundDept = departments.find(d => d.departmentCode && modCode.startsWith(d.departmentCode.toUpperCase()));
+      const dList = Array.isArray(departments) ? departments : [];
+      const foundDept = dList.find(d => d.departmentCode && modCode.startsWith(d.departmentCode.toUpperCase()));
       if (foundDept) modDeptId = foundDept.departmentId;
     }
 
@@ -141,7 +142,8 @@ export default function StudentExamTimetablePage() {
   };
 
   const getPersonalizedEntries = () => {
-    const deptFiltered = entries.filter(e => isModuleForStudent(e));
+    const eList = Array.isArray(entries) ? entries : [];
+    const deptFiltered = eList.filter(e => isModuleForStudent(e));
     const moduleGroups = {};
     for (const e of deptFiltered) {
       const key = e.module ? String(e.module.moduleId) : String(e.examEntryId);
