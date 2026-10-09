@@ -178,7 +178,41 @@ export default function AdminExamTimetablePage() {
     setEntries(prev => prev.map(e => moduleKey(e) === key ? { ...e, [field]: value } : e));
   };
 
+  const getBatchConfig = (batchObj) => {
+    let bNum = 27;
+    if (batchObj && batchObj.batchName) {
+      const match = batchObj.batchName.match(/\d+/);
+      if (match) bNum = parseInt(match[0], 10);
+    }
+    if (bNum === 23) return { year: 2021, start: 4376, end: 4894 };
+    if (bNum === 24) return { year: 2022, start: 4904, end: 5453 };
+    if (bNum === 25) return { year: 2023, start: 5456, end: 5998 };
+    return { year: 2025, start: 6560, end: 7112 };
+  };
+
   const handleAddVenue = (key, templateEntry) => {
+    const activeBatch = batches.find(b => String(b.batchId) === String(selectedBatchId));
+    const cfg = getBatchConfig(activeBatch);
+    const existingForMod = entries.filter(e => moduleKey(e) === key);
+    let nextStart = cfg.start;
+    let deptPrefix = "";
+    if (templateEntry.module && templateEntry.module.department && templateEntry.module.department.departmentCode && templateEntry.module.department.departmentCode.toUpperCase() !== "IS") {
+      deptPrefix = templateEntry.module.department.departmentCode + ": ";
+    }
+    if (existingForMod.length > 0) {
+      const last = existingForMod[existingForMod.length - 1];
+      if (last.studentIdRange) {
+        const m = last.studentIdRange.match(/(\d{4})\s*(\+.*)?$/);
+        if (m && m[1]) {
+          const parsedEnd = parseInt(m[1], 10);
+          if (!isNaN(parsedEnd)) nextStart = parsedEnd + 1;
+        }
+      }
+    }
+    const defaultCount = 80;
+    const nextEnd = Math.min(nextStart + defaultCount - 1, cfg.end);
+    const computedRange = `${deptPrefix}EG/${cfg.year}/${String(nextStart).padStart(4, "0")} - EG/${cfg.year}/${String(nextEnd).padStart(4, "0")}`;
+
     const newEntry = {
       _localId: localIdCounter++,
       _isNew: true,
@@ -188,8 +222,8 @@ export default function AdminExamTimetablePage() {
       endTime: templateEntry.endTime,
       sessionName: templateEntry.sessionName,
       hall: null,
-      studentIdRange: "",
-      allocatedCount: 0
+      studentIdRange: computedRange,
+      allocatedCount: defaultCount
     };
     setEntries(prev => {
       const lastIdx = prev.reduce((best, e, i) => moduleKey(e) === key ? i : best, -1);
@@ -859,7 +893,7 @@ export default function AdminExamTimetablePage() {
                                               })()}
                                               <input
                                                 type="text"
-                                                placeholder="e.g. EG/2023/5456 - EG/2023/5831 + Repeaters"
+                                                placeholder="Registration range..."
                                                 value={entry.studentIdRange || ""}
                                                 onChange={e => {
                                                   const val = e.target.value;

@@ -71,6 +71,22 @@ public class ExamTimetableController {
         ExamTimetable et = etOpt.get();
         List<ExamEntry> entries = examEntryRepository.findByExamTimetable_ExamTimetableIdOrderByExamDateAscStartTimeAsc(id);
 
+        // Ensure every entry has a valid, calculated student ID range if currently null/empty
+        Map<String, Integer> runningModuleIndex = new HashMap<>();
+        for (ExamEntry entry : entries) {
+            if (entry.getStudentIdRange() == null || entry.getStudentIdRange().trim().isEmpty()) {
+                String modKey = entry.getModule() != null ? String.valueOf(entry.getModule().getModuleId()) : "0";
+                int currentIndex = runningModuleIndex.getOrDefault(modKey, 0);
+                int count = (entry.getAllocatedCount() != null && entry.getAllocatedCount() > 0) ? entry.getAllocatedCount() : 100;
+                String deptPrefix = (entry.getModule() != null && entry.getModule().getDepartment() != null && !"IS".equalsIgnoreCase(entry.getModule().getDepartment().getDepartmentCode()))
+                        ? entry.getModule().getDepartment().getDepartmentCode() : null;
+                String generatedRange = generateStudentIdRange(null, currentIndex, count, et.getBatch(), deptPrefix, count, false);
+                entry.setStudentIdRange(generatedRange);
+                runningModuleIndex.put(modKey, currentIndex + count);
+                examEntryRepository.save(entry);
+            }
+        }
+
         Map<String, Object> result = new HashMap<>();
         result.put("examTimetable", et);
         result.put("entries", entries);
@@ -455,23 +471,7 @@ public class ExamTimetableController {
     private String generateStudentIdRange(List<UserAccount> students, int startIndex, int count, Batch batch, String deptPrefix, int totalDeptStudents, boolean isLastHall) {
         String prefixStr = (deptPrefix != null && !deptPrefix.isBlank() && !"ALL".equalsIgnoreCase(deptPrefix)) ? (deptPrefix + ": ") : "";
 
-        // 1. If real student accounts exist in database
-        if (students != null && !students.isEmpty() && startIndex < students.size()) {
-            int endIndex = Math.min(startIndex + count - 1, students.size() - 1);
-            String startId = students.get(startIndex).getStudentIdNumber();
-            if (startId == null || startId.isBlank()) startId = students.get(startIndex).getUsername();
-
-            String endId = students.get(endIndex).getStudentIdNumber();
-            if (endId == null || endId.isBlank()) endId = students.get(endIndex).getUsername();
-
-            String res = prefixStr + startId + " - " + endId;
-            if (isLastHall) {
-                res += " + Repeaters";
-            }
-            return res;
-        }
-
-        // 2. Official Faculty Batch Registration Configurations
+        // Official Faculty Batch Registration Configurations
         int batchNum = 27;
         if (batch != null && batch.getBatchName() != null) {
             String numOnly = batch.getBatchName().replaceAll("\\D+", "");
