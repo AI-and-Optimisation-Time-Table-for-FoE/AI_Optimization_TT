@@ -227,15 +227,64 @@ export default function AdminExamTimetablePage() {
         const latest = list[0];
         const details = await fetchExamTimetableDetails(latest.examTimetableId);
         setExamTimetable(details.examTimetable);
-        const loaded = (details.entries || []).map(e => {
-          const repCount = (e.repeaterCount !== null && e.repeaterCount !== undefined) ? Number(e.repeaterCount) : 0;
-          return {
-            ...e,
-            _localId: localIdCounter++,
-            repeaterCount: repCount,
-            repeaterInfo: repCount > 0 ? (e.repeaterInfo || `${repCount} ${repCount === 1 ? 'Repeater' : 'Repeaters'}`) : null
-          };
+
+        const activeBatch = batches.find(b => String(b.batchId) === String(batchId));
+        const cfg = getBatchConfig(activeBatch || latest.batch);
+
+        // Group by module to guarantee single-hall repeater assignment and continuous reg ranges
+        const byMod = {};
+        (details.entries || []).forEach(e => {
+          const mId = e.module ? String(e.module.moduleId) : ("nomod_" + (e.examEntryId || ""));
+          if (!byMod[mId]) byMod[mId] = [];
+          byMod[mId].push(e);
         });
+
+        const loaded = [];
+        for (const mId in byMod) {
+          const modEntries = byMod[mId];
+          const mCode = modEntries[0]?.module?.moduleCode;
+          const repDetails = getModuleRepeaterDetails(mCode, modEntries, []);
+          const existingRepSum = modEntries.reduce((sum, e) => sum + (Number(e.repeaterCount) || 0), 0);
+
+          let currentStart = cfg.start;
+          let deptCode = modEntries[0]?.module?.department?.departmentCode;
+          let deptPrefix = (deptCode && deptCode.toUpperCase() !== "IS" && !mCode?.toUpperCase().startsWith("IS") && !mCode?.toUpperCase().startsWith("COM")) ? `${deptCode}: ` : "";
+
+          modEntries.forEach((e, idx) => {
+            const isLast = (idx === modEntries.length - 1);
+            let repCount = (e.repeaterCount !== null && e.repeaterCount !== undefined) ? Number(e.repeaterCount) : 0;
+
+            // If module has repeaters in registry but no entry has repeaters assigned yet, assign all to the single last hall
+            if (existingRepSum === 0 && repDetails.count > 0 && isLast) {
+              repCount = repDetails.count;
+            }
+
+            let rangeStr = e.studentIdRange;
+            const count = (e.allocatedCount && Number(e.allocatedCount) > 0) ? Number(e.allocatedCount) : 80;
+            const endNum = Math.min(currentStart + count - 1, cfg.end);
+
+            if (!rangeStr || !rangeStr.includes("EG/") || rangeStr.includes("All ") || rangeStr.includes("Department Students")) {
+              rangeStr = `${deptPrefix}EG/${cfg.year}/${String(currentStart).padStart(4, "0")} - EG/${cfg.year}/${String(endNum).padStart(4, "0")}`;
+            }
+
+            if (repCount > 0 && !rangeStr.toLowerCase().includes("repeat")) {
+              rangeStr = `${rangeStr} + Repeaters`;
+            } else if (repCount === 0 && rangeStr.toLowerCase().includes("repeat")) {
+              rangeStr = rangeStr.replace(/\s*\+\s*Repeaters?/i, "").trim();
+            }
+
+            currentStart = endNum + 1;
+
+            loaded.push({
+              ...e,
+              _localId: localIdCounter++,
+              studentIdRange: rangeStr,
+              repeaterCount: repCount,
+              repeaterInfo: repCount > 0 ? (e.repeaterInfo || `${repCount} ${repCount === 1 ? 'Repeater' : 'Repeaters'}`) : null
+            });
+          });
+        }
+
         setEntries(loaded);
         if (latest.startDate) setStartDate(latest.startDate);
         if (latest.durationWeeks) setDurationWeeks(latest.durationWeeks);
