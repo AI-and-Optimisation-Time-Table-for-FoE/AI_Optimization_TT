@@ -82,6 +82,7 @@ export default function AdminExamTimetablePage() {
   const [examTimetable, setExamTimetable] = useState(null);
   const [entries, setEntries] = useState([]);
   const [collapsedModules, setCollapsedModules] = useState({});
+  const [showOnlyRepeaters, setShowOnlyRepeaters] = useState(false);
 
   const [startDate, setStartDate] = useState(new Date().toISOString().split("T")[0]);
   const [durationWeeks, setDurationWeeks] = useState(2);
@@ -288,7 +289,9 @@ export default function AdminExamTimetablePage() {
         hallId: e.hall ? e.hall.hallId : null,
         sessionName: e.sessionName,
         studentIdRange: e.studentIdRange,
-        allocatedCount: e.allocatedCount
+        allocatedCount: e.allocatedCount,
+        repeaterCount: e.repeaterCount || 0,
+        repeaterInfo: e.repeaterInfo || null
       }));
       await saveExamEntries(examTimetable.examTimetableId, payload);
       alert("Exam schedule saved successfully!");
@@ -667,31 +670,109 @@ export default function AdminExamTimetablePage() {
                 <div>
                   <h3 style={{ margin: 0, fontSize: "16px", fontWeight: "700", display: "flex", alignItems: "center", gap: "8px" }}>
                     <Calendar size={18} style={{ color: "var(--primary-600)" }} />
-                    Exam Schedule — Multi-Venue Editor
+                    Exam Schedule — Multi-Venue & Repeater Manager
                     <span style={{ fontSize: "12px", background: "#eff6ff", color: "#1d4ed8", padding: "2px 8px", borderRadius: "12px", fontWeight: "600" }}>
                       {groups.length} modules
                     </span>
                   </h3>
                   <p style={{ margin: "4px 0 0 26px", fontSize: "12px", color: "var(--neutral-500)" }}>
-                    Each module can have multiple venue rows. Click <strong>Add Another Venue</strong> to split across halls.
+                    Multi-venue hall allocations with explicit <strong>Regular Candidates</strong> and <strong>Repeat Candidates</strong> tracking.
                   </p>
                 </div>
-                <button onClick={handleSaveEntries} disabled={saving} style={{ background: "var(--primary-600)", color: "#fff", border: "none", borderRadius: "8px", padding: "10px 18px", cursor: "pointer", fontSize: "13px", fontWeight: "700", display: "flex", alignItems: "center", gap: "6px" }}>
-                  <Save size={15} /> {saving ? "Saving..." : "Save All Changes"}
-                </button>
+                <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+                  <button
+                    onClick={() => setShowOnlyRepeaters(!showOnlyRepeaters)}
+                    style={{
+                      background: showOnlyRepeaters ? "#fef3c7" : "#f1f5f9",
+                      color: showOnlyRepeaters ? "#92400e" : "#475569",
+                      border: showOnlyRepeaters ? "1.5px solid #f59e0b" : "1.5px solid #cbd5e1",
+                      borderRadius: "8px",
+                      padding: "8px 14px",
+                      cursor: "pointer",
+                      fontSize: "12px",
+                      fontWeight: "700",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px"
+                    }}
+                  >
+                    🔁 {showOnlyRepeaters ? "Showing: Repeaters Only" : "Filter: Repeaters Only"}
+                  </button>
+                  <button onClick={handleSaveEntries} disabled={saving} style={{ background: "var(--primary-600)", color: "#fff", border: "none", borderRadius: "8px", padding: "10px 18px", cursor: "pointer", fontSize: "13px", fontWeight: "700", display: "flex", alignItems: "center", gap: "6px" }}>
+                    <Save size={15} /> {saving ? "Saving..." : "Save All Changes"}
+                  </button>
+                </div>
               </div>
+
+              {/* ─── Batch Candidates Summary Bar ─── */}
+              {(() => {
+                const totalRegular = entries.reduce((sum, e) => sum + (Number(e.allocatedCount) || 0), 0);
+                const totalRepeaters = entries.reduce((sum, e) => sum + (Number(e.repeaterCount) || 0), 0) || enrollments.filter(en => en.enrollmentType === 'repeat' || en.enrollmentType === 'resit').length;
+                const modsWithRepeaters = groups.filter(g => {
+                  const hasEntryRep = g.rows.some(r => Number(r.repeaterCount) > 0 || (r.studentIdRange && r.studentIdRange.toLowerCase().includes("repeat")));
+                  const first = g.rows[0];
+                  const hasEnrollRep = first?.module && enrollments.some(en => en.module?.moduleId === first.module.moduleId && (en.enrollmentType === 'repeat' || en.enrollmentType === 'resit'));
+                  return hasEntryRep || hasEnrollRep;
+                }).length;
+
+                return (
+                  <div style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+                    gap: "12px",
+                    padding: "14px 20px",
+                    background: "linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%)",
+                    borderBottom: "1.5px solid var(--neutral-200)"
+                  }}>
+                    <div style={{ background: "#ffffff", padding: "10px 14px", borderRadius: "10px", border: "1px solid #e2e8f0", boxShadow: "0 1px 2px rgba(0,0,0,0.03)" }}>
+                      <div style={{ fontSize: "11px", fontWeight: "700", color: "#64748b", textTransform: "uppercase" }}>Total Scheduled Modules</div>
+                      <div style={{ fontSize: "18px", fontWeight: "800", color: "#0f172a", marginTop: "2px" }}>{groups.length} <span style={{ fontSize: "12px", color: "#64748b", fontWeight: "500" }}>modules</span></div>
+                    </div>
+                    <div style={{ background: "#ffffff", padding: "10px 14px", borderRadius: "10px", border: "1px solid #bfdbfe", boxShadow: "0 1px 2px rgba(0,0,0,0.03)" }}>
+                      <div style={{ fontSize: "11px", fontWeight: "700", color: "#1e40af", textTransform: "uppercase" }}>Regular Candidate Seats</div>
+                      <div style={{ fontSize: "18px", fontWeight: "800", color: "#1d4ed8", marginTop: "2px" }}>{totalRegular} <span style={{ fontSize: "12px", color: "#3b82f6", fontWeight: "500" }}>students</span></div>
+                    </div>
+                    <div style={{ background: "#fffbeb", padding: "10px 14px", borderRadius: "10px", border: "1.5px solid #fde68a", boxShadow: "0 1px 2px rgba(245, 158, 11, 0.06)" }}>
+                      <div style={{ fontSize: "11px", fontWeight: "700", color: "#92400e", textTransform: "uppercase", display: "flex", alignItems: "center", gap: "4px" }}>
+                        🔁 Repeat Candidates Registered
+                      </div>
+                      <div style={{ fontSize: "18px", fontWeight: "800", color: "#b45309", marginTop: "2px" }}>
+                        {totalRepeaters} <span style={{ fontSize: "12px", color: "#92400e", fontWeight: "600" }}>repeaters across {modsWithRepeaters} modules</span>
+                      </div>
+                    </div>
+                    <div style={{ background: "#ffffff", padding: "10px 14px", borderRadius: "10px", border: "1px solid #86efac", boxShadow: "0 1px 2px rgba(0,0,0,0.03)" }}>
+                      <div style={{ fontSize: "11px", fontWeight: "700", color: "#15803d", textTransform: "uppercase" }}>Combined Total Capacity</div>
+                      <div style={{ fontSize: "18px", fontWeight: "800", color: "#16a34a", marginTop: "2px" }}>{totalRegular + totalRepeaters} <span style={{ fontSize: "12px", color: "#15803d", fontWeight: "500" }}>total examinees</span></div>
+                    </div>
+                  </div>
+                );
+              })()}
 
               <div className="card-body" style={{ padding: 0 }}>
                 {groups.length === 0 ? (
                   <div style={{ padding: "40px", textAlign: "center", color: "var(--neutral-500)" }}>No modules found for this batch.</div>
                 ) : (
                   <div>
-                    {groups.map((group, gIdx) => {
+                    {groups
+                      .filter(group => {
+                        if (!showOnlyRepeaters) return true;
+                        const first = group.rows[0];
+                        const hasEntryRep = group.rows.some(r => Number(r.repeaterCount) > 0 || (r.studentIdRange && r.studentIdRange.toLowerCase().includes("repeat")));
+                        const hasEnrollRep = first?.module && enrollments.some(en => en.module?.moduleId === first.module.moduleId && (en.enrollmentType === 'repeat' || en.enrollmentType === 'resit'));
+                        return hasEntryRep || hasEnrollRep;
+                      })
+                      .map((group, gIdx) => {
                       const firstRow = group.rows[0];
                       const totalAllocated = group.rows.reduce((sum, r) => sum + (Number(r.allocatedCount) || 0), 0);
                       const hasUnavail = group.rows.some(r => isHallUnavailable(r.hall?.hallId, r.examDate));
                       const isCollapsed = collapsedModules[group.key];
                       const rowBg = gIdx % 2 === 0 ? "#f8fafc" : "#ffffff";
+
+                      // Calculate repeater count for this module
+                      const entryRepSum = group.rows.reduce((sum, r) => sum + (Number(r.repeaterCount) || 0), 0);
+                      const enrollRepCount = firstRow?.module ? enrollments.filter(en => en.module?.moduleId === firstRow.module.moduleId && (en.enrollmentType === 'repeat' || en.enrollmentType === 'resit')).length : 0;
+                      const hasRepeatText = group.rows.some(r => r.studentIdRange && (r.studentIdRange.toLowerCase().includes("repeat") || r.studentIdRange.toLowerCase().includes("+ repeater")));
+                      const moduleRepeaters = Math.max(entryRepSum, enrollRepCount, hasRepeatText ? 1 : 0);
 
                       return (
                         <div key={group.key} style={{ borderBottom: "2px solid var(--neutral-200)" }}>
@@ -706,10 +787,27 @@ export default function AdminExamTimetablePage() {
                             </div>
 
                             {/* Module info */}
-                            <div style={{ flex: "0 0 200px", minWidth: "160px" }}>
-                              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                            <div style={{ flex: "0 0 220px", minWidth: "170px" }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
                                 <strong style={{ fontSize: "14px", color: "var(--neutral-900)" }}>{firstRow?.module?.moduleCode}</strong>
                                 {hasUnavail && <span style={{ fontSize: "10px", background: "#fef2f2", color: "#dc2626", border: "1px solid #fca5a5", padding: "1px 5px", borderRadius: "5px", fontWeight: "700" }}>⚠ Conflict</span>}
+                                {moduleRepeaters > 0 && (
+                                  <span style={{
+                                    fontSize: "11px",
+                                    fontWeight: "800",
+                                    background: "#fef3c7",
+                                    color: "#92400e",
+                                    border: "1.5px solid #f59e0b",
+                                    padding: "2px 8px",
+                                    borderRadius: "8px",
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: "4px",
+                                    boxShadow: "0 1px 2px rgba(245, 158, 11, 0.15)"
+                                  }}>
+                                    🔁 {moduleRepeaters} {moduleRepeaters === 1 ? "Repeater" : "Repeaters"} (C-18)
+                                  </span>
+                                )}
                               </div>
                               <div style={{ fontSize: "11px", color: "var(--neutral-500)", marginTop: "2px" }}>{firstRow?.module?.moduleName}</div>
                             </div>
@@ -760,9 +858,9 @@ export default function AdminExamTimetablePage() {
                             </div>
 
                             {/* Summary */}
-                            <div style={{ flex: "0 0 auto", marginLeft: "auto" }} onClick={e => e.stopPropagation()}>
+                            <div style={{ flex: "0 0 auto", marginLeft: "auto", display: "flex", alignItems: "center", gap: "8px" }} onClick={e => e.stopPropagation()}>
                               <span style={{ fontSize: "12px", background: "#eff6ff", color: "#1d4ed8", padding: "4px 10px", borderRadius: "10px", fontWeight: "700", whiteSpace: "nowrap" }}>
-                                👥 {totalAllocated} students / {group.rows.length} {group.rows.length === 1 ? "venue" : "venues"}
+                                👥 {totalAllocated} regular {moduleRepeaters > 0 ? `+ 🔁 ${moduleRepeaters} repeat = ${totalAllocated + moduleRepeaters} total` : ""} / {group.rows.length} {group.rows.length === 1 ? "venue" : "venues"}
                               </span>
                             </div>
                           </div>
@@ -778,7 +876,7 @@ export default function AdminExamTimetablePage() {
                                     {/* Column headers */}
                                     <div style={{
                                       display: "grid",
-                                      gridTemplateColumns: "minmax(200px,1.2fr) minmax(260px,2fr) 70px 36px",
+                                      gridTemplateColumns: "minmax(180px,1.2fr) minmax(240px,2fr) 68px 90px 36px",
                                       gap: "8px",
                                       padding: "6px 20px 6px 52px",
                                       fontSize: "10px",
@@ -789,22 +887,25 @@ export default function AdminExamTimetablePage() {
                                       borderBottom: "1px solid var(--neutral-200)"
                                     }}>
                                       <span>Venue / Hall</span>
-                                      <span>Student Registration Range & Repeater Allocation</span>
-                                      <span style={{ textAlign: "center" }}>Students</span>
+                                      <span>Student Registration Range</span>
+                                      <span style={{ textAlign: "center" }}>Regular</span>
+                                      <span style={{ textAlign: "center", color: "#b45309" }}>🔁 Repeat</span>
                                       <span></span>
                                     </div>
 
                                     {group.rows.map((entry) => {
                                       const hallUnavail = isHallUnavailable(entry.hall?.hallId, entry.examDate);
+                                      const isEntryRepeater = Number(entry.repeaterCount) > 0 || (entry.studentIdRange && (entry.studentIdRange.toLowerCase().includes("repeat") || entry.studentIdRange.toLowerCase().includes("+ repeater")));
+
                                       return (
                                         <div key={entry._localId} style={{
                                           display: "grid",
-                                          gridTemplateColumns: "minmax(200px,1.2fr) minmax(260px,2fr) 70px 36px",
+                                          gridTemplateColumns: "minmax(180px,1.2fr) minmax(240px,2fr) 68px 90px 36px",
                                           gap: "8px",
                                           padding: "8px 20px 8px 52px",
                                           alignItems: "center",
                                           borderBottom: "1px solid var(--neutral-100)",
-                                          background: hallUnavail ? "#fff5f5" : "transparent"
+                                          background: hallUnavail ? "#fff5f5" : (isEntryRepeater ? "rgba(254, 243, 199, 0.25)" : "transparent")
                                         }}>
 
                                           {/* Hall select */}
@@ -919,7 +1020,7 @@ export default function AdminExamTimetablePage() {
                                                 }}
                                               />
                                             </div>
-                                            {entry.studentIdRange && (entry.studentIdRange.toLowerCase().includes("repeat") || entry.studentIdRange.toLowerCase().includes("+ repeater")) && (
+                                            {isEntryRepeater && (
                                               <span style={{
                                                 background: "#fef3c7",
                                                 color: "#92400e",
@@ -927,21 +1028,21 @@ export default function AdminExamTimetablePage() {
                                                 padding: "3px 8px",
                                                 borderRadius: "6px",
                                                 fontSize: "11px",
-                                                fontWeight: "600",
+                                                fontWeight: "800",
                                                 whiteSpace: "nowrap"
                                               }}>
-                                                + Repeaters
+                                                🔁 + Repeaters
                                               </span>
                                             )}
                                           </div>
 
-                                          {/* Count / Allocated Seats */}
+                                          {/* Regular Allocated Seats */}
                                           <div>
                                             <input
                                               type="number"
                                               placeholder="0"
-                                              min={1}
-                                              value={entry.allocatedCount ? entry.allocatedCount : ""}
+                                              min={0}
+                                              value={entry.allocatedCount !== undefined && entry.allocatedCount !== null ? entry.allocatedCount : ""}
                                               onChange={e => {
                                                 const newCount = e.target.value ? Number(e.target.value) : 0;
                                                 updateEntry(entry._localId, "allocatedCount", newCount);
@@ -952,9 +1053,10 @@ export default function AdminExamTimetablePage() {
                                                   }
                                                 }
                                               }}
+                                              title="Regular Students Count"
                                               style={{
-                                                width: showRegRange ? "56px" : "90px",
-                                                padding: "8px 8px",
+                                                width: "56px",
+                                                padding: "8px 6px",
                                                 fontSize: "13px",
                                                 fontWeight: "800",
                                                 fontFamily: "'JetBrains Mono', 'Consolas', monospace",
@@ -968,45 +1070,73 @@ export default function AdminExamTimetablePage() {
                                             />
                                           </div>
 
-                                    {/* Delete — inline, same row, centered */}
-                                    <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                          {/* Repeater Students Allocated */}
+                                          <div>
+                                            <input
+                                              type="number"
+                                              placeholder="0"
+                                              min={0}
+                                              value={entry.repeaterCount !== undefined && entry.repeaterCount !== null ? entry.repeaterCount : ""}
+                                              onChange={e => {
+                                                const newCount = e.target.value ? Number(e.target.value) : 0;
+                                                updateEntry(entry._localId, "repeaterCount", newCount);
+                                                if (newCount > 0) {
+                                                  updateEntry(entry._localId, "repeaterInfo", `${newCount} Repeaters (C-18)`);
+                                                }
+                                              }}
+                                              title="Repeater Students Count Allocated to this Hall"
+                                              style={{
+                                                width: "76px",
+                                                padding: "8px 6px",
+                                                fontSize: "13px",
+                                                fontWeight: "800",
+                                                fontFamily: "'JetBrains Mono', 'Consolas', monospace",
+                                                color: "#b45309",
+                                                background: entry.repeaterCount > 0 ? "#fef3c7" : "#fafafa",
+                                                border: entry.repeaterCount > 0 ? "1.5px solid #f59e0b" : "1.5px dashed #cbd5e1",
+                                                borderRadius: "8px",
+                                                textAlign: "center",
+                                                outline: "none"
+                                              }}
+                                            />
+                                          </div>
+
+                                          {/* Delete — inline, same row, centered */}
+                                          <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                            <button
+                                              onClick={() => handleDeleteVenueRow(entry)}
+                                              title="Remove this venue"
+                                              style={{ background: "#fef2f2", border: "1px solid #fca5a5", borderRadius: "6px", padding: "5px 7px", cursor: "pointer", color: "#dc2626", display: "flex", alignItems: "center" }}
+                                            >
+                                              <Trash2 size={13} />
+                                            </button>
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
+
+                                    {/* Add extra venue button */}
+                                    <div style={{ padding: "8px 20px 2px 52px" }}>
                                       <button
-                                        onClick={() => handleDeleteVenueRow(entry)}
-                                        title="Remove this venue"
-                                        style={{ background: "#fef2f2", border: "1px solid #fca5a5", borderRadius: "6px", padding: "5px 7px", cursor: "pointer", color: "#dc2626", display: "flex", alignItems: "center" }}
+                                        onClick={() => handleAddVenue(group.key, group.rows[0])}
+                                        style={{ background: "#eff6ff", border: "1px dashed #93c5fd", borderRadius: "8px", padding: "6px 14px", cursor: "pointer", color: "#1d4ed8", fontSize: "12px", fontWeight: "600", display: "flex", alignItems: "center", gap: "6px", transition: "all 0.15s" }}
+                                        onMouseEnter={e => e.currentTarget.style.background = "#dbeafe"}
+                                        onMouseLeave={e => e.currentTarget.style.background = "#eff6ff"}
                                       >
-                                        <Trash2 size={13} />
+                                        <Plus size={13} /> Add Another Venue for this Module
                                       </button>
                                     </div>
-                                  </div>
+                                  </>
                                 );
-                              })}
-
-
-                              {/* Add Venue button */}
-                              <div style={{ padding: "8px 20px 2px 52px" }}>
-                                <button
-                                  onClick={() => handleAddVenue(group.key, group.rows[0])}
-                                  style={{ background: "#eff6ff", border: "1px dashed #93c5fd", borderRadius: "8px", padding: "6px 14px", cursor: "pointer", color: "#1d4ed8", fontSize: "12px", fontWeight: "600", display: "flex", alignItems: "center", gap: "6px", transition: "all 0.15s" }}
-                                  onMouseEnter={e => e.currentTarget.style.background = "#dbeafe"}
-                                  onMouseLeave={e => e.currentTarget.style.background = "#eff6ff"}
-                                >
-                                  <Plus size={13} /> Add Another Venue for this Module
-                                </button>
-                              </div>
-                            </>
-                          );
-                        })()}
-                      </div>
-                    )}
-
+                              })()}
+                            </div>
+                          )}
                         </div>
                       );
                     })}
                   </div>
                 )}
               </div>
-
             </div>
           )}
 

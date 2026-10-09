@@ -14,6 +14,8 @@ public interface StudentModuleEnrollmentRepository extends JpaRepository<Student
     List<StudentModuleEnrollment> findByStudentRegNoIgnoreCase(String studentRegNo);
     List<StudentModuleEnrollment> findByStudentEmailIgnoreCase(String studentEmail);
     List<StudentModuleEnrollment> findByModule_ModuleId(Integer moduleId);
+    List<StudentModuleEnrollment> findByModule_ModuleIdAndEnrollmentType(Integer moduleId, StudentModuleEnrollment.EnrollmentType enrollmentType);
+    List<StudentModuleEnrollment> findByBatch_BatchIdAndEnrollmentType(Integer batchId, StudentModuleEnrollment.EnrollmentType enrollmentType);
 
     @Query("SELECT e FROM StudentModuleEnrollment e WHERE LOWER(e.studentRegNo) = LOWER(:identifier) OR LOWER(e.studentEmail) = LOWER(:identifier)")
     List<StudentModuleEnrollment> findByIdentifier(@Param("identifier") String identifier);

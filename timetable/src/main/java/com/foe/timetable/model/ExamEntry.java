@@ -51,10 +51,32 @@ public class ExamEntry {
     @Column(name = "allocated_count", nullable = true)
     private Integer allocatedCount;
 
+    @Column(name = "repeater_count", nullable = true)
+    private Integer repeaterCount;
+
+    @Column(name = "repeater_info", nullable = true, length = 150)
+    private String repeaterInfo;
+
     @jakarta.persistence.Transient
     private Boolean isRepeatExam = false;
 
     public ExamEntry() {}
+
+    public Integer getRepeaterCount() {
+        return repeaterCount != null ? repeaterCount : 0;
+    }
+
+    public void setRepeaterCount(Integer repeaterCount) {
+        this.repeaterCount = repeaterCount;
+    }
+
+    public String getRepeaterInfo() {
+        return repeaterInfo;
+    }
+
+    public void setRepeaterInfo(String repeaterInfo) {
+        this.repeaterInfo = repeaterInfo;
+    }
 
     public Boolean getIsRepeatExam() {
         return isRepeatExam;

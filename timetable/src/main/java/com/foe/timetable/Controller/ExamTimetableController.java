@@ -71,9 +71,10 @@ public class ExamTimetableController {
         ExamTimetable et = etOpt.get();
         List<ExamEntry> entries = examEntryRepository.findByExamTimetable_ExamTimetableIdOrderByExamDateAscStartTimeAsc(id);
 
-        // Ensure every entry has a valid, calculated student ID range if currently null/empty
+        // Ensure every entry has a valid, calculated student ID range and repeater count
         Map<String, Integer> runningModuleIndex = new HashMap<>();
         for (ExamEntry entry : entries) {
+            boolean modified = false;
             if (entry.getStudentIdRange() == null || entry.getStudentIdRange().trim().isEmpty()) {
                 String modKey = entry.getModule() != null ? String.valueOf(entry.getModule().getModuleId()) : "0";
                 int currentIndex = runningModuleIndex.getOrDefault(modKey, 0);
@@ -83,6 +84,25 @@ public class ExamTimetableController {
                 String generatedRange = generateStudentIdRange(null, currentIndex, count, et.getBatch(), deptPrefix, count, false);
                 entry.setStudentIdRange(generatedRange);
                 runningModuleIndex.put(modKey, currentIndex + count);
+                modified = true;
+            }
+
+            // Sync repeater count from database enrollments if available
+            if (entry.getModule() != null && (entry.getRepeaterCount() == null || entry.getRepeaterCount() == 0)) {
+                List<StudentModuleEnrollment> reps = studentModuleEnrollmentRepository.findByModule_ModuleIdAndEnrollmentType(
+                        entry.getModule().getModuleId(), StudentModuleEnrollment.EnrollmentType.repeat);
+                if (!reps.isEmpty()) {
+                    entry.setRepeaterCount(reps.size());
+                    entry.setRepeaterInfo(reps.size() + " Repeaters (C-18)");
+                    modified = true;
+                } else if (entry.getStudentIdRange() != null && (entry.getStudentIdRange().toLowerCase().contains("repeat") || entry.getStudentIdRange().toLowerCase().contains("+ repeater"))) {
+                    entry.setRepeaterCount(1);
+                    entry.setRepeaterInfo("Repeaters Allocated");
+                    modified = true;
+                }
+            }
+
+            if (modified) {
                 examEntryRepository.save(entry);
             }
         }
@@ -447,6 +467,15 @@ public class ExamTimetableController {
             entry.setStudentIdRange(idRange);
             entry.setAllocatedCount(allocatedForThisHall);
 
+            if (isLastHall && mod != null) {
+                List<StudentModuleEnrollment> reps = studentModuleEnrollmentRepository.findByModule_ModuleIdAndEnrollmentType(
+                        mod.getModuleId(), StudentModuleEnrollment.EnrollmentType.repeat);
+                if (!reps.isEmpty()) {
+                    entry.setRepeaterCount(reps.size());
+                    entry.setRepeaterInfo(reps.size() + " Repeaters (C-18)");
+                }
+            }
+
             entries.add(entry);
             String slotKey = selectedHall.getHallId() + "_" + targetDateStr + "_" + targetSessStr;
             usedHallSlots.add(slotKey);
@@ -544,6 +573,8 @@ public class ExamTimetableController {
             String sessionName = (String) item.get("sessionName");
             String studentIdRange = (String) item.get("studentIdRange");
             Number allocatedCountNum = (Number) item.get("allocatedCount");
+            Number repeaterCountNum = (Number) item.get("repeaterCount");
+            String repeaterInfo = (String) item.get("repeaterInfo");
 
             ExamEntry entry = null;
             if (entryIdNum != null) {
@@ -565,6 +596,8 @@ public class ExamTimetableController {
             if (sessionName != null) entry.setSessionName(sessionName);
             if (studentIdRange != null) entry.setStudentIdRange(studentIdRange);
             if (allocatedCountNum != null) entry.setAllocatedCount(allocatedCountNum.intValue());
+            if (repeaterCountNum != null) entry.setRepeaterCount(repeaterCountNum.intValue());
+            if (repeaterInfo != null) entry.setRepeaterInfo(repeaterInfo);
 
             if (hallIdNum != null) {
                 Hall hall = hallRepository.findById(hallIdNum.intValue()).orElse(null);

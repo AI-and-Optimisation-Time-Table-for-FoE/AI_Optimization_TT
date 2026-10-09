@@ -24,6 +24,12 @@ public class DataInitializer implements CommandLineRunner {
     private HallRepository hallRepository;
 
     @Autowired
+    private StudentModuleEnrollmentRepository studentModuleEnrollmentRepository;
+
+    @Autowired
+    private ModuleRepository moduleRepository;
+
+    @Autowired
     private AuthService authService;
 
     @Override
@@ -75,6 +81,100 @@ public class DataInitializer implements CommandLineRunner {
             authService.registerAdmin("rasika@eng.ruh.ac.lk", "admin@857$ruh");
             System.out.println("Seeded admin user (rasika@eng.ruh.ac.lk / admin@857$ruh).");
         }
+
+        // 5. Seed Official Repeater Enrollments for Faculty Modules
+        seedOfficialRepeaters();
+    }
+
+    private void seedOfficialRepeaters() {
+        if (studentModuleEnrollmentRepository.count() > 0) {
+            return; // Already populated
+        }
+
+        java.util.List<Batch> batches = batchRepository.findAll();
+        Batch batch27 = batches.stream().filter(b -> b.getBatchName() != null && b.getBatchName().contains("27")).findFirst().orElse(null);
+        Batch batch25 = batches.stream().filter(b -> b.getBatchName() != null && b.getBatchName().contains("25")).findFirst().orElse(null);
+        Batch batch24 = batches.stream().filter(b -> b.getBatchName() != null && b.getBatchName().contains("24")).findFirst().orElse(null);
+        Batch batch23 = batches.stream().filter(b -> b.getBatchName() != null && b.getBatchName().contains("23")).findFirst().orElse(null);
+
+        // Map of module code -> [repeaterCount, Batch, curriculumNote]
+        Object[][] repeaterSpecs = new Object[][] {
+            // Electrical & Information Engineering (EE)
+            {"EE4351", 9, batch25, 2018, 4},
+            {"EE4304", 4, batch25, 2018, 4},
+            {"EE4350", 2, batch25, 2018, 4},
+            {"EE6301", 2, batch24, 2018, 6},
+            {"EE2201", 1, batch27, 2018, 2},
+            {"EE6304", 1, batch24, 2018, 6},
+            {"EE6303", 1, batch24, 2018, 6},
+            {"EE4208", 1, batch25, 2023, 4},
+
+            // Civil & Environmental Engineering (CE)
+            {"CE6305", 29, batch24, 2018, 6},
+            {"CE6304", 27, batch24, 2018, 6},
+            {"CE6301", 16, batch24, 2018, 6},
+            {"CE4302", 9, batch25, 2018, 4},
+            {"CE2302", 3, batch27, 2018, 2},
+            {"CE4204", 3, batch25, 2018, 4},
+            {"CE4303", 2, batch25, 2018, 4},
+            {"CE6252", 2, batch24, 2018, 6},
+            {"CE6253", 2, batch24, 2018, 6},
+            {"CE4251", 2, batch25, 2018, 4},
+
+            // Mechanical & Manufacturing / Marine (ME/MN) & Interdisciplinary (IS)
+            {"IS4307", 119, batch25, 2018, 4},
+            {"IS4304", 11, batch25, 2018, 4},
+            {"ME4210", 4, batch25, 2018, 4},
+            {"ME6303", 3, batch24, 2018, 6},
+            {"ME6302", 3, batch24, 2018, 6},
+            {"ME6206", 3, batch24, 2018, 6},
+            {"ME4301", 2, batch25, 2018, 4},
+            {"ME6304", 1, batch24, 2018, 6},
+            {"IS6201", 1, batch24, 2018, 6},
+            {"MN4304", 1, batch25, 2018, 4},
+            {"MN4210", 1, batch24, 2018, 6}
+        };
+
+        int totalSeeded = 0;
+        for (Object[] spec : repeaterSpecs) {
+            String modCode = (String) spec[0];
+            int count = (Integer) spec[1];
+            Batch targetBatch = (Batch) spec[2];
+            int currYear = (Integer) spec[3];
+            int sem = (Integer) spec[4];
+
+            if (targetBatch == null) continue;
+
+            com.foe.timetable.model.Module mod = moduleRepository.findByModuleCode(modCode).orElse(null);
+            if (mod == null) {
+                mod = new com.foe.timetable.model.Module();
+                mod.setModuleCode(modCode);
+                mod.setModuleName(modCode + " (Official Course Module)");
+                mod.setSemester(sem);
+                mod.setCreditHours(3);
+                mod.setLectureHoursPerWeek(3);
+                mod.setLabHoursPerWeek(0);
+                mod.setDepartment(departmentRepository.findAll().stream().findFirst().orElse(null));
+                mod = moduleRepository.save(mod);
+            }
+
+            int baseReg = 3800 + (currYear % 100) * 10;
+            for (int i = 1; i <= count; i++) {
+                String regNo = "EG/" + currYear + "/" + String.format("%04d", baseReg + i);
+                String email = "repeat_" + modCode.toLowerCase() + "_" + i + "@eng.ruh.ac.lk";
+                StudentModuleEnrollment en = new StudentModuleEnrollment(
+                    regNo,
+                    email,
+                    targetBatch,
+                    mod,
+                    StudentModuleEnrollment.EnrollmentType.repeat,
+                    String.valueOf(targetBatch.getAcademicYear())
+                );
+                studentModuleEnrollmentRepository.save(en);
+                totalSeeded++;
+            }
+        }
+        System.out.println("Seeded " + totalSeeded + " official repeat candidates across Faculty modules.");
     }
 
     private void syncOrAddBatch(String batchName, int academicYear, int semester, int studentCount) {
