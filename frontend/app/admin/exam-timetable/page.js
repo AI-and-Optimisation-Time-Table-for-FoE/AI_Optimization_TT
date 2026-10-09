@@ -66,6 +66,25 @@ function getDeptBadgeConfig(prefixStr) {
   return { bg: "#f1f5f9", text: "#334155", border: "#cbd5e1", label: p || "ID" };
 }
 
+const FACULTY_ELECTIVE_CONFIG = {
+  // Semester 4 (25th batch)
+  "IS4227": { regularCount: 51, defaultHall: "LT1", repCount: 119, repDesc: "119 Repeaters", repDefaultHall: "DO2" },
+  "IS4128": { regularCount: 88, defaultHall: "DO1", repCount: 0 },
+  "IS4129": { regularCount: 2, defaultHall: "DO1", repCount: 0 },
+  "IS4224": { regularCount: 121, defaultHall: "DO2", repCount: 0 },
+  "IS4225": { regularCount: 13, defaultHall: "DO2", repCount: 0 },
+  "IS4304": { regularCount: 0, defaultHall: "DO2", repCount: 11, repDesc: "11 Repeaters" },
+  "ME4210": { regularCount: 17, defaultHall: "DO2", repCount: 4, repDesc: "4 Repeaters" },
+  "ME4212": { regularCount: 24, defaultHall: "AUD", repCount: 0 },
+  "ME4211": { regularCount: 79, defaultHall: "DO1", repCount: 0 },
+
+  // Semester 6 (24th batch)
+  "IS6121": { regularCount: 7, defaultHall: "DO1", repCount: 0 },
+  "CE6253": { regularCount: 17, defaultHall: "CC", repCount: 2 },
+  "CE6252": { regularCount: 118, defaultHall: "DO1", repCount: 2 },
+  "ME6210": { regularCount: 20, defaultHall: "LT1", repCount: 1 }
+};
+
 const FACULTY_REPEATER_REGISTRY = {
   // Semester 2 (27th Batch)
   "IS2401": { count: 2 },
@@ -75,6 +94,7 @@ const FACULTY_REPEATER_REGISTRY = {
 
   // Semester 4 (25th Batch)
   "IS4307": { count: 119 }, // Technology and Society (C-18 repeaters in DO2)
+  "IS4227": { count: 119 }, // Technology and Society (Repeaters dedicated to DO2)
   "IS4304": { count: 11 },  // Management & Organizational Behaviour
   "IS4305": { count: 4 },   // Probability and Statistics (C-18)
   "EE4351": { count: 9 },
@@ -322,13 +342,56 @@ export default function AdminExamTimetablePage() {
         const loaded = [];
         for (const mId in byMod) {
           const modEntries = byMod[mId];
-          const mCode = modEntries[0]?.module?.moduleCode;
-          const repDetails = getModuleRepeaterDetails(mCode, modEntries, []);
+          const rawMCode = (modEntries[0]?.module?.moduleCode || "").toUpperCase().trim();
+          const cleanMCode = rawMCode.replace(/\s+/g, "");
+          const electiveCfg = FACULTY_ELECTIVE_CONFIG[cleanMCode] || FACULTY_ELECTIVE_CONFIG[rawMCode];
+
+          if (electiveCfg && electiveCfg.regularCount > 0) {
+            // Elective module (e.g. IS4227 Technology and Society: exactly 51 regular candidates)
+            const first = modEntries[0];
+            const regularHall = modEntries.find(e => e.hall && (!e.repeaterCount || Number(e.repeaterCount) === 0))?.hall ||
+                                (halls.find(h => h.hallName?.toUpperCase().includes(electiveCfg.defaultHall)) || first.hall || halls[0]);
+
+            const endNum = Math.min(cfg.start + electiveCfg.regularCount - 1, cfg.end);
+            const regRange = `EG/${cfg.year}/${String(cfg.start).padStart(4, "0")} - EG/${cfg.year}/${String(endNum).padStart(4, "0")}`;
+
+            loaded.push({
+              ...first,
+              examEntryId: first.examEntryId || null,
+              _localId: localIdCounter++,
+              hall: regularHall,
+              allocatedCount: electiveCfg.regularCount,
+              studentIdRange: regRange,
+              repeaterCount: 0,
+              repeaterInfo: null
+            });
+
+            // Dedicated separate hall for repeaters (e.g. 119 repeaters in DO2)
+            if (electiveCfg.repCount > 0) {
+              const repEntry = modEntries.find(e => Number(e.repeaterCount) > 0) || (modEntries.length > 1 ? modEntries[1] : first);
+              const repHall = (repEntry !== first && repEntry.hall) ? repEntry.hall :
+                              (halls.find(h => h.hallName?.toUpperCase().includes(electiveCfg.repDefaultHall || "DO2")) || halls[1] || regularHall);
+
+              loaded.push({
+                ...first,
+                examEntryId: (repEntry !== first && repEntry.examEntryId) ? repEntry.examEntryId : null,
+                _localId: localIdCounter++,
+                hall: repHall,
+                allocatedCount: 0,
+                studentIdRange: "Repeat Candidates (Dedicated Hall)",
+                repeaterCount: electiveCfg.repCount,
+                repeaterInfo: electiveCfg.repDesc || `${electiveCfg.repCount} Repeaters`
+              });
+            }
+            continue;
+          }
+
+          const repDetails = getModuleRepeaterDetails(rawMCode, modEntries, []);
           const existingRepSum = modEntries.reduce((sum, e) => sum + (Number(e.repeaterCount) || 0), 0);
 
           let currentStart = cfg.start;
           let deptCode = modEntries[0]?.module?.department?.departmentCode;
-          let deptPrefix = (deptCode && deptCode.toUpperCase() !== "IS" && !mCode?.toUpperCase().startsWith("IS") && !mCode?.toUpperCase().startsWith("COM")) ? `${deptCode}: ` : "";
+          let deptPrefix = (deptCode && deptCode.toUpperCase() !== "IS" && !rawMCode?.toUpperCase().startsWith("IS") && !rawMCode?.toUpperCase().startsWith("COM")) ? `${deptCode}: ` : "";
 
           modEntries.forEach((e, idx) => {
             const isLast = (idx === modEntries.length - 1);

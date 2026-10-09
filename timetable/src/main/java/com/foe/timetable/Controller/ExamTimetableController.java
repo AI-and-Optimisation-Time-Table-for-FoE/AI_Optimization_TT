@@ -417,11 +417,16 @@ public class ExamTimetableController {
                                       || (mod.getSemester() != null && (mod.getSemester() == 1 || mod.getSemester() == 2));
             boolean isDeptModule = !isFirstOrSecondSem && mod.getDepartment() != null && !"IS".equalsIgnoreCase(mod.getDepartment().getDepartmentCode());
             int electiveCount = getFacultyElectiveRegularCount(mod.getModuleCode(), mod.getModuleName());
+            int officialRepCount = getFacultyRepeaterCount(mod.getModuleCode());
 
             if (electiveCount > 0) {
-                // Elective module (e.g. IS4227 Technology and Society with 51 students, IS4128 with 88 students)
-                // Allocate single/appropriate venue(s) based on elective headcount, NOT 550 batch students!
-                allocateHallsForGroup(et, mod, assignedDate, assignedSession, Collections.emptyList(), electiveCount, null, halls, usedHallSlots, unavailSet, entries, true);
+                // Elective module (e.g. IS4227 Technology and Society: exactly 51 regular students)
+                // 1. Allocate dedicated hall strictly for regular students (51 seats)
+                allocateHallsForGroup(et, mod, assignedDate, assignedSession, Collections.emptyList(), electiveCount, null, halls, usedHallSlots, unavailSet, entries, false);
+                // 2. Allocate separate dedicated hall for repeaters (e.g. 119 repeaters in DO2)
+                if (officialRepCount > 0) {
+                    allocateDedicatedRepeaterHall(et, mod, assignedDate, assignedSession, officialRepCount, halls, usedHallSlots, unavailSet, entries);
+                }
             } else if (isDeptModule) {
                 Integer modDeptId = mod.getDepartment().getDepartmentId();
                 List<UserAccount> deptStudents = registeredByDept.getOrDefault(modDeptId, Collections.emptyList());
@@ -483,6 +488,55 @@ public class ExamTimetableController {
         }
 
         return entries;
+    }
+
+    private void allocateDedicatedRepeaterHall(ExamTimetable et, Module mod, LocalDate assignedDate, String assignedSession,
+                                               int repCount, List<Hall> halls, Set<String> usedHallSlots,
+                                               Set<String> unavailSet, List<ExamEntry> entries) {
+        final String targetDateStr = assignedDate.toString();
+        final String targetSessStr = assignedSession;
+
+        java.util.function.Function<Hall, Integer> getExamCap = (h) -> {
+            int cap = (h.getCapacity() != null && h.getCapacity() > 0) ? h.getCapacity() : 100;
+            if (cap > 200) return Math.min(cap, 250);
+            return Math.max(25, cap / 2);
+        };
+
+        List<Hall> repCandidates = halls.stream()
+            .filter(h -> !isDepartmentSpecificHall(h))
+            .filter(h -> {
+                String rSlotKey = h.getHallId() + "_" + targetDateStr + "_" + targetSessStr;
+                String rHallKey = h.getHallId() + "_" + targetDateStr;
+                String rAllDatesKey = h.getHallId() + "_ALL";
+                return !unavailSet.contains(rHallKey) && !unavailSet.contains(rAllDatesKey) && !usedHallSlots.contains(rSlotKey);
+            })
+            .sorted(Comparator.comparingInt((Hall h) -> Math.abs(getExamCap.apply(h) - repCount)))
+            .collect(Collectors.toList());
+
+        if (!repCandidates.isEmpty()) {
+            Hall repHall = repCandidates.get(0);
+            String repSlotKey = repHall.getHallId() + "_" + targetDateStr + "_" + targetSessStr;
+            usedHallSlots.add(repSlotKey);
+
+            ExamEntry repEntry = new ExamEntry();
+            repEntry.setExamTimetable(et);
+            repEntry.setModule(mod);
+            repEntry.setExamDate(assignedDate);
+            repEntry.setSessionName(assignedSession);
+            if ("Morning Session".equals(assignedSession)) {
+                repEntry.setStartTime(LocalTime.of(9, 0));
+                repEntry.setEndTime(LocalTime.of(12, 0));
+            } else {
+                repEntry.setStartTime(LocalTime.of(13, 30));
+                repEntry.setEndTime(LocalTime.of(16, 30));
+            }
+            repEntry.setHall(repHall);
+            repEntry.setStudentIdRange("Repeat Candidates (Dedicated Hall)");
+            repEntry.setAllocatedCount(0);
+            repEntry.setRepeaterCount(repCount);
+            repEntry.setRepeaterInfo(repCount + " Repeaters");
+            entries.add(repEntry);
+        }
     }
 
     private void allocateHallsForGroup(ExamTimetable et, Module mod, LocalDate assignedDate, String assignedSession,
@@ -1166,8 +1220,8 @@ public class ExamTimetableController {
             case "EE2201": return 1;
 
             // Semester 4 (25th Batch)
-            case "IS4307": return 119; // Technology and Society (C-18 repeaters)
-            case "IS4227": return 0;   // Technology and Society (C-23 regular 51 students, 0 repeaters)
+            case "IS4307":
+            case "IS4227": return 119; // Technology and Society repeaters allocated to dedicated separate hall (DO2)
             case "IS4304": return 11;
             case "IS4305": return 4;
             case "EE4351": return 9;
