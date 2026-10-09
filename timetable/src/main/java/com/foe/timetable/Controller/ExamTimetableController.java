@@ -77,8 +77,10 @@ public class ExamTimetableController {
         ExamTimetable et = etOpt.get();
         List<ExamEntry> entries = examEntryRepository.findByExamTimetable_ExamTimetableIdOrderByExamDateAscStartTimeAsc(id);
 
-        // Ensure every entry has a valid, calculated student ID range and repeater count
+        // Ensure every entry has a valid, calculated student ID range and repeater count strictly grouped per module
         Map<String, Integer> runningModuleIndex = new HashMap<>();
+        Map<Integer, List<ExamEntry>> entriesByModule = new HashMap<>();
+
         for (ExamEntry entry : entries) {
             boolean modified = false;
             if (entry.getStudentIdRange() == null || entry.getStudentIdRange().trim().isEmpty()) {
@@ -92,28 +94,45 @@ public class ExamTimetableController {
                 runningModuleIndex.put(modKey, currentIndex + count);
                 modified = true;
             }
-
-            // Authoritative Faculty repeater sync
-            if (entry.getModule() != null) {
-                String mCode = entry.getModule().getModuleCode().toUpperCase().trim();
-                int officialRepCount = getFacultyRepeaterCount(mCode);
-                if (officialRepCount > 0 && (entry.getRepeaterCount() == null || entry.getRepeaterCount() == 0)) {
-                    entry.setRepeaterCount(officialRepCount);
-                    entry.setRepeaterInfo(officialRepCount + (officialRepCount == 1 ? " Repeater" : " Repeaters"));
-                    modified = true;
-                } else if (entry.getRepeaterCount() == null || entry.getRepeaterCount() == 0) {
-                    List<StudentModuleEnrollment> reps = studentModuleEnrollmentRepository.findByModule_ModuleIdAndEnrollmentType(
-                            entry.getModule().getModuleId(), StudentModuleEnrollment.EnrollmentType.repeat);
-                    if (!reps.isEmpty()) {
-                        entry.setRepeaterCount(reps.size());
-                        entry.setRepeaterInfo(reps.size() + (reps.size() == 1 ? " Repeater" : " Repeaters"));
-                        modified = true;
-                    }
-                }
-            }
-
             if (modified) {
                 examEntryRepository.save(entry);
+            }
+            if (entry.getModule() != null) {
+                entriesByModule.computeIfAbsent(entry.getModule().getModuleId(), k -> new ArrayList<>()).add(entry);
+            }
+        }
+
+        // Authoritative Faculty repeater sync — strictly ONE venue per module
+        for (Map.Entry<Integer, List<ExamEntry>> entryGroup : entriesByModule.entrySet()) {
+            List<ExamEntry> modEntries = entryGroup.getValue();
+            if (modEntries.isEmpty()) continue;
+
+            Module mod = modEntries.get(0).getModule();
+            String mCode = mod.getModuleCode().toUpperCase().trim();
+            int officialRepCount = getFacultyRepeaterCount(mCode);
+
+            int existingRepSum = modEntries.stream()
+                    .mapToInt(e -> e.getRepeaterCount() != null ? e.getRepeaterCount() : 0)
+                    .sum();
+
+            if (existingRepSum == 0 && officialRepCount > 0) {
+                // Assign repeaters ONLY to the single last venue entry of this module
+                ExamEntry lastEntry = modEntries.get(modEntries.size() - 1);
+                lastEntry.setRepeaterCount(officialRepCount);
+                lastEntry.setRepeaterInfo(officialRepCount + (officialRepCount == 1 ? " Repeater" : " Repeaters"));
+                examEntryRepository.save(lastEntry);
+            } else if (existingRepSum > 0 && modEntries.size() > 1) {
+                // Clean up any duplicates across venues so repeaters exist only on ONE venue
+                boolean foundDesignated = false;
+                for (int i = 0; i < modEntries.size(); i++) {
+                    ExamEntry e = modEntries.get(i);
+                    boolean isLast = (i == modEntries.size() - 1);
+                    if (!isLast && e.getRepeaterCount() != null && e.getRepeaterCount() > 0) {
+                        e.setRepeaterCount(0);
+                        e.setRepeaterInfo(null);
+                        examEntryRepository.save(e);
+                    }
+                }
             }
         }
 
@@ -389,16 +408,21 @@ public class ExamTimetableController {
             usedDatesForBatch.add(assignedDate);
 
             // Determine hall venue allocation using the FULL expected student count.
-            // For IS (common) modules: use full batch count.
-            // For department-specific modules: use registered dept students if available;
-            //   otherwise estimate proportionally from batch total using registered dept ratios.
+            // For IS (common) modules: check if elective (GE/TE) vs compulsory batch-wide.
+            // For department-specific modules: use registered dept students if available.
             List<UserAccount> targetStudents = registeredStudents;
             int totalForThisModule;
 
             boolean isFirstOrSecondSem = (et.getBatch().getSemester() != null && (et.getBatch().getSemester() == 1 || et.getBatch().getSemester() == 2))
                                       || (mod.getSemester() != null && (mod.getSemester() == 1 || mod.getSemester() == 2));
             boolean isDeptModule = !isFirstOrSecondSem && mod.getDepartment() != null && !"IS".equalsIgnoreCase(mod.getDepartment().getDepartmentCode());
-            if (isDeptModule) {
+            int electiveCount = getFacultyElectiveRegularCount(mod.getModuleCode(), mod.getModuleName());
+
+            if (electiveCount > 0) {
+                // Elective module (e.g. IS4227 Technology and Society with 51 students, IS4128 with 88 students)
+                // Allocate single/appropriate venue(s) based on elective headcount, NOT 550 batch students!
+                allocateHallsForGroup(et, mod, assignedDate, assignedSession, Collections.emptyList(), electiveCount, null, halls, usedHallSlots, unavailSet, entries, true);
+            } else if (isDeptModule) {
                 Integer modDeptId = mod.getDepartment().getDepartmentId();
                 List<UserAccount> deptStudents = registeredByDept.getOrDefault(modDeptId, Collections.emptyList());
 
@@ -410,9 +434,9 @@ public class ExamTimetableController {
                     totalForThisModule = Math.max(defaultDeptSize, deptStudents.size());
                 }
                 String prefix = mod.getDepartment().getDepartmentCode();
-                allocateHallsForGroup(et, mod, assignedDate, assignedSession, deptStudents, totalForThisModule, prefix, halls, usedHallSlots, unavailSet, entries);
+                allocateHallsForGroup(et, mod, assignedDate, assignedSession, deptStudents, totalForThisModule, prefix, halls, usedHallSlots, unavailSet, entries, true);
             } else if (isFirstOrSecondSem) {
-                allocateHallsForGroup(et, mod, assignedDate, assignedSession, registeredStudents, effectiveTotalStudents, null, halls, usedHallSlots, unavailSet, entries);
+                allocateHallsForGroup(et, mod, assignedDate, assignedSession, registeredStudents, effectiveTotalStudents, null, halls, usedHallSlots, unavailSet, entries, true);
             } else {
                 BatchModule bm = batchModules.stream()
                         .filter(b -> b.getModule() != null && b.getModule().getModuleId().equals(mod.getModuleId()))
@@ -440,7 +464,8 @@ public class ExamTimetableController {
                         .sorted(Comparator.comparingInt(Department::getDepartmentId))
                         .collect(Collectors.toList());
 
-                for (Department dept : studentDepts) {
+                for (int dIdx = 0; dIdx < studentDepts.size(); dIdx++) {
+                    Department dept = studentDepts.get(dIdx);
                     List<UserAccount> deptStudents = registeredByDept.getOrDefault(dept.getDepartmentId(), Collections.emptyList());
                     Integer deptCountDb = dept.getStudentCount();
                     int totalForThisDept;
@@ -451,7 +476,8 @@ public class ExamTimetableController {
                         totalForThisDept = Math.max(defaultDeptSize, deptStudents.size());
                     }
                     String prefix = dept.getDepartmentCode();
-                    allocateHallsForGroup(et, mod, assignedDate, assignedSession, deptStudents, totalForThisDept, prefix, halls, usedHallSlots, unavailSet, entries);
+                    boolean isLastDept = (dIdx == studentDepts.size() - 1);
+                    allocateHallsForGroup(et, mod, assignedDate, assignedSession, deptStudents, totalForThisDept, prefix, halls, usedHallSlots, unavailSet, entries, isLastDept);
                 }
             }
         }
@@ -462,7 +488,7 @@ public class ExamTimetableController {
     private void allocateHallsForGroup(ExamTimetable et, Module mod, LocalDate assignedDate, String assignedSession,
                                        List<UserAccount> targetStudents, int totalStudents, String deptPrefix,
                                        List<Hall> halls, Set<String> usedHallSlots, Set<String> unavailSet,
-                                       List<ExamEntry> entries) {
+                                       List<ExamEntry> entries, boolean allowRepeatersOnLastHall) {
         int remainingStudents = totalStudents;
         int currentStudentIndex = 0;
 
@@ -516,7 +542,7 @@ public class ExamTimetableController {
 
             boolean isLastHall = (remainingStudents <= effectiveCap);
             int repCount = 0;
-            if (isLastHall && mod != null) {
+            if (isLastHall && allowRepeatersOnLastHall && mod != null) {
                 repCount = getFacultyRepeaterCount(mod.getModuleCode());
                 List<StudentModuleEnrollment> reps = studentModuleEnrollmentRepository.findByModule_ModuleIdAndEnrollmentType(
                         mod.getModuleId(), StudentModuleEnrollment.EnrollmentType.repeat);
@@ -1052,6 +1078,38 @@ public class ExamTimetableController {
                name.contains("audio visual") || name.contains("drawing office") || name.contains("lab");
     }
 
+    private int getFacultyElectiveRegularCount(String code, String name) {
+        if (code == null) return 0;
+        String c = code.replaceAll("\\s+", "").toUpperCase().trim();
+        switch (c) {
+            // Semester 4 Electives (25th batch)
+            case "IS4227": return 51;  // Technology and Society (GE) — only 51 students enrolled in LT1
+            case "IS4128": return 88;  // Industrial Sociology (GE) — 88 students in DO1
+            case "IS4129": return 2;   // History of Engineering in Sri Lanka (GE)
+            case "IS4224": return 121; // Financial Management (GE) — 121 students in DO2
+            case "IS4225": return 13;  // Innovation Management & Entrepreneurship (GE)
+            case "ME4210": return 17;  // Analog and Digital Electronics (TE)
+            case "ME4212": return 24;  // Nanotechnology (TE)
+            case "ME4211": return 79;  // Automobile Engineering (TE)
+
+            // Semester 6 Electives (24th batch)
+            case "IS6121": return 7;   // Industrial Law (GE)
+            case "CE6253": return 17;  // Sustainable Built Environment Principles (TE)
+            case "CE6252": return 118; // Dynamic and Control of Structures (TE)
+            case "ME6210": return 20;  // Industrial Automation (TE)
+
+            default: {
+                if (name != null) {
+                    String n = name.toUpperCase();
+                    if (n.contains("(GE)") || n.contains("(TE)") || n.contains("ELECTIVE")) {
+                        return 80; // Standard single-hall elective group size
+                    }
+                }
+                return 0; // Compulsory or standard department module
+            }
+        }
+    }
+
     private int getFacultyRepeaterCount(String code) {
         if (code == null) return 0;
         String c = code.replaceAll("\\s+", "").toUpperCase().trim();
@@ -1063,8 +1121,8 @@ public class ExamTimetableController {
             case "EE2201": return 1;
 
             // Semester 4 (25th Batch)
-            case "IS4307":
-            case "IS4227": return 119;
+            case "IS4307": return 119; // Technology and Society (C-18 repeaters)
+            case "IS4227": return 0;   // Technology and Society (C-23 regular 51 students, 0 repeaters)
             case "IS4304": return 11;
             case "IS4305": return 4;
             case "EE4351": return 9;

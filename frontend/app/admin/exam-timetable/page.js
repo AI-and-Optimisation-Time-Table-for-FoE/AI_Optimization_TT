@@ -74,11 +74,11 @@ const FACULTY_REPEATER_REGISTRY = {
   "EE2201": { count: 1 },
 
   // Semester 4 (25th Batch)
-  "IS4307": { count: 119 },
-  "IS4227": { count: 119 },
-  "IS4304": { count: 11 },
-  "IS4305": { count: 4 },
+  "IS4307": { count: 119 }, // Technology and Society (C-18 repeaters in DO2)
+  "IS4304": { count: 11 },  // Management & Organizational Behaviour
+  "IS4305": { count: 4 },   // Probability and Statistics (C-18)
   "EE4351": { count: 9 },
+  "EC4304": { count: 9 },
   "EE4304": { count: 4 },
   "EE4350": { count: 2 },
   "CE4302": { count: 9 },
@@ -334,9 +334,13 @@ export default function AdminExamTimetablePage() {
             const isLast = (idx === modEntries.length - 1);
             let repCount = (e.repeaterCount !== null && e.repeaterCount !== undefined) ? Number(e.repeaterCount) : 0;
 
-            // If module has repeaters in registry but no entry has repeaters assigned yet, assign all to the single last hall
-            if (existingRepSum === 0 && repDetails.count > 0 && isLast) {
+            // Enforce single-hall repeater assignment: never duplicate across venues
+            if (existingRepSum > repDetails.count && repDetails.count > 0) {
+              repCount = isLast ? repDetails.count : 0;
+            } else if (existingRepSum === 0 && repDetails.count > 0 && isLast) {
               repCount = repDetails.count;
+            } else if (!isLast && modEntries.length > 1 && repCount > 0 && modEntries.some((other, oIdx) => oIdx !== idx && Number(other.repeaterCount) > 0)) {
+              repCount = 0;
             }
 
             let rangeStr = e.studentIdRange;
