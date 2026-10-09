@@ -16,13 +16,12 @@ try:
     )
     cursor = connection.cursor()
 
-    # 1. Fix user account 439 (tharusha@ug.ruh.ac.lk) who was accidentally given 2022 number in 27th batch
+    # 1. Remove user account for tharusha@ug.ruh.ac.lk
     cursor.execute("""
-        UPDATE user_account 
-        SET student_id_number='EG/2025/6561', username='eg276561@engug.ruh.ac.lk' 
-        WHERE user_id=439
+        DELETE FROM user_account 
+        WHERE user_id = 439 OR university_email = 'tharusha@ug.ruh.ac.lk' OR username = 'tharusha@ug.ruh.ac.lk'
     """)
-    print("Fixed user account 439 to EG/2025/6561.")
+    print("Successfully deleted account tharusha@ug.ruh.ac.lk from user_account.")
 
     # 2. Batch configurations: (regYear, startBase, endBase, batchNum)
     BATCH_CONFIGS = {
