@@ -320,42 +320,46 @@ export default function StudentExamTimetablePage() {
 
                         return (
                           <tr key={entry.examEntryId || entry._localId} style={{
-                            background: isRepeat ? "#fffdfa" : "#f8fafc",
-                            borderLeft: isRepeat ? "3.5px solid #d97706" : "3.5px solid #16a34a"
+                            background: isRepeat ? "#fffbeb" : "#f8fafc",
+                            borderLeft: isRepeat ? "4px solid #f59e0b" : "4px solid #16a34a",
+                            transition: "all 0.2s ease"
                           }}>
                             <td style={{ padding: "18px 24px", verticalAlign: "middle" }}>
                               <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-                                <strong style={{ fontSize: "15px", color: "var(--neutral-900)" }}>{entry.module?.moduleCode}</strong>
+                                <strong style={{ fontSize: "15px", color: isRepeat ? "#78350f" : "var(--neutral-900)" }}>{entry.module?.moduleCode}</strong>
                                 {isRepeat && (
                                   <span style={{
                                     fontSize: "11px",
-                                    fontWeight: "600",
+                                    fontWeight: "800",
                                     color: "#92400e",
                                     background: "#fef3c7",
-                                    border: "1px solid #fde68a",
-                                    padding: "1px 7px",
-                                    borderRadius: "4px",
+                                    border: "1px solid #fcd34d",
+                                    padding: "2px 8px",
+                                    borderRadius: "6px",
                                     display: "inline-flex",
                                     alignItems: "center",
-                                    gap: "4px"
+                                    gap: "4px",
+                                    letterSpacing: "0.03em"
                                   }}>
-                                    Repeat Exam
+                                    🔁 REPEAT EXAM {entry.module?.semester ? `(SEM ${entry.module.semester})` : ""}
                                   </span>
                                 )}
                               </div>
-                              <div style={{ fontSize: "13px", color: "var(--neutral-600)", marginTop: "3px" }}>{entry.module?.moduleName}</div>
+                              <div style={{ fontSize: "13px", color: isRepeat ? "#92400e" : "var(--neutral-600)", marginTop: "3px" }}>{entry.module?.moduleName}</div>
                             </td>
                             <td style={{ padding: "18px 20px", verticalAlign: "middle" }}>
-                              <div style={{ fontWeight: "700", color: "var(--neutral-800)" }}>
+                              <div style={{ fontWeight: "700", color: isRepeat ? "#78350f" : "var(--neutral-800)" }}>
                                 {new Date(entry.examDate).toLocaleDateString(undefined, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })}
                               </div>
                             </td>
                             <td style={{ padding: "18px 20px", verticalAlign: "middle" }}>
                               <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                                <Clock size={14} style={{ color: "var(--primary-600)" }} />
-                                <span>{entry.startTime ? entry.startTime.substring(0, 5) : ""} - {entry.endTime ? entry.endTime.substring(0, 5) : ""}</span>
+                                <Clock size={14} style={{ color: isRepeat ? "#d97706" : "var(--primary-600)" }} />
+                                <span style={{ fontWeight: isRepeat ? "700" : "500", color: isRepeat ? "#78350f" : "inherit" }}>
+                                  {entry.startTime ? entry.startTime.substring(0, 5) : ""} - {entry.endTime ? entry.endTime.substring(0, 5) : ""}
+                                </span>
                               </div>
-                              <div style={{ fontSize: "11px", color: "var(--neutral-500)", fontWeight: "600", textTransform: "uppercase" }}>
+                              <div style={{ fontSize: "11px", color: isRepeat ? "#b45309" : "var(--neutral-500)", fontWeight: "600", textTransform: "uppercase" }}>
                                 {entry.sessionName || "Session"}
                               </div>
                             </td>
@@ -363,16 +367,17 @@ export default function StudentExamTimetablePage() {
                               {entry.hall ? (
                                 <div style={{
                                   background: isRepeat ? "#fef3c7" : "#dcfce7",
-                                  border: isRepeat ? "1px solid #fcd34d" : "1px solid #86efac",
+                                  border: isRepeat ? "1.5px solid #fcd34d" : "1px solid #86efac",
                                   borderRadius: "8px",
                                   padding: "10px 14px",
+                                  boxShadow: isRepeat ? "0 2px 4px rgba(245, 158, 11, 0.08)" : "none"
                                 }}>
-                                  <div style={{ display: "flex", alignItems: "center", gap: "6px", color: isRepeat ? "#92400e" : "#047857", fontWeight: "700", fontSize: "14px" }}>
+                                  <div style={{ display: "flex", alignItems: "center", gap: "6px", color: isRepeat ? "#92400e" : "#047857", fontWeight: "800", fontSize: "14px" }}>
                                     <Building size={16} />
                                     <span>{entry.hall.hallName}</span>
                                   </div>
                                   {entry.studentIdRange && (
-                                    <div style={{ fontSize: "12px", color: "var(--neutral-600)", marginTop: "3px" }}>
+                                    <div style={{ fontSize: "12px", color: isRepeat ? "#78350f" : "var(--neutral-600)", marginTop: "3px", fontFamily: "'JetBrains Mono', monospace", fontWeight: "600" }}>
                                       {entry.studentIdRange}{entry.allocatedCount ? ` (${entry.allocatedCount} seats)` : ""}
                                     </div>
                                   )}
@@ -384,11 +389,11 @@ export default function StudentExamTimetablePage() {
                                       background: isRepeat ? "#d97706" : "#16a34a",
                                       color: "#fff",
                                       fontSize: "10px",
-                                      fontWeight: "700",
-                                      padding: "2px 8px",
+                                      fontWeight: "800",
+                                      padding: "3px 9px",
                                       borderRadius: "6px"
                                     }}>
-                                      <CheckCircle size={11} /> {isRepeat ? "YOUR ASSIGNED HALL (Repeat)" : "YOUR ASSIGNED HALL"}
+                                      <CheckCircle size={11} /> {isRepeat ? "YOUR ASSIGNED HALL (REPEAT)" : "YOUR ASSIGNED HALL"}
                                     </span>
                                   </div>
                                 </div>
