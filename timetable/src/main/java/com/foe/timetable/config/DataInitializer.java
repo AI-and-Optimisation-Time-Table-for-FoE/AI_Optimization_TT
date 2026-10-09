@@ -30,6 +30,9 @@ public class DataInitializer implements CommandLineRunner {
     private ModuleRepository moduleRepository;
 
     @Autowired
+    private ExamTimetableRepository examTimetableRepository;
+
+    @Autowired
     private AuthService authService;
 
     @Override
@@ -84,6 +87,15 @@ public class DataInitializer implements CommandLineRunner {
 
         // 5. Seed Official Repeater Enrollments for Faculty Modules
         seedOfficialRepeaters();
+
+        // 6. Migrate existing exam timetables with null streamScope to "ALL"
+        java.util.List<ExamTimetable> allTts = examTimetableRepository.findAll();
+        for (ExamTimetable tt : allTts) {
+            if (tt.getStreamScope() == null || tt.getStreamScope().trim().isEmpty()) {
+                tt.setStreamScope("ALL");
+                examTimetableRepository.save(tt);
+            }
+        }
     }
 
     private void seedOfficialRepeaters() {

@@ -55,8 +55,11 @@ public class ExamTimetableController {
     @GetMapping
     public ResponseEntity<?> getExamTimetables(@RequestParam(required = false) Integer batchId, @RequestParam(required = false) String streamScope) {
         if (batchId != null) {
-            if (streamScope != null && !streamScope.trim().isEmpty()) {
-                return ResponseEntity.ok(examTimetableRepository.findByBatch_BatchIdAndStreamScopeOrderByCreatedAtDesc(batchId, streamScope.trim().toUpperCase()));
+            if (streamScope != null && !streamScope.trim().isEmpty() && !"ALL".equalsIgnoreCase(streamScope.trim())) {
+                List<ExamTimetable> streamList = examTimetableRepository.findByBatch_BatchIdAndStreamScopeOrderByCreatedAtDesc(batchId, streamScope.trim().toUpperCase());
+                if (!streamList.isEmpty()) {
+                    return ResponseEntity.ok(streamList);
+                }
             }
             return ResponseEntity.ok(examTimetableRepository.findByBatch_BatchIdOrderByCreatedAtDesc(batchId));
         }
