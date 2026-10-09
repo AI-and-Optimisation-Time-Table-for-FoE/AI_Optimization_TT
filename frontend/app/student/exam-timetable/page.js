@@ -93,20 +93,20 @@ export default function StudentExamTimetablePage() {
   };
 
   const isStudentAssignedToRange = (rangeStr) => {
-    if (!user || !rangeStr) return false;
+    if (!user || !rangeStr) return true;
     const currentId = getDisplayStudentId(user).toUpperCase().trim();
-    if (!currentId) return false;
+    if (!currentId) return true;
 
     // Check if ID range contains numbers
     if (rangeStr.includes(" - ")) {
       const parts = rangeStr.split(" - ").map(s => s.trim().toUpperCase());
       if (parts.length === 2) {
-        if (currentId >= parts[0] && currentId <= parts[1]) return true;
-        
-        // Compare numerical suffix
+        const cleanStart = parts[0].replace(/^.*:\s*/, "");
+        const cleanEnd = parts[1].replace(/\s*\+.*$/, "").replace(/^.*:\s*/, "");
+
         const numCurrent = parseInt(currentId.replace(/[^0-9]/g, ""), 10);
-        const numStart = parseInt(parts[0].replace(/[^0-9]/g, ""), 10);
-        const numEnd = parseInt(parts[1].replace(/[^0-9]/g, ""), 10);
+        const numStart = parseInt(cleanStart.replace(/[^0-9]/g, ""), 10);
+        const numEnd = parseInt(cleanEnd.replace(/[^0-9]/g, ""), 10);
         if (!isNaN(numCurrent) && !isNaN(numStart) && !isNaN(numEnd)) {
           if (numCurrent >= numStart && numCurrent <= numEnd) return true;
         }
@@ -143,31 +143,41 @@ export default function StudentExamTimetablePage() {
       moduleGroups[key].push(e);
     }
 
-    // Merge entries per module: combine all venues into a single row
-    const merged = [];
+    const singleVenueList = [];
     for (const key in moduleGroups) {
       const group = moduleGroups[key];
       const first = group[0];
 
-      // Check if student is assigned to any specific hall via ID range
-      const matchingRows = group.filter(e => isStudentAssignedToRange(e.studentIdRange));
+      // Find the ONE matching hall for this student
+      const matchingRow = group.find(e => isStudentAssignedToRange(e.studentIdRange)) || group[0];
 
-      // Build venues array for merged display
-      const venues = group.map(e => ({
-        hall: e.hall,
-        studentIdRange: e.studentIdRange,
-        allocatedCount: e.allocatedCount,
-        isMatch: isStudentAssignedToRange(e.studentIdRange),
-      }));
+      // For Technical Electives: verify student falls inside the allocated range
+      const modName = (first.module?.moduleName || "").toUpperCase();
+      const modCode = (first.module?.moduleCode || "").toUpperCase();
+      const isTE = modName.includes("(TE)") || modName.includes("ELECTIVE") || modCode.includes("TE");
 
-      merged.push({
+      if (isTE && user) {
+        const hasRange = group.some(e => e.studentIdRange && e.studentIdRange.trim().length > 0);
+        if (hasRange) {
+          const isEnrolledInTE = group.some(e => isStudentAssignedToRange(e.studentIdRange));
+          if (!isEnrolledInTE) {
+            continue; // Hide this TE module if student is not enrolled
+          }
+        }
+      }
+
+      const isMatch = isStudentAssignedToRange(matchingRow.studentIdRange);
+
+      singleVenueList.push({
         ...first,
-        _venues: venues,
-        _hasMatch: matchingRows.length > 0,
-        _matchedHall: matchingRows.length > 0 ? matchingRows[0].hall : null,
+        hall: matchingRow.hall,
+        studentIdRange: matchingRow.studentIdRange,
+        allocatedCount: matchingRow.allocatedCount,
+        _isMatch: isMatch,
       });
     }
-    return merged;
+
+    return singleVenueList;
   };
 
   if (loading) {
@@ -306,14 +316,12 @@ export default function StudentExamTimetablePage() {
                     </thead>
                     <tbody>
                       {getPersonalizedEntries().map((entry) => {
-                        const venues = entry._venues || [{ hall: entry.hall, studentIdRange: entry.studentIdRange, allocatedCount: entry.allocatedCount, isMatch: isStudentAssignedToRange(entry.studentIdRange) }];
-                        const hasAnyMatch = entry._hasMatch || false;
                         const isRepeat = entry.isRepeatExam || (user?.semester && entry.module?.semester && entry.module.semester < user.semester);
 
                         return (
-                          <tr key={entry.examEntryId} style={{
-                            background: isRepeat ? "#fffdfa" : (hasAnyMatch ? "#f8fafc" : undefined),
-                            borderLeft: isRepeat ? "3.5px solid #d97706" : (hasAnyMatch ? "3.5px solid #16a34a" : "3.5px solid transparent")
+                          <tr key={entry.examEntryId || entry._localId} style={{
+                            background: isRepeat ? "#fffdfa" : "#f8fafc",
+                            borderLeft: isRepeat ? "3.5px solid #d97706" : "3.5px solid #16a34a"
                           }}>
                             <td style={{ padding: "18px 24px", verticalAlign: "middle" }}>
                               <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
@@ -352,51 +360,42 @@ export default function StudentExamTimetablePage() {
                               </div>
                             </td>
                             <td style={{ padding: "18px 24px", verticalAlign: "middle" }}>
-                              {venues.length === 0 ? (
+                              {entry.hall ? (
+                                <div style={{
+                                  background: isRepeat ? "#fef3c7" : "#dcfce7",
+                                  border: isRepeat ? "1px solid #fcd34d" : "1px solid #86efac",
+                                  borderRadius: "8px",
+                                  padding: "10px 14px",
+                                }}>
+                                  <div style={{ display: "flex", alignItems: "center", gap: "6px", color: isRepeat ? "#92400e" : "#047857", fontWeight: "700", fontSize: "14px" }}>
+                                    <Building size={16} />
+                                    <span>{entry.hall.hallName}</span>
+                                  </div>
+                                  {entry.studentIdRange && (
+                                    <div style={{ fontSize: "12px", color: "var(--neutral-600)", marginTop: "3px" }}>
+                                      {entry.studentIdRange}{entry.allocatedCount ? ` (${entry.allocatedCount} seats)` : ""}
+                                    </div>
+                                  )}
+                                  <div style={{ marginTop: "6px" }}>
+                                    <span style={{
+                                      display: "inline-flex",
+                                      alignItems: "center",
+                                      gap: "4px",
+                                      background: isRepeat ? "#d97706" : "#16a34a",
+                                      color: "#fff",
+                                      fontSize: "10px",
+                                      fontWeight: "700",
+                                      padding: "2px 8px",
+                                      borderRadius: "6px"
+                                    }}>
+                                      <CheckCircle size={11} /> {isRepeat ? "YOUR ASSIGNED HALL (Repeat)" : "YOUR ASSIGNED HALL"}
+                                    </span>
+                                  </div>
+                                </div>
+                              ) : (
                                 <span style={{ fontSize: "12px", color: "var(--neutral-500)", fontStyle: "italic" }}>
                                   Venue to be announced
                                 </span>
-                              ) : (
-                                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                                  {venues.map((v, idx) => (
-                                    <div key={idx} style={{
-                                      background: v.isMatch ? (isRepeat ? "#fef3c7" : "#dcfce7") : "#f8fafc",
-                                      border: v.isMatch ? (isRepeat ? "1px solid #fcd34d" : "1px solid #86efac") : "1px solid #e2e8f0",
-                                      borderRadius: "8px",
-                                      padding: "8px 12px",
-                                    }}>
-                                      {v.hall ? (
-                                        <div>
-                                          <div style={{ display: "flex", alignItems: "center", gap: "6px", color: isRepeat && v.isMatch ? "#92400e" : "#047857", fontWeight: "700", fontSize: "13px" }}>
-                                            <Building size={14} />
-                                            <span>{v.hall.hallName}</span>
-                                          </div>
-                                          <div style={{ fontSize: "12px", color: "var(--neutral-600)", marginTop: "2px" }}>
-                                            {v.studentIdRange || ""}{v.allocatedCount ? ` (${v.allocatedCount} seats)` : ""}
-                                          </div>
-                                          {v.isMatch && (
-                                            <span style={{
-                                              display: "inline-flex",
-                                              alignItems: "center",
-                                              gap: "4px",
-                                              background: isRepeat ? "#d97706" : "#16a34a",
-                                              color: "#fff",
-                                              fontSize: "10px",
-                                              fontWeight: "700",
-                                              padding: "2px 8px",
-                                              borderRadius: "6px",
-                                              marginTop: "4px"
-                                            }}>
-                                              <CheckCircle size={11} /> {isRepeat ? "YOUR HALL (Repeat)" : "YOUR HALL"}
-                                            </span>
-                                          )}
-                                        </div>
-                                      ) : (
-                                        <span style={{ fontSize: "12px", color: "var(--neutral-500)", fontStyle: "italic" }}>TBA</span>
-                                      )}
-                                    </div>
-                                  ))}
-                                </div>
                               )}
                             </td>
                           </tr>

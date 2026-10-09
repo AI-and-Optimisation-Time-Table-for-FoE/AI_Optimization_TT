@@ -32,6 +32,41 @@ try:
         5: (2024, 6000, 6550, 26), # 26th Batch (Semester 3)
     }
 
+    # Exact Technical Elective (TE) and specialized module student counts from official faculty timetable
+    EXACT_TE_COUNTS = {
+        'EE6208': 8,   # Introduction to Biomedical Engineering (TE)
+        'ME6210': 20,  # Industrial Automation (TE)
+        'CE6253': 17,  # Sustainable Built Environment Principles (TE)
+        'CE6252': 118, # Dynamic and Control of Structures (TE)
+        'EE6305': 15,  # Artificial Intelligence (TE)
+        'EE6309': 52,  # Renewable Energy Systems (TE)
+        'EE6206': 49,  # Energy Economics (TE)
+        'EE6207': 20,  # Information Security (TE)
+        'EE6210': 16,  # Wireless and Mobile Communications (TE)
+        'EE6211': 16,  # Wireless and Mobile Communications (TE)
+        'ME6211': 16,  # Naval Architecture and Hull Design (TE)
+        'ME6214': 2,   # Naval Architecture (C-18)
+        'ME4210': 17,  # Analog and Digital Electronics (TE)
+        'ME4211': 79,  # Automobile Engineering (TE)
+        'ME4212': 24,  # Nanotechnology (TE)
+        'MN4210': 62,  # Analog and Digital Electronics (TE)
+        'IS4225': 13,  # Innovation Management & Entrepreneurship
+        'IS4128': 88,  # Industrial Sociology
+        'IS4129': 2,   # History of Engineering in Sri Lanka
+        'IS4224': 121, # Finance Management
+        'ME8211': 69,  # Energy Management (TE)
+        'ME8212': 33,  # Non Destructive Testing (TE)
+        'EE8203': 14,  # Design and Management of Data Networks (TE)
+        'EE8204': 18,  # Digital Communication (TE)
+        'EE8206': 42,  # Electrical Installations II (TE)
+        'EE8210': 25,  # Intelligent Systems Design (TE)
+        'EE8211': 14,  # Microwave Communication (TE)
+        'EE8217': 2,   # Software Architecture (TE)
+        'EC8205': 13,  # Design and Management of Data Networks (TE)
+        'EC8207': 20,  # Integrated Circuit Design (TE)
+        'EC8208': 116, # Software Architecture (TE)
+    }
+
     # 3. Update all exam timetables and populate exact student_id_range for every exam_entry
     cursor.execute("SELECT exam_timetable_id, batch_id FROM exam_timetable")
     tts = cursor.fetchall()
@@ -54,7 +89,12 @@ try:
         
         module_offsets = {}
         for entry_id, mod_id, count, mod_code, dept_code in entries:
-            alloc = count if (count and count > 0) else 100
+            code_clean = (mod_code or "").strip().upper()
+            if code_clean in EXACT_TE_COUNTS:
+                alloc = EXACT_TE_COUNTS[code_clean]
+            else:
+                alloc = count if (count and count > 0) else 100
+
             mod_key = mod_id if mod_id else 0
             current_idx = module_offsets.get(mod_key, 0)
             
