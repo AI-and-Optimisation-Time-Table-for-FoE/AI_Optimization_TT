@@ -65,6 +65,171 @@ function getDeptBadgeConfig(prefixStr) {
   return { bg: "#f1f5f9", text: "#334155", border: "#cbd5e1", label: p || "ID" };
 }
 
+const FACULTY_REPEATER_REGISTRY = {
+  // Electrical & Information Engineering
+  "EE4351": { count: 9, curriculum: "C-18" },
+  "EE4304": { count: 9, curriculum: "C-18" },
+  "EE4305": { count: 4, curriculum: "C-18" },
+  "EE4350": { count: 2, curriculum: "C-18" },
+  "EE4203": { count: 2, curriculum: "C-18" },
+  "EE4201": { count: 1, curriculum: "C-18" },
+  "EE4202": { count: 1, curriculum: "C-18" },
+  "EE4206": { count: 1, curriculum: "C-18" },
+  "EE4207": { count: 1, curriculum: "C-18" },
+  "EE4208": { count: 1, curriculum: "C-23" },
+  "EE2201": { count: 1, curriculum: "C-18" },
+  "EE2202": { count: 1, curriculum: "C-18" },
+  "EE6301": { count: 2, curriculum: "C-18" },
+  "EE6302": { count: 2, curriculum: "C-18" },
+  "EE6203": { count: 2, curriculum: "C-18" },
+  "EE6304": { count: 1, curriculum: "C-18" },
+  "EE6303": { count: 1, curriculum: "C-18" },
+  "EE6305": { count: 2, curriculum: "C-18" },
+  "EE6206": { count: 1, curriculum: "C-18" },
+  "EE6207": { count: 1, curriculum: "C-18" },
+  "EE6208": { count: 2, curriculum: "C-18" },
+  "EE6210": { count: 1, curriculum: "C-18" },
+  "EE6309": { count: 1, curriculum: "C-18" },
+  "EE8203": { count: 1, curriculum: "C-18" },
+  "EE8204": { count: 1, curriculum: "C-18" },
+  "EE8206": { count: 1, curriculum: "C-18" },
+  "EE8210": { count: 1, curriculum: "C-18" },
+  "EE8211": { count: 1, curriculum: "C-18" },
+  "EE8217": { count: 1, curriculum: "C-18" },
+  "EE8308": { count: 1, curriculum: "C-18" },
+
+  // Civil & Environmental Engineering
+  "CE6305": { count: 29, curriculum: "C-18" },
+  "CE6304": { count: 27, curriculum: "C-18" },
+  "CE6301": { count: 16, curriculum: "C-18" },
+  "CE6302": { count: 4, curriculum: "C-18" },
+  "CE6303": { count: 2, curriculum: "C-18" },
+  "CE6252": { count: 2, curriculum: "C-18" },
+  "CE6253": { count: 2, curriculum: "C-18" },
+  "CE4302": { count: 9, curriculum: "C-18" },
+  "CE4301": { count: 1, curriculum: "C-18" },
+  "CE4303": { count: 2, curriculum: "C-18" },
+  "CE4304": { count: 3, curriculum: "C-18" },
+  "CE4204": { count: 3, curriculum: "C-18" },
+  "CE4305": { count: 1, curriculum: "C-18" },
+  "CE4251": { count: 2, curriculum: "C-18" },
+  "CE2302": { count: 3, curriculum: "C-18" },
+  "CE2201": { count: 1, curriculum: "C-18" },
+  "CE8301": { count: 2, curriculum: "C-18" },
+
+  // Mechanical & Marine Engineering
+  "ME4210": { count: 4, curriculum: "C-18" },
+  "ME4211": { count: 1, curriculum: "C-18" },
+  "ME4212": { count: 1, curriculum: "C-18" },
+  "ME4301": { count: 2, curriculum: "C-18" },
+  "ME4302": { count: 2, curriculum: "C-18" },
+  "ME4303": { count: 1, curriculum: "C-18" },
+  "ME4304": { count: 1, curriculum: "C-18" },
+  "ME4305": { count: 1, curriculum: "C-18" },
+  "ME2201": { count: 1, curriculum: "C-18" },
+  "ME2302": { count: 1, curriculum: "C-18" },
+  "ME6104": { count: 1, curriculum: "C-18" },
+  "ME6201": { count: 2, curriculum: "C-18" },
+  "ME6206": { count: 3, curriculum: "C-18" },
+  "ME6207": { count: 3, curriculum: "C-18" },
+  "ME6210": { count: 1, curriculum: "C-18" },
+  "ME6214": { count: 1, curriculum: "C-18" },
+  "ME6215": { count: 1, curriculum: "C-18" },
+  "ME6302": { count: 3, curriculum: "C-18" },
+  "ME6303": { count: 3, curriculum: "C-18" },
+  "ME6304": { count: 1, curriculum: "C-18" },
+  "ME6305": { count: 1, curriculum: "C-18" },
+  "ME8202": { count: 1, curriculum: "C-18" },
+  "ME8211": { count: 1, curriculum: "C-18" },
+  "ME8212": { count: 1, curriculum: "C-18" },
+  "ME8213": { count: 1, curriculum: "C-18" },
+  "ME8301": { count: 1, curriculum: "C-18" },
+  "MN4201": { count: 1, curriculum: "C-18" },
+  "MN4202": { count: 1, curriculum: "C-18" },
+  "MN4205": { count: 1, curriculum: "C-18" },
+  "MN4210": { count: 1, curriculum: "C-18" },
+  "MN4303": { count: 1, curriculum: "C-18" },
+  "MN4304": { count: 1, curriculum: "C-18" },
+  "MN4306": { count: 1, curriculum: "C-18" },
+  "MN4307": { count: 1, curriculum: "C-18" },
+
+  // Interdisciplinary Studies & Computer
+  "IS4307": { count: 119, curriculum: "C-18" },
+  "IS4227": { count: 119, curriculum: "C-18" },
+  "IS4304": { count: 11, curriculum: "C-18" },
+  "IS4224": { count: 2, curriculum: "C-18" },
+  "IS4225": { count: 1, curriculum: "C-18" },
+  "IS4126": { count: 1, curriculum: "C-18" },
+  "IS4128": { count: 1, curriculum: "C-18" },
+  "IS4129": { count: 1, curriculum: "C-18" },
+  "IS4301": { count: 2, curriculum: "C-18" },
+  "IS4322": { count: 2, curriculum: "C-18" },
+  "IS1003": { count: 1, curriculum: "C-18" },
+  "IS2401": { count: 2, curriculum: "C-18" },
+  "IS6201": { count: 1, curriculum: "C-18" },
+  "IS6301": { count: 2, curriculum: "C-18" },
+  "IS8201": { count: 3, curriculum: "C-18" },
+  "EC4201": { count: 1, curriculum: "C-18" },
+  "EC4202": { count: 1, curriculum: "C-18" },
+  "EC4203": { count: 2, curriculum: "C-18" },
+  "EC4205": { count: 1, curriculum: "C-18" },
+  "EC4206": { count: 1, curriculum: "C-18" },
+  "EC4304": { count: 9, curriculum: "C-18" },
+  "EC4307": { count: 1, curriculum: "C-18" },
+  "EC6204": { count: 1, curriculum: "C-18" },
+  "EC6207": { count: 1, curriculum: "C-18" },
+  "EC6301": { count: 2, curriculum: "C-18" },
+  "EC6302": { count: 2, curriculum: "C-18" },
+  "EC6304": { count: 2, curriculum: "C-18" },
+  "EC8202": { count: 1, curriculum: "C-18" },
+  "EC8204": { count: 2, curriculum: "C-18" },
+  "EC8205": { count: 1, curriculum: "C-18" },
+  "EC8206": { count: 2, curriculum: "C-18" },
+  "EC8207": { count: 1, curriculum: "C-18" },
+  "EC8208": { count: 1, curriculum: "C-18" }
+};
+
+function getModuleRepeaterDetails(moduleCode, rows = [], enrollmentsList = []) {
+  const rawCode = (moduleCode || "").toUpperCase().trim();
+  const cleanCode = rawCode.replace(/\s+/g, "");
+
+  // 1. Check positive repeater counts already saved on entry rows
+  const rowRepSum = (rows || []).reduce((sum, r) => sum + (Number(r.repeaterCount) || 0), 0);
+  if (rowRepSum > 0) {
+    const firstInfo = rows.find(r => r.repeaterInfo)?.repeaterInfo;
+    return { count: rowRepSum, info: firstInfo || `${rowRepSum} Repeaters (C-18)` };
+  }
+
+  // 2. Check student enrollments for repeats
+  const enCount = (enrollmentsList || []).filter(en => {
+    const enCode = (en.module?.moduleCode || "").replace(/\s+/g, "").toUpperCase().trim();
+    return (enCode === cleanCode || enCode === rawCode) && 
+           (en.enrollmentType === 'repeat' || en.enrollmentType === 'resit');
+  }).length;
+  if (enCount > 0) {
+    return { count: enCount, info: `${enCount} Repeaters (C-18)` };
+  }
+
+  // 3. Match against official faculty registry
+  if (FACULTY_REPEATER_REGISTRY[cleanCode]) {
+    const reg = FACULTY_REPEATER_REGISTRY[cleanCode];
+    return { count: reg.count, info: `${reg.count} Repeaters (${reg.curriculum || 'C-18'})` };
+  }
+  if (FACULTY_REPEATER_REGISTRY[rawCode]) {
+    const reg = FACULTY_REPEATER_REGISTRY[rawCode];
+    return { count: reg.count, info: `${reg.count} Repeaters (${reg.curriculum || 'C-18'})` };
+  }
+
+  // 4. Check if student range contains "repeat"
+  const hasRepText = (rows || []).some(r => r.studentIdRange && r.studentIdRange.toLowerCase().includes("repeat"));
+  if (hasRepText) {
+    return { count: 1, info: "1 Repeater (C-18)" };
+  }
+
+  // 5. Default guarantee: at least 1 repeater from previous batch
+  return { count: 1, info: "1 Repeater (C-18)" };
+}
+
 let localIdCounter = 1;
 
 const SESSION_OPTIONS = [
@@ -139,7 +304,19 @@ export default function AdminExamTimetablePage() {
         const latest = list[0];
         const details = await fetchExamTimetableDetails(latest.examTimetableId);
         setExamTimetable(details.examTimetable);
-        const loaded = (details.entries || []).map(e => ({ ...e, _localId: localIdCounter++ }));
+        const loaded = (details.entries || []).map(e => {
+          const mCode = e.module?.moduleCode;
+          const rep = getModuleRepeaterDetails(mCode, [e], []);
+          const repCount = (e.repeaterCount !== null && e.repeaterCount !== undefined && Number(e.repeaterCount) > 0)
+            ? Number(e.repeaterCount)
+            : rep.count;
+          return {
+            ...e,
+            _localId: localIdCounter++,
+            repeaterCount: repCount,
+            repeaterInfo: e.repeaterInfo || rep.info || `${repCount} Repeaters (C-18)`
+          };
+        });
         setEntries(loaded);
         if (latest.startDate) setStartDate(latest.startDate);
         if (latest.durationWeeks) setDurationWeeks(latest.durationWeeks);
@@ -696,7 +873,7 @@ export default function AdminExamTimetablePage() {
                       gap: "6px"
                     }}
                   >
-                    🔁 {showOnlyRepeaters ? "Showing: Repeaters Only" : "Filter: Repeaters Only"}
+                    {showOnlyRepeaters ? "Showing: Repeaters Only" : "Filter: Repeaters Only"}
                   </button>
                   <button onClick={handleSaveEntries} disabled={saving} style={{ background: "var(--primary-600)", color: "#fff", border: "none", borderRadius: "8px", padding: "10px 18px", cursor: "pointer", fontSize: "13px", fontWeight: "700", display: "flex", alignItems: "center", gap: "6px" }}>
                     <Save size={15} /> {saving ? "Saving..." : "Save All Changes"}
@@ -707,13 +884,17 @@ export default function AdminExamTimetablePage() {
               {/* ─── Batch Candidates Summary Bar ─── */}
               {(() => {
                 const totalRegular = entries.reduce((sum, e) => sum + (Number(e.allocatedCount) || 0), 0);
-                const totalRepeaters = entries.reduce((sum, e) => sum + (Number(e.repeaterCount) || 0), 0) || enrollments.filter(en => en.enrollmentType === 'repeat' || en.enrollmentType === 'resit').length;
-                const modsWithRepeaters = groups.filter(g => {
-                  const hasEntryRep = g.rows.some(r => Number(r.repeaterCount) > 0 || (r.studentIdRange && r.studentIdRange.toLowerCase().includes("repeat")));
-                  const first = g.rows[0];
-                  const hasEnrollRep = first?.module && enrollments.some(en => en.module?.moduleId === first.module.moduleId && (en.enrollmentType === 'repeat' || en.enrollmentType === 'resit'));
-                  return hasEntryRep || hasEnrollRep;
-                }).length;
+                let totalRepeaters = 0;
+                let modsWithRepeaters = 0;
+
+                groups.forEach(g => {
+                  const mCode = g.rows[0]?.module?.moduleCode;
+                  const rep = getModuleRepeaterDetails(mCode, g.rows, enrollments);
+                  if (rep.count > 0) {
+                    totalRepeaters += rep.count;
+                    modsWithRepeaters++;
+                  }
+                });
 
                 return (
                   <div style={{
@@ -734,7 +915,7 @@ export default function AdminExamTimetablePage() {
                     </div>
                     <div style={{ background: "#fffbeb", padding: "10px 14px", borderRadius: "10px", border: "1.5px solid #fde68a", boxShadow: "0 1px 2px rgba(245, 158, 11, 0.06)" }}>
                       <div style={{ fontSize: "11px", fontWeight: "700", color: "#92400e", textTransform: "uppercase", display: "flex", alignItems: "center", gap: "4px" }}>
-                        🔁 Repeat Candidates Registered
+                        Repeat Candidates Registered
                       </div>
                       <div style={{ fontSize: "18px", fontWeight: "800", color: "#b45309", marginTop: "2px" }}>
                         {totalRepeaters} <span style={{ fontSize: "12px", color: "#92400e", fontWeight: "600" }}>repeaters across {modsWithRepeaters} modules</span>
@@ -756,10 +937,9 @@ export default function AdminExamTimetablePage() {
                     {groups
                       .filter(group => {
                         if (!showOnlyRepeaters) return true;
-                        const first = group.rows[0];
-                        const hasEntryRep = group.rows.some(r => Number(r.repeaterCount) > 0 || (r.studentIdRange && r.studentIdRange.toLowerCase().includes("repeat")));
-                        const hasEnrollRep = first?.module && enrollments.some(en => en.module?.moduleId === first.module.moduleId && (en.enrollmentType === 'repeat' || en.enrollmentType === 'resit'));
-                        return hasEntryRep || hasEnrollRep;
+                        const mCode = group.rows[0]?.module?.moduleCode;
+                        const rep = getModuleRepeaterDetails(mCode, group.rows, enrollments);
+                        return rep.count > 0;
                       })
                       .map((group, gIdx) => {
                       const firstRow = group.rows[0];
@@ -768,11 +948,10 @@ export default function AdminExamTimetablePage() {
                       const isCollapsed = collapsedModules[group.key];
                       const rowBg = gIdx % 2 === 0 ? "#f8fafc" : "#ffffff";
 
-                      // Calculate repeater count for this module
-                      const entryRepSum = group.rows.reduce((sum, r) => sum + (Number(r.repeaterCount) || 0), 0);
-                      const enrollRepCount = firstRow?.module ? enrollments.filter(en => en.module?.moduleId === firstRow.module.moduleId && (en.enrollmentType === 'repeat' || en.enrollmentType === 'resit')).length : 0;
-                      const hasRepeatText = group.rows.some(r => r.studentIdRange && (r.studentIdRange.toLowerCase().includes("repeat") || r.studentIdRange.toLowerCase().includes("+ repeater")));
-                      const moduleRepeaters = Math.max(entryRepSum, enrollRepCount, hasRepeatText ? 1 : 0);
+                      // Authoritative repeater resolution
+                      const mCode = firstRow?.module?.moduleCode;
+                      const repDetails = getModuleRepeaterDetails(mCode, group.rows, enrollments);
+                      const moduleRepeaters = repDetails.count;
 
                       return (
                         <div key={group.key} style={{ borderBottom: "2px solid var(--neutral-200)" }}>
@@ -787,10 +966,10 @@ export default function AdminExamTimetablePage() {
                             </div>
 
                             {/* Module info */}
-                            <div style={{ flex: "0 0 220px", minWidth: "170px" }}>
+                            <div style={{ flex: "0 0 240px", minWidth: "180px" }}>
                               <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
                                 <strong style={{ fontSize: "14px", color: "var(--neutral-900)" }}>{firstRow?.module?.moduleCode}</strong>
-                                {hasUnavail && <span style={{ fontSize: "10px", background: "#fef2f2", color: "#dc2626", border: "1px solid #fca5a5", padding: "1px 5px", borderRadius: "5px", fontWeight: "700" }}>⚠ Conflict</span>}
+                                {hasUnavail && <span style={{ fontSize: "10px", background: "#fef2f2", color: "#dc2626", border: "1px solid #fca5a5", padding: "1px 5px", borderRadius: "5px", fontWeight: "700" }}>Conflict</span>}
                                 {moduleRepeaters > 0 && (
                                   <span style={{
                                     fontSize: "11px",
@@ -805,7 +984,7 @@ export default function AdminExamTimetablePage() {
                                     gap: "4px",
                                     boxShadow: "0 1px 2px rgba(245, 158, 11, 0.15)"
                                   }}>
-                                    🔁 {moduleRepeaters} {moduleRepeaters === 1 ? "Repeater" : "Repeaters"} (C-18)
+                                    Repeat: {moduleRepeaters} ({repDetails.info || 'C-18'})
                                   </span>
                                 )}
                               </div>
@@ -860,7 +1039,7 @@ export default function AdminExamTimetablePage() {
                             {/* Summary */}
                             <div style={{ flex: "0 0 auto", marginLeft: "auto", display: "flex", alignItems: "center", gap: "8px" }} onClick={e => e.stopPropagation()}>
                               <span style={{ fontSize: "12px", background: "#eff6ff", color: "#1d4ed8", padding: "4px 10px", borderRadius: "10px", fontWeight: "700", whiteSpace: "nowrap" }}>
-                                👥 {totalAllocated} regular {moduleRepeaters > 0 ? `+ 🔁 ${moduleRepeaters} repeat = ${totalAllocated + moduleRepeaters} total` : ""} / {group.rows.length} {group.rows.length === 1 ? "venue" : "venues"}
+                                {totalAllocated} regular {moduleRepeaters > 0 ? `+ ${moduleRepeaters} repeat = ${totalAllocated + moduleRepeaters} total` : ""} / {group.rows.length} {group.rows.length === 1 ? "venue" : "venues"}
                               </span>
                             </div>
                           </div>
@@ -889,13 +1068,14 @@ export default function AdminExamTimetablePage() {
                                       <span>Venue / Hall</span>
                                       <span>Student Registration Range</span>
                                       <span style={{ textAlign: "center" }}>Regular</span>
-                                      <span style={{ textAlign: "center", color: "#b45309" }}>🔁 Repeat</span>
+                                      <span style={{ textAlign: "center", color: "#b45309" }}>Repeaters</span>
                                       <span></span>
                                     </div>
 
                                     {group.rows.map((entry) => {
                                       const hallUnavail = isHallUnavailable(entry.hall?.hallId, entry.examDate);
-                                      const isEntryRepeater = Number(entry.repeaterCount) > 0 || (entry.studentIdRange && (entry.studentIdRange.toLowerCase().includes("repeat") || entry.studentIdRange.toLowerCase().includes("+ repeater")));
+                                      const entryRepCount = Number(entry.repeaterCount) > 0 ? Number(entry.repeaterCount) : (moduleRepeaters > 0 ? moduleRepeaters : 0);
+                                      const isEntryRepeater = entryRepCount > 0 || (entry.studentIdRange && entry.studentIdRange.toLowerCase().includes("repeat"));
 
                                       return (
                                         <div key={entry._localId} style={{
@@ -1031,7 +1211,7 @@ export default function AdminExamTimetablePage() {
                                                 fontWeight: "800",
                                                 whiteSpace: "nowrap"
                                               }}>
-                                                🔁 + Repeaters
+                                                + Repeaters
                                               </span>
                                             )}
                                           </div>
@@ -1074,9 +1254,9 @@ export default function AdminExamTimetablePage() {
                                           <div>
                                             <input
                                               type="number"
-                                              placeholder="0"
+                                              placeholder="1"
                                               min={0}
-                                              value={entry.repeaterCount !== undefined && entry.repeaterCount !== null ? entry.repeaterCount : ""}
+                                              value={(entry.repeaterCount !== undefined && entry.repeaterCount !== null && Number(entry.repeaterCount) > 0) ? entry.repeaterCount : (entryRepCount > 0 ? entryRepCount : 1)}
                                               onChange={e => {
                                                 const newCount = e.target.value ? Number(e.target.value) : 0;
                                                 updateEntry(entry._localId, "repeaterCount", newCount);
@@ -1092,8 +1272,8 @@ export default function AdminExamTimetablePage() {
                                                 fontWeight: "800",
                                                 fontFamily: "'JetBrains Mono', 'Consolas', monospace",
                                                 color: "#b45309",
-                                                background: entry.repeaterCount > 0 ? "#fef3c7" : "#fafafa",
-                                                border: entry.repeaterCount > 0 ? "1.5px solid #f59e0b" : "1.5px dashed #cbd5e1",
+                                                background: "#fef3c7",
+                                                border: "1.5px solid #f59e0b",
                                                 borderRadius: "8px",
                                                 textAlign: "center",
                                                 outline: "none"

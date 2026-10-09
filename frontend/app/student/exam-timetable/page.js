@@ -341,7 +341,7 @@ export default function StudentExamTimetablePage() {
                                     gap: "4px",
                                     letterSpacing: "0.03em"
                                   }}>
-                                    🔁 REPEAT EXAM {entry.module?.semester ? `(SEM ${entry.module.semester})` : ""}
+                                    REPEAT EXAM {entry.module?.semester ? `(SEM ${entry.module.semester})` : ""}
                                   </span>
                                 )}
                               </div>
