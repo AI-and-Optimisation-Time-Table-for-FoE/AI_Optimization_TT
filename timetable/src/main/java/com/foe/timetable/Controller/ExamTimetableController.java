@@ -549,6 +549,51 @@ public class ExamTimetableController {
                 if (!reps.isEmpty()) {
                     repCount = Math.max(repCount, reps.size());
                 }
+
+                // If repeaters are heavy (> 40 students), allocate a dedicated separate hall for repeaters
+                if (repCount > 40) {
+                    final int repTarget = repCount;
+                    final Hall chosenPrimaryHall = selectedHall;
+                    List<Hall> repCandidates = halls.stream()
+                        .filter(h -> !isDepartmentSpecificHall(h))
+                        .filter(h -> !h.getHallId().equals(chosenPrimaryHall.getHallId()))
+                        .filter(h -> {
+                            String rSlotKey = h.getHallId() + "_" + targetDateStr + "_" + targetSessStr;
+                            String rHallKey = h.getHallId() + "_" + targetDateStr;
+                            String rAllDatesKey = h.getHallId() + "_ALL";
+                            return !unavailSet.contains(rHallKey) && !unavailSet.contains(rAllDatesKey) && !usedHallSlots.contains(rSlotKey);
+                        })
+                        .sorted(Comparator.comparingInt((Hall h) -> Math.abs(getExamCap.apply(h) - repTarget)))
+                        .collect(Collectors.toList());
+
+                    if (!repCandidates.isEmpty()) {
+                        Hall repHall = repCandidates.get(0);
+                        String repSlotKey = repHall.getHallId() + "_" + targetDateStr + "_" + targetSessStr;
+                        usedHallSlots.add(repSlotKey);
+
+                        ExamEntry repEntry = new ExamEntry();
+                        repEntry.setExamTimetable(et);
+                        repEntry.setModule(mod);
+                        repEntry.setExamDate(assignedDate);
+                        repEntry.setSessionName(assignedSession);
+                        if ("Morning Session".equals(assignedSession)) {
+                            repEntry.setStartTime(LocalTime.of(9, 0));
+                            repEntry.setEndTime(LocalTime.of(12, 0));
+                        } else {
+                            repEntry.setStartTime(LocalTime.of(13, 30));
+                            repEntry.setEndTime(LocalTime.of(16, 30));
+                        }
+                        repEntry.setHall(repHall);
+                        repEntry.setStudentIdRange("Repeat Candidates (Dedicated Hall)");
+                        repEntry.setAllocatedCount(0);
+                        repEntry.setRepeaterCount(repCount);
+                        repEntry.setRepeaterInfo(repCount + " Repeaters");
+                        entries.add(repEntry);
+
+                        // Primary hall is left strictly for regular students
+                        repCount = 0;
+                    }
+                }
             }
 
             String idRange = generateStudentIdRange(targetStudents, currentStudentIndex, allocatedForThisHall, et.getBatch(), deptPrefix, totalStudents, (isLastHall && repCount > 0));
