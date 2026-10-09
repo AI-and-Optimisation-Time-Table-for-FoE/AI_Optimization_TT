@@ -308,11 +308,34 @@ export default function StudentExamTimetablePage() {
                       {getPersonalizedEntries().map((entry) => {
                         const venues = entry._venues || [{ hall: entry.hall, studentIdRange: entry.studentIdRange, allocatedCount: entry.allocatedCount, isMatch: isStudentAssignedToRange(entry.studentIdRange) }];
                         const hasAnyMatch = entry._hasMatch || false;
+                        const isRepeat = entry.isRepeatExam || (user?.semester && entry.module?.semester && entry.module.semester < user.semester);
+
                         return (
-                          <tr key={entry.examEntryId} style={{ background: hasAnyMatch ? "#f0fdf4" : undefined }}>
+                          <tr key={entry.examEntryId} style={{
+                            background: isRepeat ? "#fffdfa" : (hasAnyMatch ? "#f8fafc" : undefined),
+                            borderLeft: isRepeat ? "3.5px solid #d97706" : (hasAnyMatch ? "3.5px solid #16a34a" : "3.5px solid transparent")
+                          }}>
                             <td style={{ padding: "18px 24px", verticalAlign: "middle" }}>
-                              <div><strong style={{ fontSize: "15px", color: "var(--neutral-900)" }}>{entry.module?.moduleCode}</strong></div>
-                              <div style={{ fontSize: "13px", color: "var(--neutral-600)" }}>{entry.module?.moduleName}</div>
+                              <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                                <strong style={{ fontSize: "15px", color: "var(--neutral-900)" }}>{entry.module?.moduleCode}</strong>
+                                {isRepeat && (
+                                  <span style={{
+                                    fontSize: "11px",
+                                    fontWeight: "600",
+                                    color: "#92400e",
+                                    background: "#fef3c7",
+                                    border: "1px solid #fde68a",
+                                    padding: "1px 7px",
+                                    borderRadius: "4px",
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: "4px"
+                                  }}>
+                                    Repeat Exam
+                                  </span>
+                                )}
+                              </div>
+                              <div style={{ fontSize: "13px", color: "var(--neutral-600)", marginTop: "3px" }}>{entry.module?.moduleName}</div>
                             </td>
                             <td style={{ padding: "18px 20px", verticalAlign: "middle" }}>
                               <div style={{ fontWeight: "700", color: "var(--neutral-800)" }}>
@@ -337,14 +360,14 @@ export default function StudentExamTimetablePage() {
                                 <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                                   {venues.map((v, idx) => (
                                     <div key={idx} style={{
-                                      background: v.isMatch ? "#dcfce7" : "#f8fafc",
-                                      border: v.isMatch ? "1px solid #86efac" : "1px solid #e2e8f0",
+                                      background: v.isMatch ? (isRepeat ? "#fef3c7" : "#dcfce7") : "#f8fafc",
+                                      border: v.isMatch ? (isRepeat ? "1px solid #fcd34d" : "1px solid #86efac") : "1px solid #e2e8f0",
                                       borderRadius: "8px",
                                       padding: "8px 12px",
                                     }}>
                                       {v.hall ? (
                                         <div>
-                                          <div style={{ display: "flex", alignItems: "center", gap: "6px", color: "#047857", fontWeight: "700", fontSize: "13px" }}>
+                                          <div style={{ display: "flex", alignItems: "center", gap: "6px", color: isRepeat && v.isMatch ? "#92400e" : "#047857", fontWeight: "700", fontSize: "13px" }}>
                                             <Building size={14} />
                                             <span>{v.hall.hallName}</span>
                                           </div>
@@ -352,8 +375,19 @@ export default function StudentExamTimetablePage() {
                                             {v.studentIdRange || ""}{v.allocatedCount ? ` (${v.allocatedCount} seats)` : ""}
                                           </div>
                                           {v.isMatch && (
-                                            <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", background: "#16a34a", color: "#fff", fontSize: "10px", fontWeight: "800", padding: "2px 8px", borderRadius: "10px", marginTop: "4px" }}>
-                                              <CheckCircle size={11} /> YOUR HALL
+                                            <span style={{
+                                              display: "inline-flex",
+                                              alignItems: "center",
+                                              gap: "4px",
+                                              background: isRepeat ? "#d97706" : "#16a34a",
+                                              color: "#fff",
+                                              fontSize: "10px",
+                                              fontWeight: "700",
+                                              padding: "2px 8px",
+                                              borderRadius: "6px",
+                                              marginTop: "4px"
+                                            }}>
+                                              <CheckCircle size={11} /> {isRepeat ? "YOUR HALL (Repeat)" : "YOUR HALL"}
                                             </span>
                                           )}
                                         </div>

@@ -51,7 +51,18 @@ public class ExamEntry {
     @Column(name = "allocated_count", nullable = true)
     private Integer allocatedCount;
 
+    @jakarta.persistence.Transient
+    private Boolean isRepeatExam = false;
+
     public ExamEntry() {}
+
+    public Boolean getIsRepeatExam() {
+        return isRepeatExam;
+    }
+
+    public void setIsRepeatExam(Boolean isRepeatExam) {
+        this.isRepeatExam = isRepeatExam;
+    }
 
     public Integer getExamEntryId() {
         return examEntryId;

@@ -888,15 +888,15 @@ export default function AdminExamTimetablePage() {
                                             {entry.studentIdRange && (entry.studentIdRange.toLowerCase().includes("repeat") || entry.studentIdRange.toLowerCase().includes("+ repeater")) && (
                                               <span style={{
                                                 background: "#fef3c7",
-                                                color: "#b45309",
-                                                border: "1px solid #fcd34d",
-                                                padding: "4px 8px",
-                                                borderRadius: "8px",
+                                                color: "#92400e",
+                                                border: "1px solid #fde68a",
+                                                padding: "3px 8px",
+                                                borderRadius: "6px",
                                                 fontSize: "11px",
-                                                fontWeight: "800",
+                                                fontWeight: "600",
                                                 whiteSpace: "nowrap"
                                               }}>
-                                                🔁 Repeater Allocation
+                                                + Repeaters
                                               </span>
                                             )}
                                           </div>

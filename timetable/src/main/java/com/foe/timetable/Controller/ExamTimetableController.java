@@ -775,18 +775,25 @@ public class ExamTimetableController {
                         .map(e -> e.getModule().getModuleId())
                         .collect(Collectors.toSet());
 
+                List<StudentModuleEnrollment> repeatEnrollments = enrollments.stream()
+                        .filter(e -> e.getEnrollmentType() == StudentModuleEnrollment.EnrollmentType.repeat || e.getEnrollmentType() == StudentModuleEnrollment.EnrollmentType.resit)
+                        .toList();
+
+                Set<Integer> repeatModuleIds = repeatEnrollments.stream()
+                        .map(e -> e.getModule().getModuleId())
+                        .collect(Collectors.toSet());
+
                 // Filter batch entries to only enrolled modules (TEs, IS, Core)
                 for (ExamEntry e : allEntries) {
                     if (e.getModule() != null && enrolledModuleIds.contains(e.getModule().getModuleId())) {
+                        if (repeatModuleIds.contains(e.getModule().getModuleId())) {
+                            e.setIsRepeatExam(true);
+                        }
                         candidateEntries.add(e);
                     }
                 }
 
                 // Also check if student has repeat modules in OTHER batches and include their published exam entries!
-                List<StudentModuleEnrollment> repeatEnrollments = enrollments.stream()
-                        .filter(e -> e.getEnrollmentType() == StudentModuleEnrollment.EnrollmentType.repeat || e.getEnrollmentType() == StudentModuleEnrollment.EnrollmentType.resit)
-                        .toList();
-
                 for (StudentModuleEnrollment rep : repeatEnrollments) {
                     if (rep.getBatch() != null && !rep.getBatch().getBatchId().equals(batchId)) {
                         Optional<ExamTimetable> otherBatchPublished = examTimetableRepository.findFirstByBatch_BatchIdAndStatusOrderByCreatedAtDesc(rep.getBatch().getBatchId(), "published");
@@ -794,6 +801,7 @@ public class ExamTimetableController {
                             List<ExamEntry> otherEntries = examEntryRepository.findByExamTimetable_ExamTimetableIdOrderByExamDateAscStartTimeAsc(otherBatchPublished.get().getExamTimetableId());
                             for (ExamEntry repEntry : otherEntries) {
                                 if (repEntry.getModule() != null && repEntry.getModule().getModuleId().equals(rep.getModule().getModuleId())) {
+                                    repEntry.setIsRepeatExam(true);
                                     if (!candidateEntries.contains(repEntry)) {
                                         candidateEntries.add(repEntry);
                                     }
