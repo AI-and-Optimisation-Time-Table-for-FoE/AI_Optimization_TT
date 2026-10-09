@@ -66,127 +66,56 @@ function getDeptBadgeConfig(prefixStr) {
 }
 
 const FACULTY_REPEATER_REGISTRY = {
-  // Electrical & Information Engineering
-  "EE4351": { count: 9, curriculum: "C-18" },
-  "EE4304": { count: 9, curriculum: "C-18" },
-  "EE4305": { count: 4, curriculum: "C-18" },
-  "EE4350": { count: 2, curriculum: "C-18" },
-  "EE4203": { count: 2, curriculum: "C-18" },
-  "EE4201": { count: 1, curriculum: "C-18" },
-  "EE4202": { count: 1, curriculum: "C-18" },
-  "EE4206": { count: 1, curriculum: "C-18" },
-  "EE4207": { count: 1, curriculum: "C-18" },
-  "EE4208": { count: 1, curriculum: "C-23" },
-  "EE2201": { count: 1, curriculum: "C-18" },
-  "EE2202": { count: 1, curriculum: "C-18" },
-  "EE6301": { count: 2, curriculum: "C-18" },
-  "EE6302": { count: 2, curriculum: "C-18" },
-  "EE6203": { count: 2, curriculum: "C-18" },
-  "EE6304": { count: 1, curriculum: "C-18" },
-  "EE6303": { count: 1, curriculum: "C-18" },
-  "EE6305": { count: 2, curriculum: "C-18" },
-  "EE6206": { count: 1, curriculum: "C-18" },
-  "EE6207": { count: 1, curriculum: "C-18" },
-  "EE6208": { count: 2, curriculum: "C-18" },
-  "EE6210": { count: 1, curriculum: "C-18" },
-  "EE6309": { count: 1, curriculum: "C-18" },
-  "EE8203": { count: 1, curriculum: "C-18" },
-  "EE8204": { count: 1, curriculum: "C-18" },
-  "EE8206": { count: 1, curriculum: "C-18" },
-  "EE8210": { count: 1, curriculum: "C-18" },
-  "EE8211": { count: 1, curriculum: "C-18" },
-  "EE8217": { count: 1, curriculum: "C-18" },
-  "EE8308": { count: 1, curriculum: "C-18" },
+  // Semester 2 (27th Batch)
+  "IS2401": { count: 2 },
+  "IS1003": { count: 1 },
+  "CE2302": { count: 3 },
+  "EE2201": { count: 1 },
 
-  // Civil & Environmental Engineering
-  "CE6305": { count: 29, curriculum: "C-18" },
-  "CE6304": { count: 27, curriculum: "C-18" },
-  "CE6301": { count: 16, curriculum: "C-18" },
-  "CE6302": { count: 4, curriculum: "C-18" },
-  "CE6303": { count: 2, curriculum: "C-18" },
-  "CE6252": { count: 2, curriculum: "C-18" },
-  "CE6253": { count: 2, curriculum: "C-18" },
-  "CE4302": { count: 9, curriculum: "C-18" },
-  "CE4301": { count: 1, curriculum: "C-18" },
-  "CE4303": { count: 2, curriculum: "C-18" },
-  "CE4304": { count: 3, curriculum: "C-18" },
-  "CE4204": { count: 3, curriculum: "C-18" },
-  "CE4305": { count: 1, curriculum: "C-18" },
-  "CE4251": { count: 2, curriculum: "C-18" },
-  "CE2302": { count: 3, curriculum: "C-18" },
-  "CE2201": { count: 1, curriculum: "C-18" },
-  "CE8301": { count: 2, curriculum: "C-18" },
+  // Semester 4 (25th Batch)
+  "IS4307": { count: 119 },
+  "IS4227": { count: 119 },
+  "IS4304": { count: 11 },
+  "IS4305": { count: 4 },
+  "EE4351": { count: 9 },
+  "EE4304": { count: 4 },
+  "EE4350": { count: 2 },
+  "CE4302": { count: 9 },
+  "CE4305": { count: 6 },
+  "CE4301": { count: 4 },
+  "CE4304": { count: 3 },
+  "CE4204": { count: 3 },
+  "CE4303": { count: 2 },
+  "CE4251": { count: 2 },
+  "ME4210": { count: 4 },
+  "ME4301": { count: 2 },
+  "MN4304": { count: 1 },
+  "MN4205": { count: 3 },
 
-  // Mechanical & Marine Engineering
-  "ME4210": { count: 4, curriculum: "C-18" },
-  "ME4211": { count: 1, curriculum: "C-18" },
-  "ME4212": { count: 1, curriculum: "C-18" },
-  "ME4301": { count: 2, curriculum: "C-18" },
-  "ME4302": { count: 2, curriculum: "C-18" },
-  "ME4303": { count: 1, curriculum: "C-18" },
-  "ME4304": { count: 1, curriculum: "C-18" },
-  "ME4305": { count: 1, curriculum: "C-18" },
-  "ME2201": { count: 1, curriculum: "C-18" },
-  "ME2302": { count: 1, curriculum: "C-18" },
-  "ME6104": { count: 1, curriculum: "C-18" },
-  "ME6201": { count: 2, curriculum: "C-18" },
-  "ME6206": { count: 3, curriculum: "C-18" },
-  "ME6207": { count: 3, curriculum: "C-18" },
-  "ME6210": { count: 1, curriculum: "C-18" },
-  "ME6214": { count: 1, curriculum: "C-18" },
-  "ME6215": { count: 1, curriculum: "C-18" },
-  "ME6302": { count: 3, curriculum: "C-18" },
-  "ME6303": { count: 3, curriculum: "C-18" },
-  "ME6304": { count: 1, curriculum: "C-18" },
-  "ME6305": { count: 1, curriculum: "C-18" },
-  "ME8202": { count: 1, curriculum: "C-18" },
-  "ME8211": { count: 1, curriculum: "C-18" },
-  "ME8212": { count: 1, curriculum: "C-18" },
-  "ME8213": { count: 1, curriculum: "C-18" },
-  "ME8301": { count: 1, curriculum: "C-18" },
-  "MN4201": { count: 1, curriculum: "C-18" },
-  "MN4202": { count: 1, curriculum: "C-18" },
-  "MN4205": { count: 1, curriculum: "C-18" },
-  "MN4210": { count: 1, curriculum: "C-18" },
-  "MN4303": { count: 1, curriculum: "C-18" },
-  "MN4304": { count: 1, curriculum: "C-18" },
-  "MN4306": { count: 1, curriculum: "C-18" },
-  "MN4307": { count: 1, curriculum: "C-18" },
+  // Semester 6 (24th Batch)
+  "CE6305": { count: 29 },
+  "CE6304": { count: 27 },
+  "CE6301": { count: 16 },
+  "CE6302": { count: 12 },
+  "CE6303": { count: 18 },
+  "CE6252": { count: 2 },
+  "CE6253": { count: 2 },
+  "EE6301": { count: 2 },
+  "EE6304": { count: 1 },
+  "EE6303": { count: 1 },
+  "EE6302": { count: 1 },
+  "ME6303": { count: 3 },
+  "ME6302": { count: 3 },
+  "ME6206": { count: 3 },
+  "ME6304": { count: 1 },
+  "ME6214": { count: 2 },
+  "ME6213": { count: 1 },
+  "IS6303": { count: 1 },
+  "IS6201": { count: 1 },
+  "MN4210": { count: 1 },
 
-  // Interdisciplinary Studies & Computer
-  "IS4307": { count: 119, curriculum: "C-18" },
-  "IS4227": { count: 119, curriculum: "C-18" },
-  "IS4304": { count: 11, curriculum: "C-18" },
-  "IS4224": { count: 2, curriculum: "C-18" },
-  "IS4225": { count: 1, curriculum: "C-18" },
-  "IS4126": { count: 1, curriculum: "C-18" },
-  "IS4128": { count: 1, curriculum: "C-18" },
-  "IS4129": { count: 1, curriculum: "C-18" },
-  "IS4301": { count: 2, curriculum: "C-18" },
-  "IS4322": { count: 2, curriculum: "C-18" },
-  "IS1003": { count: 1, curriculum: "C-18" },
-  "IS2401": { count: 2, curriculum: "C-18" },
-  "IS6201": { count: 1, curriculum: "C-18" },
-  "IS6301": { count: 2, curriculum: "C-18" },
-  "IS8201": { count: 3, curriculum: "C-18" },
-  "EC4201": { count: 1, curriculum: "C-18" },
-  "EC4202": { count: 1, curriculum: "C-18" },
-  "EC4203": { count: 2, curriculum: "C-18" },
-  "EC4205": { count: 1, curriculum: "C-18" },
-  "EC4206": { count: 1, curriculum: "C-18" },
-  "EC4304": { count: 9, curriculum: "C-18" },
-  "EC4307": { count: 1, curriculum: "C-18" },
-  "EC6204": { count: 1, curriculum: "C-18" },
-  "EC6207": { count: 1, curriculum: "C-18" },
-  "EC6301": { count: 2, curriculum: "C-18" },
-  "EC6302": { count: 2, curriculum: "C-18" },
-  "EC6304": { count: 2, curriculum: "C-18" },
-  "EC8202": { count: 1, curriculum: "C-18" },
-  "EC8204": { count: 2, curriculum: "C-18" },
-  "EC8205": { count: 1, curriculum: "C-18" },
-  "EC8206": { count: 2, curriculum: "C-18" },
-  "EC8207": { count: 1, curriculum: "C-18" },
-  "EC8208": { count: 1, curriculum: "C-18" }
+  // Semester 8 (23rd Batch)
+  "EE8217": { count: 2 }
 };
 
 function getModuleRepeaterDetails(moduleCode, rows = [], enrollmentsList = []) {
@@ -197,7 +126,7 @@ function getModuleRepeaterDetails(moduleCode, rows = [], enrollmentsList = []) {
   const rowRepSum = (rows || []).reduce((sum, r) => sum + (Number(r.repeaterCount) || 0), 0);
   if (rowRepSum > 0) {
     const firstInfo = rows.find(r => r.repeaterInfo)?.repeaterInfo;
-    return { count: rowRepSum, info: firstInfo || `${rowRepSum} Repeaters (C-18)` };
+    return { count: rowRepSum, info: firstInfo || `${rowRepSum} ${rowRepSum === 1 ? 'Repeater' : 'Repeaters'}` };
   }
 
   // 2. Check student enrollments for repeats
@@ -207,27 +136,21 @@ function getModuleRepeaterDetails(moduleCode, rows = [], enrollmentsList = []) {
            (en.enrollmentType === 'repeat' || en.enrollmentType === 'resit');
   }).length;
   if (enCount > 0) {
-    return { count: enCount, info: `${enCount} Repeaters (C-18)` };
+    return { count: enCount, info: `${enCount} ${enCount === 1 ? 'Repeater' : 'Repeaters'}` };
   }
 
-  // 3. Match against official faculty registry
+  // 3. Match against official faculty PDF registry
   if (FACULTY_REPEATER_REGISTRY[cleanCode]) {
     const reg = FACULTY_REPEATER_REGISTRY[cleanCode];
-    return { count: reg.count, info: `${reg.count} Repeaters (${reg.curriculum || 'C-18'})` };
+    return { count: reg.count, info: `${reg.count} ${reg.count === 1 ? 'Repeater' : 'Repeaters'}` };
   }
   if (FACULTY_REPEATER_REGISTRY[rawCode]) {
     const reg = FACULTY_REPEATER_REGISTRY[rawCode];
-    return { count: reg.count, info: `${reg.count} Repeaters (${reg.curriculum || 'C-18'})` };
+    return { count: reg.count, info: `${reg.count} ${reg.count === 1 ? 'Repeater' : 'Repeaters'}` };
   }
 
-  // 4. Check if student range contains "repeat"
-  const hasRepText = (rows || []).some(r => r.studentIdRange && r.studentIdRange.toLowerCase().includes("repeat"));
-  if (hasRepText) {
-    return { count: 1, info: "1 Repeater (C-18)" };
-  }
-
-  // 5. Default guarantee: at least 1 repeater from previous batch
-  return { count: 1, info: "1 Repeater (C-18)" };
+  // 4. Default: 0 repeaters for non-repeater modules
+  return { count: 0, info: null };
 }
 
 let localIdCounter = 1;
@@ -314,7 +237,7 @@ export default function AdminExamTimetablePage() {
             ...e,
             _localId: localIdCounter++,
             repeaterCount: repCount,
-            repeaterInfo: e.repeaterInfo || rep.info || `${repCount} Repeaters (C-18)`
+            repeaterInfo: e.repeaterInfo || rep.info || `${repCount} ${repCount === 1 ? 'Repeater' : 'Repeaters'}`
           };
         });
         setEntries(loaded);
@@ -986,7 +909,7 @@ export default function AdminExamTimetablePage() {
                                     gap: "4px",
                                     boxShadow: "0 1px 2px rgba(245, 158, 11, 0.15)"
                                   }}>
-                                    Repeat: {moduleRepeaters} ({repDetails.info || 'C-18'})
+                                    Repeat: {moduleRepeaters}
                                   </span>
                                 )}
                               </div>
@@ -1263,7 +1186,7 @@ export default function AdminExamTimetablePage() {
                                                 const newCount = e.target.value ? Number(e.target.value) : 0;
                                                 updateEntry(entry._localId, "repeaterCount", newCount);
                                                 if (newCount > 0) {
-                                                  updateEntry(entry._localId, "repeaterInfo", `${newCount} Repeaters (C-18)`);
+                                                  updateEntry(entry._localId, "repeaterInfo", `${newCount} ${newCount === 1 ? 'Repeater' : 'Repeaters'}`);
                                                 }
                                               }}
                                               title="Repeater Students Count Allocated to this Hall"

@@ -112,6 +112,12 @@ export default function StudentExamTimetablePage() {
         }
       }
     }
+
+    // Match if this entry is designated for repeaters
+    if (rangeStr.toUpperCase().includes("REPEATER")) {
+      return true;
+    }
+
     return rangeStr.toUpperCase().includes(currentId);
   };
 

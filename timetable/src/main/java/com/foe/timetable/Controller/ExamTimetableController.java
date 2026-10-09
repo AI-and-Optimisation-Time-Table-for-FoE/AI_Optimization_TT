@@ -93,14 +93,14 @@ public class ExamTimetableController {
                 int officialRepCount = getFacultyRepeaterCount(mCode);
                 if (officialRepCount > 0 && (entry.getRepeaterCount() == null || entry.getRepeaterCount() == 0)) {
                     entry.setRepeaterCount(officialRepCount);
-                    entry.setRepeaterInfo(officialRepCount + " Repeaters (C-18)");
+                    entry.setRepeaterInfo(officialRepCount + (officialRepCount == 1 ? " Repeater" : " Repeaters"));
                     modified = true;
                 } else if (entry.getRepeaterCount() == null || entry.getRepeaterCount() == 0) {
                     List<StudentModuleEnrollment> reps = studentModuleEnrollmentRepository.findByModule_ModuleIdAndEnrollmentType(
                             entry.getModule().getModuleId(), StudentModuleEnrollment.EnrollmentType.repeat);
                     if (!reps.isEmpty()) {
                         entry.setRepeaterCount(reps.size());
-                        entry.setRepeaterInfo(reps.size() + " Repeaters (C-18)");
+                        entry.setRepeaterInfo(reps.size() + (reps.size() == 1 ? " Repeater" : " Repeaters"));
                         modified = true;
                     }
                 }
@@ -453,7 +453,17 @@ public class ExamTimetableController {
             int allocatedForThisHall = Math.min(remainingStudents, effectiveCap);
 
             boolean isLastHall = (remainingStudents <= effectiveCap);
-            String idRange = generateStudentIdRange(targetStudents, currentStudentIndex, allocatedForThisHall, et.getBatch(), deptPrefix, totalStudents, isLastHall);
+            int repCount = 0;
+            if (isLastHall && mod != null) {
+                repCount = getFacultyRepeaterCount(mod.getModuleCode());
+                List<StudentModuleEnrollment> reps = studentModuleEnrollmentRepository.findByModule_ModuleIdAndEnrollmentType(
+                        mod.getModuleId(), StudentModuleEnrollment.EnrollmentType.repeat);
+                if (!reps.isEmpty()) {
+                    repCount = Math.max(repCount, reps.size());
+                }
+            }
+
+            String idRange = generateStudentIdRange(targetStudents, currentStudentIndex, allocatedForThisHall, et.getBatch(), deptPrefix, totalStudents, (isLastHall && repCount > 0));
 
             ExamEntry entry = new ExamEntry();
             entry.setExamTimetable(et);
@@ -471,17 +481,9 @@ public class ExamTimetableController {
             entry.setStudentIdRange(idRange);
             entry.setAllocatedCount(allocatedForThisHall);
 
-            if (isLastHall && mod != null) {
-                int repCount = getFacultyRepeaterCount(mod.getModuleCode());
-                List<StudentModuleEnrollment> reps = studentModuleEnrollmentRepository.findByModule_ModuleIdAndEnrollmentType(
-                        mod.getModuleId(), StudentModuleEnrollment.EnrollmentType.repeat);
-                if (!reps.isEmpty()) {
-                    repCount = Math.max(repCount, reps.size());
-                }
-                if (repCount > 0) {
-                    entry.setRepeaterCount(repCount);
-                    entry.setRepeaterInfo(repCount + " Repeaters (C-18)");
-                }
+            if (repCount > 0) {
+                entry.setRepeaterCount(repCount);
+                entry.setRepeaterInfo(repCount + (repCount == 1 ? " Repeater" : " Repeaters"));
             }
 
             entries.add(entry);
@@ -505,7 +507,7 @@ public class ExamTimetableController {
             });
     }
 
-    private String generateStudentIdRange(List<UserAccount> students, int startIndex, int count, Batch batch, String deptPrefix, int totalDeptStudents, boolean isLastHall) {
+    private String generateStudentIdRange(List<UserAccount> students, int startIndex, int count, Batch batch, String deptPrefix, int totalDeptStudents, boolean hasRepeaters) {
         String prefixStr = (deptPrefix != null && !deptPrefix.isBlank() && !"ALL".equalsIgnoreCase(deptPrefix)) ? (deptPrefix + ": ") : "";
 
         // Official Faculty Batch Registration Configurations
@@ -554,7 +556,7 @@ public class ExamTimetableController {
         }
 
         String rangeStr = prefixStr + "EG/" + regYear + "/" + String.format("%04d", startNum) + " - EG/" + regYear + "/" + String.format("%04d", endNum);
-        if (isLastHall) {
+        if (hasRepeaters) {
             rangeStr += " + Repeaters";
         }
         return rangeStr;
@@ -952,132 +954,62 @@ public class ExamTimetableController {
     }
 
     private int getFacultyRepeaterCount(String code) {
-        if (code == null) return 1;
+        if (code == null) return 0;
         String c = code.replaceAll("\\s+", "").toUpperCase().trim();
         switch (c) {
-            // Electrical & Information Engineering
-            case "EE4351":
-            case "EE4304": return 9;
-            case "EE4305": return 4;
-            case "EE4350":
-            case "EE4203": return 2;
-            case "EE4201":
-            case "EE4202":
-            case "EE4206":
-            case "EE4207":
-            case "EE4208":
-            case "EE2201":
-            case "EE2202": return 1;
-            case "EE6301":
-            case "EE6302":
-            case "EE6203":
-            case "EE6305":
-            case "EE6208": return 2;
-            case "EE6304":
-            case "EE6303":
-            case "EE6206":
-            case "EE6207":
-            case "EE6210":
-            case "EE6309": return 1;
-            case "EE8203":
-            case "EE8204":
-            case "EE8206":
-            case "EE8210":
-            case "EE8211":
-            case "EE8217":
-            case "EE8308": return 1;
-
-            // Civil & Environmental Engineering
-            case "CE6305": return 29;
-            case "CE6304": return 27;
-            case "CE6301": return 16;
-            case "CE6302": return 4;
-            case "CE6303":
-            case "CE6252":
-            case "CE6253": return 2;
-            case "CE4302": return 9;
-            case "CE4304":
-            case "CE4204":
+            // Semester 2 (27th Batch)
+            case "IS2401": return 2;
+            case "IS1003": return 1;
             case "CE2302": return 3;
-            case "CE4303":
-            case "CE4251":
-            case "CE8301": return 2;
-            case "CE4301":
-            case "CE4305":
-            case "CE2201": return 1;
+            case "EE2201": return 1;
 
-            // Mechanical & Marine Engineering
-            case "ME4210": return 4;
-            case "ME6303":
-            case "ME6302":
-            case "ME6206":
-            case "ME6207": return 3;
-            case "ME4301":
-            case "ME4302":
-            case "ME6201": return 2;
-            case "ME4211":
-            case "ME4212":
-            case "ME4303":
-            case "ME4304":
-            case "ME4305":
-            case "ME2201":
-            case "ME2302":
-            case "ME6104":
-            case "ME6210":
-            case "ME6214":
-            case "ME6215":
-            case "ME6304":
-            case "ME6305":
-            case "ME8202":
-            case "ME8211":
-            case "ME8212":
-            case "ME8213":
-            case "ME8301": return 1;
-            case "MN4201":
-            case "MN4202":
-            case "MN4205":
-            case "MN4210":
-            case "MN4303":
-            case "MN4304":
-            case "MN4306":
-            case "MN4307": return 1;
-
-            // Interdisciplinary Studies & Computer
+            // Semester 4 (25th Batch)
             case "IS4307":
             case "IS4227": return 119;
             case "IS4304": return 11;
-            case "IS8201": return 3;
-            case "IS2401":
-            case "IS4322":
-            case "IS4301":
-            case "IS4224":
-            case "IS6301": return 2;
-            case "IS1003":
-            case "IS4225":
-            case "IS4126":
-            case "IS4128":
-            case "IS4129":
-            case "IS6201": return 1;
+            case "IS4305": return 4;
+            case "EE4351": return 9;
             case "EC4304": return 9;
-            case "EC4203":
-            case "EC6301":
-            case "EC6302":
-            case "EC6304":
-            case "EC8204":
-            case "EC8206": return 2;
-            case "EC4201":
-            case "EC4202":
-            case "EC4205":
-            case "EC4206":
-            case "EC4307":
-            case "EC6204":
-            case "EC6207":
-            case "EC8202":
-            case "EC8205":
-            case "EC8207":
-            case "EC8208": return 1;
+            case "EE4304": return 4;
+            case "EE4350": return 2;
+            case "CE4302": return 9;
+            case "CE4305": return 6;
+            case "CE4301": return 4;
+            case "CE4304":
+            case "CE4204": return 3;
+            case "CE4303":
+            case "CE4251": return 2;
+            case "ME4210": return 4;
+            case "ME4301": return 2;
+            case "MN4304": return 1;
+            case "MN4205": return 3;
 
-            default: return 1;
+            // Semester 6 (24th Batch)
+            case "CE6305": return 29;
+            case "CE6304": return 27;
+            case "CE6301": return 16;
+            case "CE6302": return 12;
+            case "CE6303": return 18;
+            case "CE6252":
+            case "CE6253": return 2;
+            case "EE6301": return 2;
+            case "EE6304":
+            case "EE6303":
+            case "EE6302": return 1;
+            case "ME6303":
+            case "ME6302":
+            case "ME6206": return 3;
+            case "ME6304": return 1;
+            case "ME6214": return 2;
+            case "ME6213": return 1;
+            case "IS6303":
+            case "IS6201":
+            case "MN4210": return 1;
+
+            // Semester 8 (23rd Batch)
+            case "EE8217": return 2;
+
+            default: return 0;
         }
     }
 }
