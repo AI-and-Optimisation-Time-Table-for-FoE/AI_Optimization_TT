@@ -97,6 +97,12 @@ export default function StudentExamTimetablePage() {
     const currentId = getDisplayStudentId(user).toUpperCase().trim();
     if (!currentId) return true;
 
+    // Check if ID is explicitly listed (e.g. "EG/2021/4607,EG/2023/5466-EG/2023/5885" or "4607")
+    const cleanIdNoSlashes = currentId.replace(/[^0-9]/g, "");
+    if (rangeStr.toUpperCase().includes(currentId) || (cleanIdNoSlashes && cleanIdNoSlashes.length >= 4 && rangeStr.includes(cleanIdNoSlashes))) {
+      return true;
+    }
+
     // Check if ID range contains numbers
     if (rangeStr.includes(" - ")) {
       const parts = rangeStr.split(" - ").map(s => s.trim().toUpperCase());
@@ -123,6 +129,7 @@ export default function StudentExamTimetablePage() {
 
   const isModuleForStudent = (entry) => {
     if (!user) return true;
+    if (entry.isRepeatExam) return true; // Repeat exams from other semesters/batches always display!
     if (user.semester === 1 || user.semester === 2) return true;
     const studentDeptId = user.departmentId || user.department?.departmentId;
     const modCode = (entry.module?.moduleCode || "").toUpperCase();

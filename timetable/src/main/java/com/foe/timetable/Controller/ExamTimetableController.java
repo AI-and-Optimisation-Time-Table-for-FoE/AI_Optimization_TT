@@ -1035,8 +1035,10 @@ public class ExamTimetableController {
         List<ExamEntry> candidateEntries = new ArrayList<>();
 
         // If student identifier (Reg No or Email) is provided and student has specific MIS enrollments
-        if (identifier != null && !identifier.trim().isEmpty()) {
-            List<StudentModuleEnrollment> enrollments = studentModuleEnrollmentRepository.findByIdentifier(identifier.trim());
+        String searchIdentifier = (identifier != null && !identifier.trim().isEmpty()) ? identifier.trim() : (studentRegNo != null ? studentRegNo.trim() : null);
+
+        if (searchIdentifier != null) {
+            List<StudentModuleEnrollment> enrollments = studentModuleEnrollmentRepository.findByIdentifier(searchIdentifier);
             if (!enrollments.isEmpty()) {
                 Set<Integer> enrolledModuleIds = enrollments.stream()
                         .map(e -> e.getModule().getModuleId())
@@ -1060,7 +1062,7 @@ public class ExamTimetableController {
                     }
                 }
 
-                // Also check if student has repeat modules in OTHER batches and include their published exam entries!
+                // Check if student has repeat modules in OTHER batches and include their published exam entries!
                 for (StudentModuleEnrollment rep : repeatEnrollments) {
                     if (rep.getBatch() != null && !rep.getBatch().getBatchId().equals(batchId)) {
                         Optional<ExamTimetable> otherBatchPublished = examTimetableRepository.findFirstByBatch_BatchIdAndStatusOrderByCreatedAtDesc(rep.getBatch().getBatchId(), "published");
@@ -1080,6 +1082,31 @@ public class ExamTimetableController {
             } else {
                 candidateEntries.addAll(allEntries);
             }
+
+            // Also search all other published timetables for entries where student ID is explicitly listed in studentIdRange (e.g. EG/2021/4607)
+            final String sRegMatch = studentRegNo != null ? studentRegNo : searchIdentifier;
+            final String cleanNumMatch = sRegMatch.replaceAll("\\D+", "");
+
+            List<ExamTimetable> otherPublishedTimetables = examTimetableRepository.findAll().stream()
+                    .filter(t -> "published".equalsIgnoreCase(t.getStatus()))
+                    .filter(t -> t.getBatch() != null && !t.getBatch().getBatchId().equals(batchId))
+                    .collect(Collectors.toList());
+
+            for (ExamTimetable otherEt : otherPublishedTimetables) {
+                List<ExamEntry> otherEntries = examEntryRepository.findByExamTimetable_ExamTimetableIdOrderByExamDateAscStartTimeAsc(otherEt.getExamTimetableId());
+                for (ExamEntry otherE : otherEntries) {
+                    String range = otherE.getStudentIdRange() != null ? otherE.getStudentIdRange().toUpperCase() : "";
+                    boolean isExplicitMatch = range.contains(sRegMatch.toUpperCase()) ||
+                            (!cleanNumMatch.isEmpty() && cleanNumMatch.length() >= 4 && range.contains(cleanNumMatch));
+
+                    if (isExplicitMatch) {
+                        otherE.setIsRepeatExam(true);
+                        if (!candidateEntries.contains(otherE)) {
+                            candidateEntries.add(otherE);
+                        }
+                    }
+                }
+            }
         } else {
             candidateEntries.addAll(allEntries);
         }
@@ -1098,9 +1125,9 @@ public class ExamTimetableController {
                 // Find matching hall for student's registration number
                 final String sReg = studentRegNo;
                 ExamEntry matchedEntry = group.stream()
-                    .filter(entry -> matchesStudentRange(entry, sReg, false))
+                    .filter(entry -> matchesStudentRange(entry, sReg, Boolean.TRUE.equals(entry.getIsRepeatExam())))
                     .findFirst()
-                    .orElse(group.get(0)); // Fallback to first if not explicitly partitioned
+                    .orElse(group.get(0));
                 personalizedEntries.add(matchedEntry);
             }
         }

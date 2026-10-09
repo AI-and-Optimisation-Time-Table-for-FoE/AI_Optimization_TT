@@ -187,6 +187,29 @@ public class DataInitializer implements CommandLineRunner {
             }
         }
         System.out.println("Seeded " + totalSeeded + " official repeat candidates across Faculty modules.");
+
+        // Ensure EG/2021/4607 has explicit repeat enrollments for official Semester 4 repeat modules
+        if (batch25 != null) {
+            String[] rep4607Modules = new String[]{"EC4202", "EC4304", "EC4203", "EC4205", "EC4201", "IS4322", "IS4301"};
+            for (String mCode : rep4607Modules) {
+                com.foe.timetable.model.Module mod = moduleRepository.findByModuleCode(mCode).orElse(null);
+                if (mod != null) {
+                    boolean alreadyExists = studentModuleEnrollmentRepository.findByIdentifier("EG/2021/4607").stream()
+                            .anyMatch(e -> e.getModule() != null && e.getModule().getModuleId().equals(mod.getModuleId()));
+                    if (!alreadyExists) {
+                        StudentModuleEnrollment en = new StudentModuleEnrollment(
+                            "EG/2021/4607",
+                            "eg20214607@eng.ruh.ac.lk",
+                            batch25,
+                            mod,
+                            StudentModuleEnrollment.EnrollmentType.repeat,
+                            "2023"
+                        );
+                        studentModuleEnrollmentRepository.save(en);
+                    }
+                }
+            }
+        }
     }
 
     private void syncOrAddBatch(String batchName, int academicYear, int semester, int studentCount) {

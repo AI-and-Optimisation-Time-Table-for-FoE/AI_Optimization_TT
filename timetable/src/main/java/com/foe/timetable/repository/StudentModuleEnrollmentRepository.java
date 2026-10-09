@@ -17,7 +17,11 @@ public interface StudentModuleEnrollmentRepository extends JpaRepository<Student
     List<StudentModuleEnrollment> findByModule_ModuleIdAndEnrollmentType(Integer moduleId, StudentModuleEnrollment.EnrollmentType enrollmentType);
     List<StudentModuleEnrollment> findByBatch_BatchIdAndEnrollmentType(Integer batchId, StudentModuleEnrollment.EnrollmentType enrollmentType);
 
-    @Query("SELECT e FROM StudentModuleEnrollment e WHERE LOWER(e.studentRegNo) = LOWER(:identifier) OR LOWER(e.studentEmail) = LOWER(:identifier)")
+    @Query("SELECT e FROM StudentModuleEnrollment e WHERE " +
+           "LOWER(e.studentRegNo) = LOWER(:identifier) OR " +
+           "LOWER(e.studentEmail) = LOWER(:identifier) OR " +
+           "REPLACE(REPLACE(LOWER(e.studentRegNo), '/', ''), '-', '') = REPLACE(REPLACE(LOWER(:identifier), '/', ''), '-', '') OR " +
+           "LOWER(e.studentRegNo) LIKE CONCAT('%', :identifier, '%')")
     List<StudentModuleEnrollment> findByIdentifier(@Param("identifier") String identifier);
 
     void deleteByBatch_BatchId(Integer batchId);
