@@ -738,13 +738,13 @@ export default function AdminExamTimetablePage() {
                             <div style={{ background: gIdx % 2 === 0 ? "#f1f5f9" : "#f8fafc", paddingBottom: "10px" }}>
                               {(() => {
                                 const activeBatch = batches.find(b => String(b.batchId) === String(selectedBatchId));
-                                const showRegRange = activeBatch ? (activeBatch.semester === 1 || activeBatch.semester === 2) : false;
+                                const showRegRange = true; // Enabled for all batches (Sem 2, 4, 6, 8)
                                 return (
                                   <>
                                     {/* Column headers */}
                                     <div style={{
                                       display: "grid",
-                                      gridTemplateColumns: showRegRange ? "minmax(200px,1fr) minmax(220px,1fr) 60px 36px" : "minmax(250px,1fr) 120px 36px",
+                                      gridTemplateColumns: "minmax(200px,1.2fr) minmax(260px,2fr) 70px 36px",
                                       gap: "8px",
                                       padding: "6px 20px 6px 52px",
                                       fontSize: "10px",
@@ -755,8 +755,8 @@ export default function AdminExamTimetablePage() {
                                       borderBottom: "1px solid var(--neutral-200)"
                                     }}>
                                       <span>Venue / Hall</span>
-                                      {showRegRange && <span>Student Registration Range</span>}
-                                      <span>{showRegRange ? "Count" : "Allocated Seats"}</span>
+                                      <span>Student Registration Range & Repeater Allocation</span>
+                                      <span style={{ textAlign: "center" }}>Students</span>
                                       <span></span>
                                     </div>
 
@@ -765,7 +765,7 @@ export default function AdminExamTimetablePage() {
                                       return (
                                         <div key={entry._localId} style={{
                                           display: "grid",
-                                          gridTemplateColumns: showRegRange ? "minmax(200px,1fr) minmax(220px,1fr) 60px 36px" : "minmax(250px,1fr) 120px 36px",
+                                          gridTemplateColumns: "minmax(200px,1.2fr) minmax(260px,2fr) 70px 36px",
                                           gap: "8px",
                                           padding: "8px 20px 8px 52px",
                                           alignItems: "center",
@@ -818,9 +818,9 @@ export default function AdminExamTimetablePage() {
                                             {hallUnavail && <div style={{ fontSize: "11px", color: "#dc2626", fontWeight: "700", marginTop: "4px", display: "flex", alignItems: "center", gap: "4px" }}><AlertTriangle size={12} /> Unavailable on exam date!</div>}
                                           </div>
 
-                                          {/* Student range (only shown for Semester 1 & 2 batches) */}
-                                          {showRegRange && (
-                                            <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+                                          {/* Student range and repeater allocation indicator */}
+                                          <div style={{ position: "relative", display: "flex", alignItems: "center", gap: "6px" }}>
+                                            <div style={{ position: "relative", flex: 1, display: "flex", alignItems: "center" }}>
                                               {(() => {
                                                 let prefix = null;
                                                 if (entry.studentIdRange && entry.studentIdRange.includes(":")) {
@@ -859,7 +859,7 @@ export default function AdminExamTimetablePage() {
                                               })()}
                                               <input
                                                 type="text"
-                                                placeholder="e.g. EG/2025/4001 - EG/2025/4160"
+                                                placeholder="e.g. EG/2023/5456 - EG/2023/5831 + Repeaters"
                                                 value={entry.studentIdRange || ""}
                                                 onChange={e => {
                                                   const val = e.target.value;
@@ -885,7 +885,21 @@ export default function AdminExamTimetablePage() {
                                                 }}
                                               />
                                             </div>
-                                          )}
+                                            {entry.studentIdRange && (entry.studentIdRange.toLowerCase().includes("repeat") || entry.studentIdRange.toLowerCase().includes("+ repeater")) && (
+                                              <span style={{
+                                                background: "#fef3c7",
+                                                color: "#b45309",
+                                                border: "1px solid #fcd34d",
+                                                padding: "4px 8px",
+                                                borderRadius: "8px",
+                                                fontSize: "11px",
+                                                fontWeight: "800",
+                                                whiteSpace: "nowrap"
+                                              }}>
+                                                🔁 Repeater Allocation
+                                              </span>
+                                            )}
+                                          </div>
 
                                           {/* Count / Allocated Seats */}
                                           <div>
@@ -962,24 +976,7 @@ export default function AdminExamTimetablePage() {
             </div>
           )}
 
-          {/* Download PDF button — visible when exam timetable is loaded */}
-          {examTimetable && (
-            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "16px" }} className="no-print">
-              <button
-                onClick={() => window.print()}
-                style={{
-                  display: "flex", alignItems: "center", gap: "8px",
-                  background: "#1d4ed8", color: "#ffffff",
-                  border: "none", borderRadius: "10px",
-                  padding: "10px 20px", fontSize: "14px",
-                  fontWeight: "600", cursor: "pointer",
-                  boxShadow: "0 2px 8px rgba(29,78,216,0.25)"
-                }}
-              >
-                <Download size={16} /> Download as PDF
-              </button>
-            </div>
-          )}
+
         </main>
       </div>
     </div>

@@ -750,19 +750,7 @@ function TimetableViewPage() {
             </div>
           )}
 
-          {/* PDF Download button — visible to all roles when timetable is loaded */}
-          {entries.length > 0 && (
-            <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "12px" }}>
-              <button
-                onClick={handleDownloadPdf}
-                style={{ display: "flex", alignItems: "center", gap: "8px", background: "linear-gradient(135deg, #0d9488, #0f766e)", color: "#ffffff", border: "none", padding: "10px 20px", borderRadius: "8px", fontWeight: "600", cursor: "pointer", fontSize: "14px", boxShadow: "0 2px 8px rgba(13,148,136,0.35)" }}
-                title="Download timetable as PDF"
-              >
-                <Download size={16} />
-                Download PDF
-              </button>
-            </div>
-          )}
+
 
           {error && (
             <div className="card" style={{ marginBottom: 20, borderColor: "#fecaca", background: "#fef2f2" }}>

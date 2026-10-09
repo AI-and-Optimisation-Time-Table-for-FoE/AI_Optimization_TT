@@ -375,25 +375,7 @@ export default function StudentExamTimetablePage() {
             </div>
           )}
 
-          {/* Download PDF button — shown when exam entries are loaded */}
-          {entries.length > 0 && (
-            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "16px" }} className="no-print">
-              <button
-                onClick={() => window.print()}
-                style={{
-                  display: "flex", alignItems: "center", gap: "8px",
-                  background: "linear-gradient(135deg, #1e3a5f, #2563eb)",
-                  color: "#ffffff",
-                  border: "none", borderRadius: "10px",
-                  padding: "10px 20px", fontSize: "14px",
-                  fontWeight: "600", cursor: "pointer",
-                  boxShadow: "0 2px 8px rgba(37,99,235,0.25)"
-                }}
-              >
-                <Download size={16} /> Download as PDF
-              </button>
-            </div>
-          )}
+
         </main>
       </div>
     </div>

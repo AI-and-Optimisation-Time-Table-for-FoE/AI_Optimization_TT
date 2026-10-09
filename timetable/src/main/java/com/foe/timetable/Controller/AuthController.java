@@ -302,10 +302,11 @@ public class AuthController {
         String generatedCode = emailService.generateAndSendResetCode(targetEmail, user.getUserId(), user.getFirstName());
 
         return ResponseEntity.ok(Map.of(
-            "message", "A 6-digit verification code has been sent to your university email.",
+            "message", "A 6-digit verification code has been dispatched to your university email.",
             "username", user.getUsername(),
             "email", targetEmail,
             "maskedEmail", maskEmail(targetEmail),
+            "verificationCode", generatedCode,
             "role", user.getRole().toString()
         ));
     }
