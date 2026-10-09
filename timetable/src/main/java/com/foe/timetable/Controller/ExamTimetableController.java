@@ -605,9 +605,17 @@ public class ExamTimetableController {
             if (endTimeStr != null) entry.setEndTime(LocalTime.parse(endTimeStr));
             if (sessionName != null) entry.setSessionName(sessionName);
             if (studentIdRange != null) entry.setStudentIdRange(studentIdRange);
-            if (allocatedCountNum != null) entry.setAllocatedCount(allocatedCountNum.intValue());
-            if (repeaterCountNum != null) entry.setRepeaterCount(repeaterCountNum.intValue());
-            if (repeaterInfo != null) entry.setRepeaterInfo(repeaterInfo);
+            if (repeaterCountNum != null) {
+                entry.setRepeaterCount(repeaterCountNum.intValue());
+                if (repeaterCountNum.intValue() == 0) {
+                    entry.setRepeaterInfo(null);
+                }
+            }
+            if (repeaterInfo != null && (repeaterCountNum == null || repeaterCountNum.intValue() > 0)) {
+                entry.setRepeaterInfo(repeaterInfo);
+            } else if (repeaterCountNum != null && repeaterCountNum.intValue() == 0) {
+                entry.setRepeaterInfo(null);
+            }
 
             if (hallIdNum != null) {
                 Hall hall = hallRepository.findById(hallIdNum.intValue()).orElse(null);

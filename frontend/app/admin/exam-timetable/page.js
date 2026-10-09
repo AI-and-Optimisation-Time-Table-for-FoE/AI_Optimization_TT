@@ -226,18 +226,13 @@ export default function AdminExamTimetablePage() {
       if (list && list.length > 0) {
         const latest = list[0];
         const details = await fetchExamTimetableDetails(latest.examTimetableId);
-        setExamTimetable(details.examTimetable);
         const loaded = (details.entries || []).map(e => {
-          const mCode = e.module?.moduleCode;
-          const rep = getModuleRepeaterDetails(mCode, [e], []);
-          const repCount = (e.repeaterCount !== null && e.repeaterCount !== undefined && Number(e.repeaterCount) > 0)
-            ? Number(e.repeaterCount)
-            : rep.count;
+          const repCount = (e.repeaterCount !== null && e.repeaterCount !== undefined) ? Number(e.repeaterCount) : 0;
           return {
             ...e,
             _localId: localIdCounter++,
             repeaterCount: repCount,
-            repeaterInfo: e.repeaterInfo || rep.info || `${repCount} ${repCount === 1 ? 'Repeater' : 'Repeaters'}`
+            repeaterInfo: repCount > 0 ? (e.repeaterInfo || `${repCount} ${repCount === 1 ? 'Repeater' : 'Repeaters'}`) : null
           };
         });
         setEntries(loaded);
@@ -999,7 +994,7 @@ export default function AdminExamTimetablePage() {
 
                                     {group.rows.map((entry) => {
                                       const hallUnavail = isHallUnavailable(entry.hall?.hallId, entry.examDate);
-                                      const entryRepCount = Number(entry.repeaterCount) > 0 ? Number(entry.repeaterCount) : (moduleRepeaters > 0 ? moduleRepeaters : 0);
+                                      const entryRepCount = (entry.repeaterCount !== undefined && entry.repeaterCount !== null) ? Number(entry.repeaterCount) : 0;
                                       const isEntryRepeater = entryRepCount > 0 || (entry.studentIdRange && entry.studentIdRange.toLowerCase().includes("repeat"));
 
                                       return (
@@ -1179,14 +1174,23 @@ export default function AdminExamTimetablePage() {
                                           <div>
                                             <input
                                               type="number"
-                                              placeholder="1"
+                                              placeholder="0"
                                               min={0}
-                                              value={(entry.repeaterCount !== undefined && entry.repeaterCount !== null && Number(entry.repeaterCount) > 0) ? entry.repeaterCount : (entryRepCount > 0 ? entryRepCount : 1)}
+                                              value={entry.repeaterCount !== undefined && entry.repeaterCount !== null ? entry.repeaterCount : 0}
                                               onChange={e => {
                                                 const newCount = e.target.value ? Number(e.target.value) : 0;
                                                 updateEntry(entry._localId, "repeaterCount", newCount);
                                                 if (newCount > 0) {
                                                   updateEntry(entry._localId, "repeaterInfo", `${newCount} ${newCount === 1 ? 'Repeater' : 'Repeaters'}`);
+                                                  if (entry.studentIdRange && !entry.studentIdRange.includes("Repeat")) {
+                                                    updateEntry(entry._localId, "studentIdRange", `${entry.studentIdRange} + Repeaters`);
+                                                  }
+                                                } else {
+                                                  updateEntry(entry._localId, "repeaterInfo", null);
+                                                  if (entry.studentIdRange && entry.studentIdRange.includes("Repeat")) {
+                                                    const cleanRange = entry.studentIdRange.replace(/\s*\+\s*Repeaters?/i, "").trim();
+                                                    updateEntry(entry._localId, "studentIdRange", cleanRange);
+                                                  }
                                                 }
                                               }}
                                               title="Repeater Students Count Allocated to this Hall"
@@ -1196,9 +1200,9 @@ export default function AdminExamTimetablePage() {
                                                 fontSize: "13px",
                                                 fontWeight: "800",
                                                 fontFamily: "'JetBrains Mono', 'Consolas', monospace",
-                                                color: "#b45309",
-                                                background: "#fef3c7",
-                                                border: "1.5px solid #f59e0b",
+                                                color: entryRepCount > 0 ? "#b45309" : "#64748b",
+                                                background: entryRepCount > 0 ? "#fef3c7" : "#f8fafc",
+                                                border: entryRepCount > 0 ? "1.5px solid #f59e0b" : "1.5px solid #cbd5e1",
                                                 borderRadius: "8px",
                                                 textAlign: "center",
                                                 outline: "none"
