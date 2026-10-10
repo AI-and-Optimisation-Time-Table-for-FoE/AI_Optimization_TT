@@ -125,6 +125,7 @@ export default function LoginPage() {
     }
   };
 
+  // Closes the forgot password modal and clears all of its fields
   const resetForgotState = () => {
     setShowForgotModal(false);
     setForgotStep(1);
