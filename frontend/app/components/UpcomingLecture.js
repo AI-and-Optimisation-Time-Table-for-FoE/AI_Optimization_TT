@@ -24,6 +24,7 @@ export default function UpcomingLecture({ entries = [] }) {
     return () => clearInterval(interval);
   }, []);
 
+  // Works out which lecture is ongoing or next, searching from today through the following 6 days
   const upcomingInfo = useMemo(() => {
     if (!entries || entries.length === 0) return null;
 
