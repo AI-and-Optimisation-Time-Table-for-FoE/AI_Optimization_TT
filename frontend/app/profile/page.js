@@ -118,6 +118,7 @@ export default function ProfilePage() {
     fileInputRef.current.click();
   };
 
+  // Handles profile picture upload: checks the file is an image under 2MB, previews it, saves it to the backend and updates the sidebar
   const handleFileChange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
