@@ -33,7 +33,7 @@ async function request(path, options = {}) {
   return response.json();
 }
 
-// === AUTH ===
+// Sends the username and password to the backend and returns the logged-in user's details
 export function login(username, password) {
   const payload = typeof username === "object" ? username : { username, password };
   return request("/api/auth/login", {
