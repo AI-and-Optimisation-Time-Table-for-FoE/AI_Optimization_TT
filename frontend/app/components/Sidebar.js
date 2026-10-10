@@ -11,6 +11,7 @@ export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const [user, setUser] = useState(null);
+  // Controls whether the sidebar is open on mobile screens
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
