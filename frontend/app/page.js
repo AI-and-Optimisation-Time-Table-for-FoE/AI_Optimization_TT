@@ -10,7 +10,8 @@ import "./optimizer.css";
 // Login page: lets admin, student and lecturer users sign in, and reset a forgotten password
 export default function LoginPage() {
   const router = useRouter();
-  const [username, setUsername] = useState("");
+  // Login form state: email, password, show/hide password, remember me, error message and loading flag
+  const [username, setUsername] = useState(""); 
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
