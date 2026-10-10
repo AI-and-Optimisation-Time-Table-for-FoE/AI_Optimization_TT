@@ -81,6 +81,7 @@ export default function ProfilePage() {
     }
   };
 
+  // Validates the password form (all fields filled, at least 6 characters, passwords match) and sends the change request to the backend
   const handleChangePassword = async (e) => {
     e.preventDefault();
     if (!currentPassword || !newPasswordInput || !confirmNewPasswordInput) {
