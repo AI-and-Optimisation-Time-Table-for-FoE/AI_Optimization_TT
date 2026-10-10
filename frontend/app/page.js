@@ -1,643 +1,538 @@
 "use client";
 
-import { useState } from "react";
-import Sidebar from "./components/Sidebar";
-import "./optimizer.css";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { login, requestPasswordReset, resetPasswordWithKey } from "./lib/api";
+import { Eye, EyeOff, KeyRound, ArrowLeft, CheckCircle2, Lock, Mail, ShieldAlert } from "lucide-react";
+import "./optimizer.css"; 
 
-// ── initial demo data ──────────────────────────────────────────────────────
-const BATCHES = [
-  { id: "23", label: "23rd Intake", year: "23",  dept: "rd Intake" },
-  { id: "24", label: "24th Intake", year: "24",  dept: "th Intake" },
-  { id: "25", label: "25th Intake", year: "25",  dept: "th Intake" },
-  { id: "26", label: "26th Intake", year: "26",  dept: "th Intake" },
-  { id: "27", label: "27th Intake", year: "27",  dept: "th Intake" },
-];
+export default function LoginPage() {
+  const router = useRouter();
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-const MODULE_OPTIONS = ["CS101 - Intro to CS", "CS201 - Data Structures", "CS301 - Algorithms",
-  "CS401 - AI & ML", "IT101 - Networking", "IT201 - Database Systems", "MATH101 - Calculus"];
-const HALL_OPTIONS = ["Main Auditorium", "Hall A", "Hall B", "Hall C", "Lab 1", "Lab 2"];
+  // Forgot password modal state
+  const [showForgotModal, setShowForgotModal] = useState(false);
+  const [forgotStep, setForgotStep] = useState(1); // 1 = enter email, 2 = enter code & set new password, 3 = success
+  const [forgotIdentifier, setForgotIdentifier] = useState("");
+  const [verificationCode, setVerificationCode] = useState("");
+  const [accountInfo, setAccountInfo] = useState(null);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotError, setForgotError] = useState("");
+  const [forgotSuccess, setForgotSuccess] = useState("");
 
-// Per-batch module data
-const initialBatchModules = {
-  "23": [
-    { id: 1, code: "CS401", name: "AI & ML",          hours: 4, lectures: 2 },
-    { id: 2, code: "CS301", name: "Algorithms",        hours: 3, lectures: 3 },
-    { id: 3, code: "MATH101", name: "Calculus",        hours: 2, lectures: 2 },
-  ],
-  "24": [
-    { id: 4, code: "CS301", name: "Algorithms",        hours: 3, lectures: 3 },
-    { id: 5, code: "CS201", name: "Data Structures",   hours: 4, lectures: 3 },
-  ],
-  "25": [
-    { id: 6, code: "CS201", name: "Data Structures",   hours: 4, lectures: 3 },
-    { id: 7, code: "CS101", name: "Intro to CS",       hours: 3, lectures: 2 },
-    { id: 8, code: "MATH101", name: "Calculus",        hours: 2, lectures: 2 },
-  ],
-  "26": [
-    { id: 9,  code: "IT101", name: "Networking",       hours: 3, lectures: 2 },
-    { id: 10, code: "IT201", name: "Database Systems", hours: 4, lectures: 3 },
-  ],
-  "27": [
-    { id: 11, code: "CS101", name: "Intro to CS",      hours: 3, lectures: 2 },
-    { id: 12, code: "MATH101", name: "Calculus",       hours: 2, lectures: 2 },
-  ],
-};
+  useEffect(() => {
+    // Check if user is already logged in
+    const userStr = localStorage.getItem("user");
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        redirectUser(user.role);
+      } catch (e) {
+        localStorage.removeItem("user");
+      }
+    }
 
-const initialLecturers = [
-  { id: 1, name: "Dr. Perera",  modules: ["CS101 - Intro to CS", "CS301 - Algorithms"] },
-  { id: 2, name: "Prof. Silva", modules: ["CS201 - Data Structures"] },
-];
+    // Load remembered email
+    const savedEmail = localStorage.getItem("remembered_email");
+    if (savedEmail) {
+      setUsername(savedEmail);
+      setRememberMe(true);
+    }
+  }, []);
 
-const initialHalls = [
-  { id: 1, hall: "Hall A",  capacity: 60,  start: "08:00", end: "17:00" },
-  { id: 2, hall: "Lab 1",   capacity: 30,  start: "08:00", end: "16:00" },
-];
-
-// ── helpers ────────────────────────────────────────────────────────────────
-let nextId = 100;
-const uid = () => ++nextId;
-
-// ══════════════════════════════════════════════════════════════════════════
-export default function OptimizerPage() {
-  // ── state ────────────────────────────────────────────────────────────────
-  const [selectedBatch, setSelectedBatch]               = useState(BATCHES[0].id);
-  const [generating, setGenerating]                     = useState(false);
-  const [generateDone, setGenerateDone]                 = useState(false);
-
-  // per-batch module data
-  const [batchModules, setBatchModules]                 = useState(initialBatchModules);
-  const [newMod, setNewMod]                             = useState({ code: "", name: "", hours: "", lectures: "" });
-
-  // current batch's module list
-  const modules = batchModules[selectedBatch] || [];
-
-  // lecturer modal
-  const [lecturers, setLecturers]                       = useState(initialLecturers);
-  const [showLecturerModal, setShowLecturerModal]       = useState(false);
-  const [lecturerForm, setLecturerForm]                 = useState({ name: "", modules: [] });
-  const [selectedModule, setSelectedModule]             = useState("");
-
-  // hall modal
-  const [halls, setHalls]                               = useState(initialHalls);
-  const [showHallModal, setShowHallModal]               = useState(false);
-  const [hallForm, setHallForm]                         = useState({ hall: "", capacity: "", start: "08:00", end: "17:00" });
-
-  // ── handlers – batch select ─────────────────────────────────────────────
-  const handleBatchSelect = (batchId) => {
-    setSelectedBatch(batchId);
-    setGenerateDone(false);
+  const redirectUser = (role) => {
+    if (role === "admin") {
+      router.push("/admin");
+    } else if (role === "student") {
+      router.push("/student");
+    } else if (role === "lecturer") {
+      router.push("/lecturer");
+    }
   };
 
-  // ── handlers – modules ──────────────────────────────────────────────────
-  const addModule = () => {
-    if (!newMod.code || !newMod.name) return;
-    setBatchModules(prev => ({
-      ...prev,
-      [selectedBatch]: [...(prev[selectedBatch] || []), { id: uid(), ...newMod }],
-    }));
-    setNewMod({ code: "", name: "", hours: "", lectures: "" });
-  };
-  const deleteModule = (id) => setBatchModules(prev => ({
-    ...prev,
-    [selectedBatch]: (prev[selectedBatch] || []).filter(m => m.id !== id),
-  }));
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!username || !password) {
+      setError("Please fill in all fields.");
+      return;
+    }
 
-  // ── handlers – lecturers ────────────────────────────────────────────────
-  const addModuleToLecturer = () => {
-    if (!selectedModule || lecturerForm.modules.includes(selectedModule)) return;
-    setLecturerForm(f => ({ ...f, modules: [...f.modules, selectedModule] }));
-    setSelectedModule("");
-  };
-  const removeModuleFromLecturer = (mod) =>
-    setLecturerForm(f => ({ ...f, modules: f.modules.filter(m => m !== mod) }));
+    setLoading(true);
+    setError("");
 
-  const saveLecturer = () => {
-    if (!lecturerForm.name) return;
-    setLecturers(prev => [...prev, { id: uid(), ...lecturerForm }]);
-    setLecturerForm({ name: "", modules: [] });
-    setShowLecturerModal(false);
-  };
-  const deleteLecturer = (id) => setLecturers(prev => prev.filter(l => l.id !== id));
+    try {
+      const universityEmailForKushan = "testDrkushan@university.edu";
+      const trimmed = username.trim();
+      const payloadUsername = trimmed.toLowerCase() === "kushan" ? universityEmailForKushan : trimmed;
+      const data = await login(payloadUsername, password);
+      
+      // Save or clear remembered email
+      if (rememberMe) {
+        localStorage.setItem("remembered_email", trimmed);
+      } else {
+        localStorage.removeItem("remembered_email");
+      }
 
-  // ── handlers – halls ────────────────────────────────────────────────────
-  const saveHall = () => {
-    if (!hallForm.hall || !hallForm.capacity) return;
-    setHalls(prev => [...prev, { id: uid(), ...hallForm }]);
-    setHallForm({ hall: "", capacity: "", start: "08:00", end: "17:00" });
-    setShowHallModal(false);
-  };
-  const deleteHall = (id) => setHalls(prev => prev.filter(h => h.id !== id));
-
-  // ── handlers – generate ─────────────────────────────────────────────────
-  const handleGenerate = () => {
-    setGenerating(true);
-    setGenerateDone(false);
-    setTimeout(() => {
-      setGenerating(false);
-      setGenerateDone(true);
-    }, 2500);
+      localStorage.setItem("user", JSON.stringify(data));
+      redirectUser(data.role);
+    } catch (err) {
+      setError(err.message || "Invalid username or password.");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // ── render ───────────────────────────────────────────────────────────────
+  const handleResetPassword = async (e) => {
+    e.preventDefault();
+    if (!forgotIdentifier.trim()) {
+      setForgotError("Please enter your university email or username.");
+      return;
+    }
+    if (!newPassword || !confirmPassword) {
+      setForgotError("Please enter and confirm your new password.");
+      return;
+    }
+    if (newPassword.length < 6) {
+      setForgotError("Password must be at least 6 characters long.");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setForgotError("Passwords do not match.");
+      return;
+    }
+
+    setForgotLoading(true);
+    setForgotError("");
+    try {
+      const resp = await resetPasswordWithKey(forgotIdentifier.trim(), null, newPassword);
+      setForgotSuccess(resp.message || "Password reset successfully!");
+      setForgotStep(2);
+    } catch (err) {
+      setForgotError(err.message || "Failed to reset password. Please check your email and try again.");
+    } finally {
+      setForgotLoading(false);
+    }
+  };
+
+  const resetForgotState = () => {
+    setShowForgotModal(false);
+    setForgotStep(1);
+    setForgotIdentifier("");
+    setVerificationCode("");
+    setAccountInfo(null);
+    setNewPassword("");
+    setConfirmPassword("");
+    setForgotError("");
+    setForgotSuccess("");
+  };
+
   return (
-    <div className="app-layout">
-      <Sidebar />
+    <div style={{
+      minHeight: '100vh',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      background: 'var(--bg-primary)',
+      fontFamily: "'Inter', sans-serif",
+      padding: '20px'
+    }}>
+      <div style={{
+        background: '#ffffff',
+        borderRadius: '24px',
+        boxShadow: '0 25px 50px -12px rgba(22, 163, 74, 0.15)',
+        width: '100%',
+        maxWidth: '440px',
+        padding: '48px',
+        position: 'relative',
+        overflow: 'hidden'
+      }}>
+        {/* Subtle decorative top border */}
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '6px', background: 'var(--primary-600)' }}></div>
+        
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '32px' }}>
+          <img src="/logo.jpg" alt="University Logo" style={{ width: '72px', height: '72px', objectFit: 'contain', marginBottom: '16px', borderRadius: '12px' }} />
+          <h1 style={{ fontSize: '24px', fontWeight: '800', color: '#171717', margin: '0 0 8px 0', textAlign: 'center' }}>
+            Faculty of Engineering
+          </h1>
+          <p style={{ fontSize: '14px', color: '#737373', margin: 0, textAlign: 'center' }}>
+            Timetable Management System
+          </p>
+        </div>
 
-      <div className="main-content">
-        {/* ── Top Bar ── */}
-        <header className="topbar">
-          <div className="topbar-left">
-            <div className="topbar-breadcrumb">
-              Home <span style={{ color: "var(--neutral-400)" }}>/</span> <span>Optimizer</span>
+        {error && (
+          <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#b91c1c', padding: '12px 16px', borderRadius: '8px', fontSize: '14px', marginBottom: '24px', textAlign: 'center', fontWeight: '500' }}>
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <div>
+            <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#404040', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              University Email
+            </label>
+            <input
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              disabled={loading}
+              placeholder="user@eng.ruh.ac.lk"
+              style={{
+                width: '100%',
+                padding: '12px 16px',
+                borderRadius: '10px',
+                border: '2px solid #e2e8f0',
+                fontSize: '15px',
+                outline: 'none',
+                transition: 'border-color 0.2s',
+                boxSizing: 'border-box'
+              }}
+              onFocus={(e) => e.target.style.borderColor = 'var(--primary-600)'}
+              onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
+            />
+          </div>
+
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+              <label style={{ fontSize: '13px', fontWeight: '600', color: '#404040', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                Password
+              </label>
+              <button
+                type="button"
+                onClick={() => { setShowForgotModal(true); setForgotError(""); }}
+                style={{ background: 'none', border: 'none', color: 'var(--primary-600)', fontSize: '12px', fontWeight: '600', cursor: 'pointer', padding: 0 }}
+              >
+                Forgot Password?
+              </button>
+            </div>
+            
+            <div style={{ position: 'relative' }}>
+              <input
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={loading}
+                placeholder="••••••••"
+                style={{
+                  width: '100%',
+                  padding: '12px 42px 12px 16px',
+                  borderRadius: '10px',
+                  border: '2px solid #e2e8f0',
+                  fontSize: '15px',
+                  outline: 'none',
+                  transition: 'border-color 0.2s',
+                  boxSizing: 'border-box'
+                }}
+                onFocus={(e) => e.target.style.borderColor = 'var(--primary-600)'}
+                onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                style={{
+                  position: 'absolute',
+                  right: '12px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'none',
+                  border: 'none',
+                  color: '#94a3b8',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  padding: '4px'
+                }}
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
             </div>
           </div>
-          <div className="topbar-right">
-            <button className="topbar-icon-btn" title="Notifications">🔔</button>
-            <button className="topbar-icon-btn" title="Settings">⚙️</button>
-            <div style={{
-              width: 36, height: 36, borderRadius: "50%",
-              background: "linear-gradient(135deg, var(--primary-400), var(--primary-700))",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer"
-            }}>A</div>
-          </div>
-        </header>
 
-        <main className="page-content">
-          {/* ── Hero / Optimizer Banner ── */}
-          <div className="optimizer-hero">
-            <div className="optimizer-hero-content">
-              <div className="optimizer-hero-text">
-                <h1>⚡ Timetable Optimizer</h1>
-                <p>
-                  Select a batch, configure constraints, then generate a conflict-free timetable instantly.
+          {/* Remember me checkbox */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <input
+              type="checkbox"
+              id="rememberMe"
+              checked={rememberMe}
+              onChange={(e) => setRememberMe(e.target.checked)}
+              style={{ width: '16px', height: '16px', accentColor: 'var(--primary-600)', cursor: 'pointer' }}
+            />
+            <label htmlFor="rememberMe" style={{ fontSize: '13px', color: '#64748b', cursor: 'pointer', userSelect: 'none' }}>
+              Remember my email on this device
+            </label>
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            style={{
+              width: '100%',
+              padding: '14px',
+              background: 'var(--primary-600)',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '10px',
+              fontSize: '16px',
+              fontWeight: '600',
+              cursor: loading ? 'not-allowed' : 'pointer',
+              marginTop: '4px',
+              boxShadow: '0 4px 12px rgba(22, 163, 74, 0.25)',
+              transition: 'transform 0.1s, background 0.2s',
+              opacity: loading ? 0.8 : 1,
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center'
+            }}
+            onMouseOver={(e) => !loading && (e.currentTarget.style.background = 'var(--primary-700)')}
+            onMouseOut={(e) => !loading && (e.currentTarget.style.background = 'var(--primary-600)')}
+            onMouseDown={(e) => !loading && (e.currentTarget.style.transform = 'scale(0.98)')}
+            onMouseUp={(e) => !loading && (e.currentTarget.style.transform = 'scale(1)')}
+          >
+            {loading ? (
+              <div style={{ width: '20px', height: '20px', border: '2px solid rgba(255,255,255,0.4)', borderTop: '2px solid #fff', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
+            ) : "Sign In"}
+          </button>
+        </form>
+
+        <div style={{ marginTop: '28px', textAlign: 'center', fontSize: '14px', color: '#737373' }}>
+          Don't have an account?{' '}
+          <Link href="/register" style={{ color: 'var(--primary-600)', fontWeight: '600', textDecoration: 'none' }}>
+            Create one now
+          </Link>
+        </div>
+      </div>
+
+      {/* ─── FORGOT PASSWORD MODAL ─── */}
+      {showForgotModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(15, 23, 42, 0.65)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+          padding: '20px'
+        }}>
+          <div style={{
+            background: '#ffffff',
+            borderRadius: '20px',
+            width: '100%',
+            maxWidth: '460px',
+            padding: '32px',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+            position: 'relative'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
+              <div style={{ background: '#ecfdf5', color: 'var(--primary-700)', padding: '10px', borderRadius: '12px' }}>
+                <KeyRound size={22} />
+              </div>
+              <div>
+                <h2 style={{ fontSize: '18px', fontWeight: '700', color: '#1e293b', margin: 0 }}>
+                  Account Password Recovery
+                </h2>
+                <p style={{ fontSize: '13px', color: '#64748b', margin: '2px 0 0 0' }}>
+                  Reset your university account password
                 </p>
               </div>
             </div>
 
-            {/* ── Batch Pill Selector ── */}
-            <div className="batch-pill-row">
-              <span className="batch-pill-label">Select Batch:</span>
-              <div className="batch-pills">
-                {BATCHES.map(b => (
+            {forgotError && (
+              <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#b91c1c', padding: '10px 14px', borderRadius: '8px', fontSize: '13px', marginBottom: '16px' }}>
+                ⚠️ {forgotError}
+              </div>
+            )}
+
+            {/* STEP 1: Enter email and set new password directly */}
+            {forgotStep === 1 && (
+              <form onSubmit={handleResetPassword} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#475569', marginBottom: '6px' }}>
+                    University Email or Username
+                  </label>
+                  <input
+                    type="text"
+                    value={forgotIdentifier}
+                    onChange={(e) => setForgotIdentifier(e.target.value)}
+                    placeholder="user@eng.ruh.ac.lk or username"
+                    disabled={forgotLoading}
+                    required
+                    style={{
+                      width: '100%',
+                      padding: '11px 14px',
+                      borderRadius: '10px',
+                      border: '1.5px solid #cbd5e1',
+                      fontSize: '14px',
+                      outline: 'none',
+                      boxSizing: 'border-box'
+                    }}
+                    onFocus={(e) => e.target.style.borderColor = 'var(--primary-600)'}
+                    onBlur={(e) => e.target.style.borderColor = '#cbd5e1'}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#475569', marginBottom: '6px' }}>
+                    New Password
+                  </label>
+                  <div style={{ position: 'relative' }}>
+                    <input
+                      type={showNewPassword ? "text" : "password"}
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="Minimum 6 characters"
+                      disabled={forgotLoading}
+                      required
+                      style={{
+                        width: '100%',
+                        padding: '11px 40px 11px 14px',
+                        borderRadius: '10px',
+                        border: '1.5px solid #cbd5e1',
+                        fontSize: '14px',
+                        outline: 'none',
+                        boxSizing: 'border-box'
+                      }}
+                      onFocus={(e) => e.target.style.borderColor = 'var(--primary-600)'}
+                      onBlur={(e) => e.target.style.borderColor = '#cbd5e1'}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowNewPassword(!showNewPassword)}
+                      style={{
+                        position: 'absolute',
+                        right: '12px',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        background: 'none',
+                        border: 'none',
+                        color: '#94a3b8',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {showNewPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#475569', marginBottom: '6px' }}>
+                    Confirm New Password
+                  </label>
+                  <input
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Re-enter new password"
+                    disabled={forgotLoading}
+                    required
+                    style={{
+                      width: '100%',
+                      padding: '11px 14px',
+                      borderRadius: '10px',
+                      border: '1.5px solid #cbd5e1',
+                      fontSize: '14px',
+                      outline: 'none',
+                      boxSizing: 'border-box'
+                    }}
+                    onFocus={(e) => e.target.style.borderColor = 'var(--primary-600)'}
+                    onBlur={(e) => e.target.style.borderColor = '#cbd5e1'}
+                  />
+                </div>
+
+                <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
                   <button
-                    key={b.id}
-                    id={`batch-pill-${b.id}`}
-                    className={`batch-pill ${selectedBatch === b.id ? "active" : ""}`}
-                    onClick={() => handleBatchSelect(b.id)}
+                    type="button"
+                    onClick={resetForgotState}
+                    disabled={forgotLoading}
+                    style={{
+                      flex: 1,
+                      padding: '11px',
+                      background: '#f1f5f9',
+                      color: '#475569',
+                      border: 'none',
+                      borderRadius: '10px',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      cursor: 'pointer'
+                    }}
                   >
-                    <span className="batch-pill-year">{b.year}</span>
-                    <span className="batch-pill-dept">{b.dept}</span>
-                    {selectedBatch === b.id && <span className="batch-pill-check">✓</span>}
+                    Cancel
                   </button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* ── Data Sections ── */}
-
-          <div className="data-sections">
-            {/* ── Batch Modules Table ── */}
-            <div className="card batch-card">
-              <div className="card-header">
-                <div className="card-title">
-                  <div className="card-title-icon">📚</div>
-                  Module Schedule
-                </div>
-                <span className="badge badge-primary" style={{ fontSize: 13, padding: "5px 14px" }}>
-                  {BATCHES.find(b => b.id === selectedBatch)?.label}
-                </span>
-              </div>
-              <div className="card-body" style={{ padding: "0 0 16px" }}>
-                <div className="table-container" style={{ border: "none", borderRadius: 0 }}>
-                  <table className="data-table">
-                    <thead>
-                      <tr>
-                        <th>Module Code</th>
-                        <th>Module Name</th>
-                        <th>Hrs / Week</th>
-                        <th>Lectures</th>
-                        <th></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {modules.length === 0 ? (
-                        <tr>
-                          <td colSpan={5}>
-                            <div className="empty-state">
-                              <div className="empty-state-icon">📭</div>
-                              <div className="empty-state-text">No modules added yet</div>
-                            </div>
-                          </td>
-                        </tr>
-                      ) : modules.map(m => (
-                        <tr key={m.id}>
-                          <td><span className="badge badge-primary">{m.code}</span></td>
-                          <td>{m.name}</td>
-                          <td style={{ textAlign: "center" }}>{m.hours}</td>
-                          <td style={{ textAlign: "center" }}>{m.lectures}</td>
-                          <td>
-                            <button className="btn-delete" onClick={() => deleteModule(m.id)} title="Remove">✕</button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* Add Row */}
-                <div className="add-row-form" style={{ padding: "0 16px" }}>
-                  <div className="form-group" style={{ flex: "0 0 90px" }}>
-                    <input
-                      id="mod-code"
-                      className="form-input"
-                      placeholder="Code"
-                      value={newMod.code}
-                      onChange={e => setNewMod(p => ({ ...p, code: e.target.value }))}
-                    />
-                  </div>
-                  <div className="form-group" style={{ flex: 2 }}>
-                    <input
-                      id="mod-name"
-                      className="form-input"
-                      placeholder="Module Name"
-                      value={newMod.name}
-                      onChange={e => setNewMod(p => ({ ...p, name: e.target.value }))}
-                    />
-                  </div>
-                  <div className="form-group" style={{ flex: "0 0 70px" }}>
-                    <input
-                      id="mod-hours"
-                      className="form-input"
-                      placeholder="Hrs"
-                      type="number"
-                      min="1"
-                      value={newMod.hours}
-                      onChange={e => setNewMod(p => ({ ...p, hours: e.target.value }))}
-                    />
-                  </div>
-                  <div className="form-group" style={{ flex: "0 0 70px" }}>
-                    <input
-                      id="mod-lectures"
-                      className="form-input"
-                      placeholder="Lec"
-                      type="number"
-                      min="1"
-                      value={newMod.lectures}
-                      onChange={e => setNewMod(p => ({ ...p, lectures: e.target.value }))}
-                    />
-                  </div>
                   <button
-                    id="add-module-btn"
-                    className="btn btn-primary btn-sm"
-                    onClick={addModule}
-                    style={{ flex: "0 0 auto", whiteSpace: "nowrap" }}
+                    type="submit"
+                    disabled={forgotLoading}
+                    style={{
+                      flex: 1.5,
+                      padding: '11px',
+                      background: 'var(--primary-600)',
+                      color: '#ffffff',
+                      border: 'none',
+                      borderRadius: '10px',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      cursor: forgotLoading ? 'not-allowed' : 'pointer'
+                    }}
                   >
-                    + Add
+                    {forgotLoading ? "Resetting..." : "Reset Password"}
                   </button>
                 </div>
-              </div>
-            </div>
+              </form>
+            )}
 
-            {/* ── Lecturer Card ── */}
-            <div className="card lecturer-card">
-              <div className="card-header">
-                <div className="card-title">
-                  <div className="card-title-icon">👨‍🏫</div>
-                  Lecturers
+            {/* STEP 2: Success confirmation */}
+            {forgotStep === 2 && (
+              <div style={{ textAlign: 'center', padding: '10px 0' }}>
+                <div style={{ width: '48px', height: '48px', background: '#dcfce7', color: '#16a34a', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px auto' }}>
+                  <CheckCircle2 size={28} />
                 </div>
+                <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#1e293b', margin: '0 0 8px 0' }}>
+                  Password Reset Complete!
+                </h3>
+                <p style={{ fontSize: '13px', color: '#64748b', margin: '0 0 20px 0' }}>
+                  {forgotSuccess || "Your password has been updated. You can now sign in with your new password."}
+                </p>
                 <button
-                  id="add-lecturer-btn"
-                  className="btn btn-primary btn-sm"
-                  onClick={() => setShowLecturerModal(true)}
+                  type="button"
+                  onClick={() => {
+                    setUsername(forgotIdentifier.trim());
+                    resetForgotState();
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    background: 'var(--primary-600)',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '10px',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    cursor: 'pointer'
+                  }}
                 >
-                  + Add
+                  Return to Sign In
                 </button>
-              </div>
-              <div className="card-body" style={{ padding: "0 0 8px" }}>
-                {lecturers.length === 0 ? (
-                  <div className="empty-state">
-                    <div className="empty-state-icon">👤</div>
-                    <div className="empty-state-text">No lecturers added yet</div>
-                  </div>
-                ) : (
-                  <div style={{ padding: "0 0 8px" }}>
-                    {lecturers.map(l => (
-                      <div key={l.id} style={{
-                        padding: "12px 20px",
-                        borderBottom: "1px solid var(--neutral-100)",
-                        display: "flex",
-                        alignItems: "flex-start",
-                        justifyContent: "space-between",
-                        gap: 12
-                      }}>
-                        <div>
-                          <div style={{ fontWeight: 600, fontSize: 14, color: "var(--neutral-800)", marginBottom: 6 }}>
-                            {l.name}
-                          </div>
-                          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                            {l.modules.map(mod => (
-                              <span key={mod} className="badge badge-primary" style={{ fontSize: 11 }}>
-                                {mod.split(" - ")[0]}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                        <button className="btn-delete" onClick={() => deleteLecturer(l.id)} title="Remove">✕</button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* ── Hall Card ── */}
-            <div className="card hall-card">
-              <div className="card-header">
-                <div className="card-title">
-                  <div className="card-title-icon">🏛️</div>
-                  Halls
-                </div>
-                <button
-                  id="add-hall-btn"
-                  className="btn btn-primary btn-sm"
-                  onClick={() => setShowHallModal(true)}
-                >
-                  + Add
-                </button>
-              </div>
-              <div className="card-body" style={{ padding: "0 0 8px" }}>
-                {halls.length === 0 ? (
-                  <div className="empty-state">
-                    <div className="empty-state-icon">🏛️</div>
-                    <div className="empty-state-text">No halls configured</div>
-                  </div>
-                ) : (
-                  halls.map(h => (
-                    <div key={h.id} style={{
-                      padding: "12px 20px",
-                      borderBottom: "1px solid var(--neutral-100)",
-                      display: "flex",
-                      alignItems: "flex-start",
-                      justifyContent: "space-between",
-                      gap: 12
-                    }}>
-                      <div>
-                        <div style={{ fontWeight: 600, fontSize: 14, color: "var(--neutral-800)", marginBottom: 4 }}>
-                          {h.hall}
-                        </div>
-                        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                          <span className="badge badge-neutral">
-                            👥 {h.capacity} seats
-                          </span>
-                          <span className="badge badge-success">
-                            🕐 {h.start} – {h.end}
-                          </span>
-                        </div>
-                      </div>
-                      <button className="btn-delete" onClick={() => deleteHall(h.id)} title="Remove">✕</button>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* ── Bottom Generate Button ── */}
-          <div style={{
-            marginTop: 32,
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            gap: 12,
-            paddingBottom: 16,
-          }}>
-            <button
-              id="generate-bottom-btn"
-              onClick={handleGenerate}
-              disabled={generating}
-              style={{
-                background: generating
-                  ? "linear-gradient(135deg, var(--primary-400), var(--primary-600))"
-                  : generateDone
-                  ? "linear-gradient(135deg, #10b981, #059669)"
-                  : "linear-gradient(135deg, var(--primary-500), var(--primary-800))",
-                color: "#fff",
-                border: "none",
-                borderRadius: "var(--radius-md)",
-                padding: "16px 64px",
-                fontSize: 17,
-                fontWeight: 700,
-                fontFamily: "var(--font-family)",
-                cursor: generating ? "not-allowed" : "pointer",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 12,
-                boxShadow: "0 6px 24px rgba(0,150,136,0.35)",
-                transition: "all var(--transition-base)",
-                letterSpacing: "0.01em",
-                opacity: generating ? 0.85 : 1,
-              }}
-              onMouseEnter={e => { if (!generating) e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 10px 32px rgba(0,150,136,0.45)"; }}
-              onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 6px 24px rgba(0,150,136,0.35)"; }}
-            >
-              {generating ? (
-                <><Spinner /> Optimizing Timetable…</>
-              ) : generateDone ? (
-                <><span style={{ fontSize: 20 }}>✅</span> Regenerate Timetable</>
-              ) : (
-                <><span style={{ fontSize: 20 }}>⚡</span> Generate Timetable</>
-              )}
-            </button>
-
-            {generateDone && (
-              <div style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                padding: "10px 20px",
-                borderRadius: "var(--radius-full)",
-                background: "#ecfdf5",
-                border: "1px solid #6ee7b7",
-                color: "#065f46",
-                fontSize: 14,
-                fontWeight: 500,
-                animation: "slideUp 300ms ease",
-              }}>
-                <span>✓</span>
-                Timetable for <strong>{BATCHES.find(b => b.id === selectedBatch)?.label}</strong> generated successfully!
               </div>
             )}
           </div>
-        </main>
-
-      </div>
-
-      {/* ══════════ LECTURER MODAL ══════════ */}
-      {showLecturerModal && (
-        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setShowLecturerModal(false)}>
-          <div className="modal" id="lecturer-modal">
-            <div className="modal-header">
-              <div className="modal-title">👨‍🏫 Add Lecturer</div>
-              <button className="modal-close" onClick={() => setShowLecturerModal(false)}>✕</button>
-            </div>
-            <div className="modal-body">
-              <div className="form-group" style={{ marginBottom: 20 }}>
-                <label className="form-label" htmlFor="lecturer-name">
-                  Name <span className="required">*</span>
-                </label>
-                <input
-                  id="lecturer-name"
-                  className="form-input"
-                  placeholder="e.g. Dr. Fernando"
-                  value={lecturerForm.name}
-                  onChange={e => setLecturerForm(f => ({ ...f, name: e.target.value }))}
-                />
-              </div>
-
-              <div className="form-group" style={{ marginBottom: 16 }}>
-                <label className="form-label">Modules</label>
-                <div style={{ display: "flex", gap: 8 }}>
-                  <select
-                    id="lecturer-module-select"
-                    className="form-select"
-                    value={selectedModule}
-                    onChange={e => setSelectedModule(e.target.value)}
-                  >
-                    <option value="">— Select module —</option>
-                    {MODULE_OPTIONS.map(m => <option key={m} value={m}>{m}</option>)}
-                  </select>
-                  <button
-                    id="add-module-to-lecturer"
-                    className="btn btn-primary btn-sm"
-                    onClick={addModuleToLecturer}
-                    style={{ flexShrink: 0 }}
-                  >
-                    Add
-                  </button>
-                </div>
-              </div>
-
-              {lecturerForm.modules.length > 0 && (
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 8 }}>
-                  {lecturerForm.modules.map(mod => (
-                    <span key={mod} className="chip">
-                      {mod.split(" - ")[0]}
-                      <button className="chip-remove" onClick={() => removeModuleFromLecturer(mod)}>✕</button>
-                    </span>
-                  ))}
-                </div>
-              )}
-
-              {lecturerForm.modules.length === 0 && (
-                <div style={{
-                  padding: "14px", borderRadius: "var(--radius-sm)",
-                  background: "var(--neutral-50)", border: "1px dashed var(--neutral-300)",
-                  textAlign: "center", fontSize: 13, color: "var(--neutral-400)"
-                }}>
-                  No modules assigned yet
-                </div>
-              )}
-            </div>
-            <div className="modal-footer">
-              <button className="btn btn-secondary" onClick={() => setShowLecturerModal(false)}>Cancel</button>
-              <button id="save-lecturer-btn" className="btn btn-primary" onClick={saveLecturer}>
-                Save Lecturer
-              </button>
-            </div>
-          </div>
         </div>
       )}
 
-      {/* ══════════ HALL MODAL ══════════ */}
-      {showHallModal && (
-        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setShowHallModal(false)}>
-          <div className="modal" id="hall-modal">
-            <div className="modal-header">
-              <div className="modal-title">🏛️ Add Hall</div>
-              <button className="modal-close" onClick={() => setShowHallModal(false)}>✕</button>
-            </div>
-            <div className="modal-body">
-              <div className="form-group" style={{ marginBottom: 16 }}>
-                <label className="form-label" htmlFor="hall-select">
-                  Hall <span className="required">*</span>
-                </label>
-                <select
-                  id="hall-select"
-                  className="form-select"
-                  value={hallForm.hall}
-                  onChange={e => setHallForm(f => ({ ...f, hall: e.target.value }))}
-                >
-                  <option value="">— Select hall —</option>
-                  {HALL_OPTIONS.map(h => <option key={h} value={h}>{h}</option>)}
-                </select>
-              </div>
-
-              <div className="form-group" style={{ marginBottom: 16 }}>
-                <label className="form-label" htmlFor="hall-capacity">
-                  Capacity <span className="required">*</span>
-                </label>
-                <input
-                  id="hall-capacity"
-                  className="form-input"
-                  placeholder="e.g. 60"
-                  type="number"
-                  min="1"
-                  value={hallForm.capacity}
-                  onChange={e => setHallForm(f => ({ ...f, capacity: e.target.value }))}
-                />
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">Available Times</label>
-                <div className="hall-card" style={{ margin: 0 }}>
-                  <div className="time-range">
-                    <input
-                      id="hall-start"
-                      className="form-input"
-                      type="time"
-                      value={hallForm.start}
-                      onChange={e => setHallForm(f => ({ ...f, start: e.target.value }))}
-                    />
-                    <span className="time-separator">→</span>
-                    <input
-                      id="hall-end"
-                      className="form-input"
-                      type="time"
-                      value={hallForm.end}
-                      onChange={e => setHallForm(f => ({ ...f, end: e.target.value }))}
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="modal-footer">
-              <button className="btn btn-secondary" onClick={() => setShowHallModal(false)}>Cancel</button>
-              <button id="save-hall-btn" className="btn btn-primary" onClick={saveHall}>
-                Save Hall
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <style dangerouslySetInnerHTML={{__html: `
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+      `}} />
     </div>
-  );
-}
-
-// ── Spinner helper ─────────────────────────────────────────────────────────
-function Spinner() {
-  return (
-    <svg
-      width="16" height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.5"
-      style={{ animation: "spin 0.8s linear infinite" }}
-    >
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-      <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
-    </svg>
   );
 }

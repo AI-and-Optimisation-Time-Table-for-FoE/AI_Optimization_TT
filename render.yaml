@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: timetable-backend
+    env: java
+    rootDir: timetable
+    buildCommand: ./mvnw clean package -DskipTests
+    startCommand: java -jar target/timetable-0.0.1-SNAPSHOT.jar
+    envVars:
+      - key: JDBC_DATABASE_URL
+        value: jdbc:mysql://mysql-2fe3e6d3-gimaya222-6d31.c.aivencloud.com:12525/defaultdb?useSSL=true&trustServerCertificate=true&allowPublicKeyRetrieval=true
+      - key: JDBC_DATABASE_USERNAME
+        value: avnadmin
+      - key: JDBC_DATABASE_PASSWORD
+        sync: false
