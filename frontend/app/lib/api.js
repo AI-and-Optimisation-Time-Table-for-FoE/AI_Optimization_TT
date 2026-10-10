@@ -50,6 +50,7 @@ export function register(data) {
 }
 
 // === BATCHES ===
+// Gets the list of all batches from the backend
 export function fetchBatches() {
   return request("/api/batches");
 }
