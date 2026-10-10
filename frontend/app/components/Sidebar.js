@@ -14,6 +14,7 @@ export default function Sidebar() {
   // Controls whether the sidebar is open on mobile screens
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  // Load the user from localStorage when the page loads, and reload when "userUpdate" is fired
   useEffect(() => {
     const loadUser = () => {
       const userStr = localStorage.getItem("user");
