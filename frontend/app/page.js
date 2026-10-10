@@ -7,9 +7,11 @@ import { login, requestPasswordReset, resetPasswordWithKey } from "./lib/api";
 import { Eye, EyeOff, KeyRound, ArrowLeft, CheckCircle2, Lock, Mail, ShieldAlert } from "lucide-react";
 import "./optimizer.css"; 
 
+// Login page: lets admin, student and lecturer users sign in, and reset a forgotten password
 export default function LoginPage() {
   const router = useRouter();
-  const [username, setUsername] = useState("");
+  // Login form state: email, password, show/hide password, remember me, error message and loading flag
+  const [username, setUsername] = useState(""); 
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
@@ -49,6 +51,7 @@ export default function LoginPage() {
     }
   }, []);
 
+  // Sends the user to the correct dashboard based on their role (admin, student or lecturer)
   const redirectUser = (role) => {
     if (role === "admin") {
       router.push("/admin");
@@ -123,6 +126,7 @@ export default function LoginPage() {
     }
   };
 
+  // Closes the forgot password modal and clears all of its fields
   const resetForgotState = () => {
     setShowForgotModal(false);
     setForgotStep(1);

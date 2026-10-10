@@ -1,5 +1,8 @@
+
+// Base URL of the backend API: uses NEXT_PUBLIC_API_URL if set, otherwise localhost:5000 in development
 export const API_BASE = process.env.NEXT_PUBLIC_API_URL || (process.env.NODE_ENV === "production" ? "" : "http://localhost:5000");
 
+// Shared helper that sends every API call, adds JSON headers, and throws an error with the server's message if the request fails
 async function request(path, options = {}) {
   const response = await fetch(`${API_BASE}${path}`, {
     cache: "no-store",
@@ -30,7 +33,7 @@ async function request(path, options = {}) {
   return response.json();
 }
 
-// === AUTH ===
+// Sends the username and password to the backend and returns the logged-in user's details
 export function login(username, password) {
   const payload = typeof username === "object" ? username : { username, password };
   return request("/api/auth/login", {
@@ -47,6 +50,7 @@ export function register(data) {
 }
 
 // === BATCHES ===
+// Gets the list of all batches from the backend
 export function fetchBatches() {
   return request("/api/batches");
 }
