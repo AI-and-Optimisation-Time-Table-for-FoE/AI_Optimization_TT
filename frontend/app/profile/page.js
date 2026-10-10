@@ -138,7 +138,7 @@ export default function ProfilePage() {
     reader.onloadend = async () => {
       const base64Image = reader.result;
       
-      // Instantly preview
+    
       setFormData(prev => ({ ...prev, profilePicture: base64Image }));
 
       // Auto-save to database
