@@ -1,3 +1,5 @@
+
+// Base URL of the backend API: uses NEXT_PUBLIC_API_URL if set, otherwise localhost:5000 in development
 export const API_BASE = process.env.NEXT_PUBLIC_API_URL || (process.env.NODE_ENV === "production" ? "" : "http://localhost:5000");
 
 async function request(path, options = {}) {
