@@ -5,6 +5,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Shield, GraduationCap, Users, Calendar, LogOut, ClipboardList, Menu } from "lucide-react";
 
+// Sidebar component: shows the navigation menu, logo and logged-in user's profile.
+// The menu items change depending on the user's role (admin, student or lecturer).
 export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
