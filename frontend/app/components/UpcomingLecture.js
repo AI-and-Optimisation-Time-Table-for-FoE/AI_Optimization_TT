@@ -12,6 +12,7 @@ function getMinutesFromTime(timeStr) {
   return parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
 }
 
+// UpcomingLecture component: shows a card with the user's ongoing or next lecture, using the timetable entries passed in as props
 export default function UpcomingLecture({ entries = [] }) {
   const [currentTime, setCurrentTime] = useState(new Date());
 
