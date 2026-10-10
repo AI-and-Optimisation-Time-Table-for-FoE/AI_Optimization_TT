@@ -51,6 +51,7 @@ export default function LoginPage() {
     }
   }, []);
 
+  // Sends the user to the correct dashboard based on their role (admin, student or lecturer)
   const redirectUser = (role) => {
     if (role === "admin") {
       router.push("/admin");
