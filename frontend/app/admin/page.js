@@ -13,7 +13,7 @@ import {
   generateTimetable,
   fetchLabSchedules, createLabSchedule, deleteLabSchedule,
   fetchLecturers, fetchBatchModules, updateBatchModule, updateLecturer, deleteLecturer,
-  addModuleToBatch, removeModuleFromBatch
+  addModuleToBatch, removeModuleFromBatch, autoLinkSharedModules
 } from "../lib/api";
 import "../optimizer.css";
 import { Shield, GraduationCap, Building, BookOpen, Calendar, User, Zap, Plus, FlaskConical } from "lucide-react";
@@ -31,8 +31,18 @@ const SEMESTERS = [
 
 export default function AdminDashboard() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState("batches");
-  
+  // Persistent Tab & Selection States
+  const [activeTab, setActiveTabState] = useState(() => {
+    if (typeof window !== "undefined") {
+      return sessionStorage.getItem("admin_activeTab") || "batches";
+    }
+    return "batches";
+  });
+  const setActiveTab = (tab) => {
+    setActiveTabState(tab);
+    if (typeof window !== "undefined") sessionStorage.setItem("admin_activeTab", tab);
+  };
+
   // Data lists
   const [batches, setBatches] = useState([]);
   const [halls, setHalls] = useState([]);
@@ -43,12 +53,78 @@ export default function AdminDashboard() {
   const [lecturers, setLecturers] = useState([]);
   const [batchModules, setBatchModules] = useState([]);
   const [allBatchModules, setAllBatchModules] = useState([]);
-  const [assignBatchId, setAssignBatchId] = useState("");
-  const [assignDeptId, setAssignDeptId] = useState("");
+  
+  const [assignBatchId, setAssignBatchIdState] = useState(() => {
+    if (typeof window !== "undefined") {
+      const saved = sessionStorage.getItem("admin_assignBatchId");
+      if (saved && saved !== "NaN" && saved !== "undefined" && !saved.includes("=>") && !saved.includes("function") && !isNaN(Number(saved))) {
+        return saved;
+      }
+    }
+    return "";
+  });
+  const setAssignBatchId = (val) => {
+    setAssignBatchIdState(prev => {
+      const next = typeof val === "function" ? val(prev) : val;
+      if (typeof window !== "undefined") {
+        if (next && next !== "NaN" && next !== "undefined" && !String(next).includes("=>") && !String(next).includes("function") && !isNaN(Number(next))) {
+          sessionStorage.setItem("admin_assignBatchId", String(next));
+        } else if (!next) {
+          sessionStorage.removeItem("admin_assignBatchId");
+        }
+      }
+      return next;
+    });
+  };
+
+  const [assignDeptId, setAssignDeptIdState] = useState(() => {
+    if (typeof window !== "undefined") {
+      const saved = sessionStorage.getItem("admin_assignDeptId");
+      if (saved && saved !== "NaN" && saved !== "undefined" && !saved.includes("=>") && !saved.includes("function")) {
+        return saved;
+      }
+    }
+    return "";
+  });
+  const setAssignDeptId = (val) => {
+    setAssignDeptIdState(prev => {
+      const next = typeof val === "function" ? val(prev) : val;
+      if (typeof window !== "undefined") {
+        if (next && next !== "NaN" && next !== "undefined" && !String(next).includes("=>") && !String(next).includes("function")) {
+          sessionStorage.setItem("admin_assignDeptId", String(next));
+        } else if (!next) {
+          sessionStorage.removeItem("admin_assignDeptId");
+        }
+      }
+      return next;
+    });
+  };
+
   const [assignLoading, setAssignLoading] = useState(false);
   const [changedAssignments, setChangedAssignments] = useState({});
   const [filterDeptId, setFilterDeptId] = useState("all");
-  const [moduleBatchFilterId, setModuleBatchFilterId] = useState("all");
+  
+  const [moduleBatchFilterId, setModuleBatchFilterIdState] = useState(() => {
+    if (typeof window !== "undefined") {
+      const saved = sessionStorage.getItem("admin_moduleBatchFilterId");
+      if (saved && saved !== "NaN" && saved !== "undefined" && !saved.includes("=>") && !saved.includes("function")) {
+        return saved;
+      }
+    }
+    return "all";
+  });
+  const setModuleBatchFilterId = (val) => {
+    setModuleBatchFilterIdState(prev => {
+      const next = typeof val === "function" ? val(prev) : val;
+      if (typeof window !== "undefined") {
+        if (next && next !== "NaN" && next !== "undefined" && !String(next).includes("=>") && !String(next).includes("function")) {
+          sessionStorage.setItem("admin_moduleBatchFilterId", String(next));
+        }
+      }
+      return next;
+    });
+  };
+
   const [moduleDeptFilterId, setModuleDeptFilterId] = useState("");
   const [moduleBatchModules, setModuleBatchModules] = useState([]);
   const [assignableModuleId, setAssignableModuleId] = useState("");
@@ -58,7 +134,30 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [optimizing, setOptimizing] = useState(false);
-  const [selectedBatchId, setSelectedBatchId] = useState("");
+  
+  const [selectedBatchId, setSelectedBatchIdState] = useState(() => {
+    if (typeof window !== "undefined") {
+      const saved = sessionStorage.getItem("admin_selectedBatchId");
+      if (saved && saved !== "NaN" && saved !== "undefined" && !saved.includes("=>") && !saved.includes("function") && !isNaN(Number(saved))) {
+        return saved;
+      }
+    }
+    return "";
+  });
+  const setSelectedBatchId = (val) => {
+    setSelectedBatchIdState(prev => {
+      const next = typeof val === "function" ? val(prev) : val;
+      if (typeof window !== "undefined") {
+        if (next && next !== "NaN" && next !== "undefined" && !String(next).includes("=>") && !String(next).includes("function") && !isNaN(Number(next))) {
+          sessionStorage.setItem("admin_selectedBatchId", String(next));
+        } else if (!next) {
+          sessionStorage.removeItem("admin_selectedBatchId");
+        }
+      }
+      return next;
+    });
+  };
+
   const [optDeptId, setOptDeptId] = useState("");
   const [labs, setLabs] = useState([]);
   const [labForm, setLabForm] = useState({ batchId: "", dayOfWeek: "Monday", startTime: "08:30", endTime: "10:30", departmentId: "" });
@@ -101,13 +200,14 @@ export default function AdminDashboard() {
   }, []);
 
   const loadBatchModules = async (batchId, deptId) => {
-    if (!batchId) return;
+    if (!batchId || isNaN(Number(batchId))) return;
     setAssignLoading(true);
     try {
       const selectedBatch = batches.find(b => String(b.batchId) === String(batchId));
       const isDeptRequired = selectedBatch ? selectedBatch.semester >= 3 : false;
-      const data = await fetchBatchModules(Number(batchId), isDeptRequired ? Number(deptId) : null);
-      setBatchModules(data);
+      const validDeptId = (isDeptRequired && deptId && deptId !== "all" && !isNaN(Number(deptId))) ? Number(deptId) : null;
+      const data = await fetchBatchModules(Number(batchId), validDeptId);
+      setBatchModules(Array.isArray(data) ? data : []);
       setChangedAssignments({});
       
       const allData = await fetchBatchModules(Number(batchId), null);
@@ -125,24 +225,41 @@ export default function AdminDashboard() {
     }
   }, [activeTab, assignBatchId, assignDeptId]);
 
-  const handleSaveAssignment = async (batchModuleId, lecturerIds, preferredHallId, isShared, linkedBatchModuleId) => {
+  const handleSaveAllAssignments = async () => {
+    if (Object.keys(changedAssignments).length === 0) {
+      alert("No changes to save.");
+      return;
+    }
     try {
-      const payload = {
-        lecturerIds: Array.isArray(lecturerIds) ? lecturerIds.map(Number) : [],
-        preferredHallId: preferredHallId ? Number(preferredHallId) : null,
-        isShared: Boolean(isShared),
-        linkedBatchModuleId: linkedBatchModuleId ? Number(linkedBatchModuleId) : null
-      };
-      await updateBatchModule(batchModuleId, payload);
-      alert("Assignment saved successfully!");
+      const promises = Object.keys(changedAssignments).map(batchModuleId => {
+        const changes = changedAssignments[batchModuleId];
+        const bm = batchModules.find(b => String(b.batchModuleId) === String(batchModuleId));
+        
+        const isShared = changes.isShared !== undefined ? changes.isShared : (bm.isShared || false);
+        const linkedId = changes.linkedBatchModuleId !== undefined ? changes.linkedBatchModuleId : bm.linkedBatchModuleId;
+        const currentLecIds = changes.lecturerIds !== undefined ? changes.lecturerIds : (bm.allLecturerIds || []);
+        const currentHallId = changes.preferredHallId !== undefined ? changes.preferredHallId : (bm.preferredHall ? bm.preferredHall.hallId : null);
+        
+        const payload = {
+          lecturerIds: Array.isArray(currentLecIds) ? currentLecIds.map(Number) : [],
+          preferredHallId: currentHallId ? Number(currentHallId) : null,
+          isShared: Boolean(isShared),
+          linkedBatchModuleId: linkedId ? Number(linkedId) : null
+        };
+        return updateBatchModule(batchModuleId, payload);
+      });
+      
+      await Promise.all(promises);
+      alert("All assignments saved successfully!");
+      setChangedAssignments({});
       loadBatchModules(assignBatchId, assignDeptId);
     } catch (err) {
-      alert("Failed to save assignment: " + err.message);
+      alert("Failed to save assignments: " + err.message);
     }
   };
 
   const loadModuleBatchModules = async () => {
-    if (moduleBatchFilterId === "all") return;
+    if (!moduleBatchFilterId || moduleBatchFilterId === "all" || isNaN(Number(moduleBatchFilterId))) return;
     setModuleBatchLoading(true);
     try {
       const data = await fetchBatchModules(Number(moduleBatchFilterId), moduleDeptFilterId ? Number(moduleDeptFilterId) : null);
@@ -231,17 +348,19 @@ export default function AdminDashboard() {
       
       // Set defaults for IDs in forms
       if (dData.length > 0) {
+        const nonCompDepts = dData.filter(d => d.departmentCode !== "EC" && !d.departmentName?.toLowerCase().includes("computer"));
+        const defaultLecturerDeptId = nonCompDepts[0]?.departmentId || dData[0].departmentId;
         setModuleForm(prev => ({ ...prev, departmentId: dData[0].departmentId }));
         setUserForm(prev => ({ ...prev, departmentId: dData[0].departmentId }));
-        setLecturerForm(prev => ({ ...prev, departmentId: dData[0].departmentId }));
-        setOptDeptId(dData[0].departmentId.toString());
-        setAssignDeptId(dData[0].departmentId.toString());
+        setLecturerForm(prev => ({ ...prev, departmentId: defaultLecturerDeptId }));
+        setOptDeptId(prev => (prev && dData.some(d => String(d.departmentId) === String(prev))) ? prev : dData[0].departmentId.toString());
+        setAssignDeptId(prev => (prev && dData.some(d => String(d.departmentId) === String(prev))) ? prev : dData[0].departmentId.toString());
       }
       if (bData.length > 0) {
-        setUserForm(prev => ({ ...prev, batchId: bData[0].batchId }));
-        setLabForm(prev => ({ ...prev, batchId: bData[0].batchId, departmentId: dData[0]?.departmentId?.toString() || "" }));
-        setSelectedBatchId(prev => prev || String(bData[0].batchId));
-        setAssignBatchId(prev => prev || String(bData[0].batchId));
+        setUserForm(prev => ({ ...prev, batchId: prev.batchId || bData[0].batchId }));
+        setLabForm(prev => ({ ...prev, batchId: prev.batchId || bData[0].batchId, departmentId: prev.departmentId || (dData[0]?.departmentId?.toString() || "") }));
+        setSelectedBatchId(prev => (prev && !isNaN(Number(prev)) && bData.some(b => String(b.batchId) === String(prev))) ? prev : String(bData[0].batchId));
+        setAssignBatchId(prev => (prev && !isNaN(Number(prev)) && bData.some(b => String(b.batchId) === String(prev))) ? prev : String(bData[0].batchId));
       }
     } catch (err) {
       alert("Error loading dashboard data: " + err.message);
@@ -370,7 +489,8 @@ export default function AdminDashboard() {
           phoneNumber: lecturerForm.phoneNumber
         };
         await createUser(payload);
-        setLecturerForm({ username: "", password: "", name: "", email: "", departmentId: departments[0]?.departmentId || "", specialization: "", maxHoursPerWeek: 20, universityAddress: "", phoneNumber: "", title: "Dr." });
+        const nonCompDepts = departments.filter(d => d.departmentCode !== "EC" && !d.departmentName?.toLowerCase().includes("computer"));
+        setLecturerForm({ username: "", password: "", name: "", email: "", departmentId: nonCompDepts[0]?.departmentId || departments[0]?.departmentId || "", specialization: "", maxHoursPerWeek: 20, universityAddress: "", phoneNumber: "", title: "Dr." });
       } else if (type === "labschedule") {
         const selectedBatch = batches.find(b => String(b.batchId) === String(labForm.batchId));
         const isS12 = selectedBatch ? (selectedBatch.semester === 1 || selectedBatch.semester === 2) : true;
@@ -457,11 +577,15 @@ export default function AdminDashboard() {
   };
 
   const handleOptimize = async () => {
-    if (!selectedBatchId) {
+    if (!selectedBatchId || isNaN(Number(selectedBatchId))) {
       alert("Please select a batch first.");
       return;
     }
     const selectedBatch = batches.find(b => String(b.batchId) === String(selectedBatchId));
+    if (!selectedBatch) {
+      alert("Selected batch not found. Please re-select the batch.");
+      return;
+    }
     const isDeptRequired = selectedBatch ? selectedBatch.semester >= 3 : false;
     
     if (isDeptRequired && !optDeptId) {
@@ -683,10 +807,9 @@ export default function AdminDashboard() {
                         </thead>
                         <tbody>
                           {batches.slice().sort((a, b) => {
-                            if (a.semester !== b.semester) {
-                              return a.semester - b.semester;
-                            }
-                            return a.batchName.localeCompare(b.batchName);
+                            const numA = parseInt((a.batchName || "").replace(/\D/g, ""), 10) || a.batchId || 0;
+                            const numB = parseInt((b.batchName || "").replace(/\D/g, ""), 10) || b.batchId || 0;
+                            return numA - numB;
                           }).map((b) => (
                             <tr key={b.batchId}>
                               <td>{b.batchId}</td>
@@ -1087,7 +1210,7 @@ export default function AdminDashboard() {
                           style={{ padding: "8px 12px", borderRadius: "var(--radius-sm)", border: "1px solid var(--neutral-300)", outline: "none", minWidth: "250px" }}
                         >
                           <option value="all">All Departments</option>
-                          {departments.map(d => (
+                          {departments.filter(d => d.departmentCode !== "EC" && !d.departmentName?.toLowerCase().includes("computer")).map(d => (
                             <option key={d.departmentId} value={d.departmentId}>
                               {d.departmentName} ({d.departmentCode})
                             </option>
@@ -1139,7 +1262,7 @@ export default function AdminDashboard() {
                               <td>
                                 {editingId === lec.lecturerId ? (
                                   <select value={editData.departmentId || (lec.department?.departmentId || "")} onChange={e => setEditData({...editData, departmentId: e.target.value})}>
-                                    {departments.map(d => <option key={d.departmentId} value={d.departmentId}>{d.departmentCode}</option>)}
+                                    {departments.filter(d => d.departmentCode !== "EC" && !d.departmentName?.toLowerCase().includes("computer")).map(d => <option key={d.departmentId} value={d.departmentId}>{d.departmentCode}</option>)}
                                   </select>
                                 ) : (lec.department?.departmentCode || "—")}
                               </td>
@@ -1224,7 +1347,7 @@ export default function AdminDashboard() {
                         <div>
                           <label style={{ fontSize: "12px", fontWeight: "600" }}>Department</label>
                           <select value={lecturerForm.departmentId} onChange={e => setLecturerForm({...lecturerForm, departmentId: e.target.value})} style={{ width: "100%", padding: "8px" }} required>
-                            {departments.map(d => <option key={d.departmentId} value={d.departmentId}>{d.departmentName}</option>)}
+                            {departments.filter(d => d.departmentCode !== "EC" && !d.departmentName?.toLowerCase().includes("computer")).map(d => <option key={d.departmentId} value={d.departmentId}>{d.departmentName}</option>)}
                           </select>
                         </div>
                         <div>
@@ -1495,13 +1618,31 @@ export default function AdminDashboard() {
                             {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"].map(day => <option key={day} value={day}>{day}</option>)}
                           </select>
                         </div>
-                        <div style={{ flex: "1 1 120px" }}>
+                        <div style={{ flex: "1 1 130px" }}>
                           <label style={{ fontSize: "12px", fontWeight: "600", display: "block", marginBottom: "4px" }}>Start Time</label>
-                          <input type="text" placeholder="e.g. 14:30" value={labForm.startTime} onChange={e => setLabForm({...labForm, startTime: e.target.value})} required style={{ width: "100%", padding: "8px", borderRadius: "var(--radius-sm)", border: "1px solid var(--neutral-300)" }} />
+                          <select 
+                            value={labForm.startTime} 
+                            onChange={e => setLabForm({...labForm, startTime: e.target.value})} 
+                            required 
+                            style={{ width: "100%", padding: "8px", borderRadius: "var(--radius-sm)", border: "1px solid var(--neutral-300)" }}
+                          >
+                            {["08:00", "08:30", "09:00", "09:30", "10:00", "10:30", "11:00", "11:30", "12:00", "12:30", "13:00", "13:30", "14:00", "14:30", "15:00", "15:30", "16:00", "16:30", "17:00", "17:30"].map(t => (
+                              <option key={t} value={t}>{t}</option>
+                            ))}
+                          </select>
                         </div>
-                        <div style={{ flex: "1 1 120px" }}>
+                        <div style={{ flex: "1 1 130px" }}>
                           <label style={{ fontSize: "12px", fontWeight: "600", display: "block", marginBottom: "4px" }}>End Time</label>
-                          <input type="text" placeholder="e.g. 17:30" value={labForm.endTime} onChange={e => setLabForm({...labForm, endTime: e.target.value})} required style={{ width: "100%", padding: "8px", borderRadius: "var(--radius-sm)", border: "1px solid var(--neutral-300)" }} />
+                          <select 
+                            value={labForm.endTime} 
+                            onChange={e => setLabForm({...labForm, endTime: e.target.value})} 
+                            required 
+                            style={{ width: "100%", padding: "8px", borderRadius: "var(--radius-sm)", border: "1px solid var(--neutral-300)" }}
+                          >
+                            {["09:30", "10:00", "10:30", "11:00", "11:30", "12:00", "12:30", "13:00", "13:30", "14:00", "14:30", "15:00", "15:30", "16:00", "16:30", "17:00", "17:30", "18:00", "18:30"].map(t => (
+                              <option key={t} value={t}>{t}</option>
+                            ))}
+                          </select>
                         </div>
                         <div style={{ flex: "1 1 150px" }}>
                           <button type="submit" disabled={submitting} className="btn btn-primary" style={{ width: "100%", padding: "9px" }}>Add Lab</button>
@@ -1589,6 +1730,7 @@ export default function AdminDashboard() {
                                 onChange={(e) => setAssignDeptId(e.target.value)}
                                 style={{ padding: "8px 12px", borderRadius: "var(--radius-sm)", border: "1px solid var(--neutral-300)", outline: "none", minWidth: "200px" }}
                               >
+                                <option value="all">All Departments</option>
                                 {departments.map(d => (
                                   <option key={d.departmentId} value={d.departmentId}>
                                     {d.departmentName} ({d.departmentCode})
@@ -1623,6 +1765,32 @@ export default function AdminDashboard() {
                         </div>
                       ) : (
                         <div className="table-responsive">
+                          <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px", marginBottom: "16px" }}>
+                            <button 
+                              className="btn btn-secondary" 
+                              style={{ display: "flex", alignItems: "center", gap: "6px" }}
+                              onClick={async () => {
+                                if (!assignBatchId) return;
+                                try {
+                                  await autoLinkSharedModules(assignBatchId);
+                                  alert("Shared modules have been automatically detected and linked across departments!");
+                                  await loadBatchModules(assignBatchId, assignDeptId);
+                                } catch (err) {
+                                  alert("Error auto-linking shared modules: " + err.message);
+                                }
+                              }}
+                            >
+                              <Zap size={14} />
+                              <span>Auto-Link Shared Modules</span>
+                            </button>
+                            <button 
+                              className="btn btn-primary" 
+                              onClick={handleSaveAllAssignments}
+                              disabled={Object.keys(changedAssignments).length === 0}
+                            >
+                              Save All Changes
+                            </button>
+                          </div>
                           <table className="data-table">
                             <thead>
                               <tr>
@@ -1710,12 +1878,20 @@ export default function AdminDashboard() {
                                       >
                                         <option value="">+ Add Lecturer...</option>
                                         {(() => {
-                                          // Filter to selected department and IS department
+                                          // Filter to selected department and IS department (or EE + IS for Computer Dept)
+                                          const selectedDept = departments.find(d => String(d.departmentId) === String(assignDeptId));
+                                          const isComputerDept = selectedDept?.departmentCode === "EC" || String(assignDeptId) === "6";
+
                                           const deptFiltered = lecturers.filter(lec => {
                                             if (currentLecIds.includes(lec.lecturerId)) return false;
                                             if (!assignDeptId) return true; // Show all for semesters 1-2
                                             const lecDeptId = lec.department?.departmentId;
                                             const lecDeptCode = lec.department?.departmentCode;
+
+                                            if (isComputerDept) {
+                                              return lecDeptCode === "EE" || lecDeptId === 2 || lecDeptCode === "IS" || lecDeptId === 4;
+                                            }
+
                                             return lecDeptId === Number(assignDeptId) || String(lecDeptId) === String(assignDeptId) || lecDeptId === 4 || lecDeptCode === "IS";
                                           });
                                           return deptFiltered.map(lec => (
@@ -1806,26 +1982,6 @@ export default function AdminDashboard() {
                                     </td>
                                     <td>
                                       <div style={{ display: "flex", gap: "6px" }}>
-                                        <button
-                                          onClick={() => {
-                                            const isShared = changedAssignments[bm.batchModuleId]?.isShared !== undefined 
-                                                  ? changedAssignments[bm.batchModuleId].isShared 
-                                                  : (bm.isShared || false);
-                                            const linkedId = changedAssignments[bm.batchModuleId]?.linkedBatchModuleId !== undefined 
-                                                  ? changedAssignments[bm.batchModuleId].linkedBatchModuleId 
-                                                  : bm.linkedBatchModuleId;
-                                            handleSaveAssignment(bm.batchModuleId, currentLecIds, currentHallId, isShared, linkedId);
-                                          }}
-                                          className="btn btn-primary btn-sm"
-                                          disabled={
-                                            changedAssignments[bm.batchModuleId]?.lecturerIds === undefined &&
-                                            changedAssignments[bm.batchModuleId]?.preferredHallId === undefined &&
-                                            changedAssignments[bm.batchModuleId]?.isShared === undefined &&
-                                            changedAssignments[bm.batchModuleId]?.linkedBatchModuleId === undefined
-                                          }
-                                        >
-                                          Save
-                                        </button>
                                         <button
                                           onClick={async () => {
                                             if (confirm(`Are you sure you want to remove ${bm.moduleCode} assignment from this batch?`)) {

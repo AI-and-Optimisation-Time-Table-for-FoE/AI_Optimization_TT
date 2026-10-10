@@ -2,9 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import Sidebar from "../components/Sidebar";
-import { fetchBatchModules, fetchBatches, fetchUserProfile } from "../lib/api";
-import { GraduationCap, BookOpen, AlertTriangle } from "lucide-react";
+import { fetchBatchModules, fetchBatches, fetchUserProfile, fetchTimetable, fetchStudentExamTimetable, fetchPersonalizedStudentEnrollments } from "../lib/api";
+import { GraduationCap, BookOpen, AlertTriangle, Calendar, ArrowRight } from "lucide-react";
+import UpcomingLecture from "../components/UpcomingLecture";
 import "./student.css";
 
 export default function StudentDashboard() {
@@ -12,6 +14,8 @@ export default function StudentDashboard() {
   const [user, setUser] = useState(null);
   const [batch, setBatch] = useState(null);
   const [modules, setModules] = useState([]);
+  const [entries, setEntries] = useState([]);
+  const [isExamPublished, setIsExamPublished] = useState(false);
   
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -31,16 +35,22 @@ export default function StudentDashboard() {
     setUser(userData);
 
     loadStudentData(userData);
+
+    const interval = setInterval(() => {
+      loadStudentData(userData, false);
+    }, 30000);
+
+    return () => clearInterval(interval);
   }, []);
 
-  const loadStudentData = async (userData) => {
+  async function loadStudentData(userData, showLoading = true) {
     if (!userData.batchId) {
       setError("No batch assigned to this student account. Please contact an administrator.");
-      setLoading(false);
+      if (showLoading) setLoading(false);
       return;
     }
 
-    setLoading(true);
+    if (showLoading) setLoading(true);
     setError("");
 
     try {
@@ -49,11 +59,58 @@ export default function StudentDashboard() {
       const currentBatch = batchesList.find((b) => b.batchId === userData.batchId);
       setBatch(currentBatch);
 
-      // 2. Fetch modules for this batch
-      const modulesData = await fetchBatchModules(userData.batchId, userData.departmentId);      
-      setModules(modulesData);
+      // 2. Fetch personalized enrollments from MIS if available
+      const studentIdentifier = userData.studentIdNumber || userData.universityEmail || userData.username;
+      let personalEnrollments = [];
+      try {
+        if (studentIdentifier) {
+          personalEnrollments = await fetchPersonalizedStudentEnrollments(studentIdentifier);
+        }
+      } catch (enrollErr) {
+        console.log("No personal MIS enrollments recorded yet:", enrollErr);
+      }
 
-      // 3. Fetch user profile to get first and last name
+      // 3. Fetch modules for this batch
+      const modulesData = await fetchBatchModules(userData.batchId, userData.departmentId);      
+      if (Array.isArray(personalEnrollments) && personalEnrollments.length > 0) {
+        const enrolledModIds = new Set(personalEnrollments.map(e => e.module?.moduleId));
+        const filteredMods = modulesData.filter(m => enrolledModIds.has(m.moduleId || m.module?.moduleId));
+        setModules(filteredMods.length > 0 ? filteredMods : modulesData);
+      } else {
+        setModules(modulesData);
+      }
+
+      // 4. Fetch timetable entries for this student
+      const timetableData = await fetchTimetable(userData.batchId, userData.departmentId, false, null);
+      let rawEntries = [];
+      if (Array.isArray(timetableData)) {
+        rawEntries = timetableData;
+      } else if (timetableData && timetableData.entries) {
+        rawEntries = timetableData.entries;
+      }
+
+      // If personalized MIS enrollments exist, filter lecture schedule to only their subjects
+      if (Array.isArray(personalEnrollments) && personalEnrollments.length > 0) {
+        const enrolledModCodes = new Set(personalEnrollments.map(e => e.module?.moduleCode?.toUpperCase()));
+        const personalEntries = rawEntries.filter(e => enrolledModCodes.has(e.moduleCode?.toUpperCase()));
+        setEntries(personalEntries.length > 0 ? personalEntries : rawEntries);
+      } else {
+        setEntries(rawEntries);
+      }
+
+      // 5. Fetch exam timetable status for this student's batch
+      try {
+        const examData = await fetchStudentExamTimetable(userData.batchId, studentIdentifier);
+        if (examData && examData.status === "published" && examData.entries && examData.entries.length > 0) {
+          setIsExamPublished(true);
+        } else {
+          setIsExamPublished(false);
+        }
+      } catch (examErr) {
+        console.error("Exam timetable status check:", examErr);
+      }
+
+      // 5. Fetch user profile to get first and last name
       try {
         const profileData = await fetchUserProfile(userData.userId);
         if (profileData) {
@@ -61,7 +118,8 @@ export default function StudentDashboard() {
             ...userData, 
             firstName: profileData.firstName, 
             lastName: profileData.lastName,
-            profilePicture: profileData.profilePicture
+            profilePicture: profileData.profilePicture,
+            studentIdNumber: profileData.studentIdNumber
           };
           setUser(updatedUser);
           localStorage.setItem("user", JSON.stringify(updatedUser));
@@ -73,7 +131,7 @@ export default function StudentDashboard() {
       console.error(err);
       setError("Could not load student dashboard details from the database.");
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
   };
 
@@ -142,6 +200,54 @@ export default function StudentDashboard() {
                   </div>
                 </div>
               </div>
+
+              {/* Exam Published Announcement Card */}
+              {isExamPublished && (
+                <div className="card" style={{ 
+                  background: "linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)", 
+                  color: "#ffffff", 
+                  marginBottom: "24px",
+                  borderRadius: "16px",
+                  padding: "20px 24px",
+                  boxShadow: "0 4px 16px rgba(49, 46, 129, 0.25)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  flexWrap: "wrap",
+                  gap: "16px"
+                }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+                    <div style={{ background: "rgba(255,255,255,0.15)", borderRadius: "50%", padding: "12px", display: "flex" }}>
+                      <Calendar size={28} color="#ffffff" />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: "17px", fontWeight: "700" }}>
+                        Exam timetables are now published!
+                      </div>
+                      <p style={{ margin: "2px 0 0 0", fontSize: "13px", opacity: 0.85 }}>
+                        Your official end-semester exam dates, times, and hall locations are now available. Click below to view your schedule.
+                      </p>
+                    </div>
+                  </div>
+                  <Link href="/student/exam-timetable" className="btn" style={{ 
+                    background: "#ffffff", 
+                    color: "#312e81", 
+                    fontWeight: "700", 
+                    padding: "10px 18px", 
+                    borderRadius: "10px",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    textDecoration: "none"
+                  }}>
+                    <span>View Exam Schedule</span>
+                    <ArrowRight size={16} />
+                  </Link>
+                </div>
+              )}
+
+              {/* Upcoming Lecture Widget */}
+              <UpcomingLecture entries={entries} />
 
               {/* Your Course Modules — full width below welcome card */}
               <div className="card" style={{ marginBottom: "32px" }}>

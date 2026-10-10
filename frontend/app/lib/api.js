@@ -1,4 +1,4 @@
-export const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+export const API_BASE = process.env.NEXT_PUBLIC_API_URL || (process.env.NODE_ENV === "production" ? "" : "http://localhost:5000");
 
 async function request(path, options = {}) {
   const response = await fetch(`${API_BASE}${path}`, {
@@ -198,8 +198,15 @@ export function fetchLecturerModules(lecturerId) {
   return request(`/api/lecturers/${lecturerId}/modules`);
 }
 
+export function autoLinkSharedModules(batchId) {
+  return request(`/api/batches/${batchId}/auto-link-shared`, {
+    method: "POST"
+  });
+}
+
 // === BATCH MODULE ASSIGNMENT ===
 export function fetchBatchModules(batchId, departmentId) {
+  if (!batchId || isNaN(Number(batchId))) return Promise.resolve([]);
   const query = departmentId ? `?departmentId=${departmentId}` : "";
   return request(`/api/batches/${batchId}/modules${query}`);
 }
@@ -212,6 +219,7 @@ export function updateBatchModule(batchModuleId, data) {
 }
 
 export function addModuleToBatch(batchId, moduleId, departmentId) {
+  if (!batchId || isNaN(Number(batchId))) return Promise.reject(new Error("Invalid batch ID"));
   return request(`/api/batches/${batchId}/modules`, {
     method: "POST",
     body: JSON.stringify({ moduleId, departmentId })
@@ -219,6 +227,7 @@ export function addModuleToBatch(batchId, moduleId, departmentId) {
 }
 
 export function removeModuleFromBatch(batchId, batchModuleId, departmentId) {
+  if (!batchId || isNaN(Number(batchId))) return Promise.reject(new Error("Invalid batch ID"));
   let query = "";
   if (departmentId) query = `?departmentId=${departmentId}`;
   return request(`/api/batches/${batchId}/modules/${batchModuleId}${query}`, {
@@ -229,7 +238,7 @@ export function removeModuleFromBatch(batchId, batchModuleId, departmentId) {
 // === LAB SCHEDULES ===
 export function fetchLabSchedules(batchId, departmentId) {
   let query = "";
-  if (batchId) query += `?batchId=${batchId}`;
+  if (batchId && !isNaN(Number(batchId))) query += `?batchId=${batchId}`;
   if (departmentId) query += (query ? `&` : `?`) + `departmentId=${departmentId}`;
   return request(`/api/lab-schedules${query}`);
 }
@@ -249,6 +258,7 @@ export function deleteLabSchedule(id) {
 
 // === TIMETABLE GENERATION & ACCESS ===
 export function generateTimetable(batchId, departmentId) {
+  if (!batchId || isNaN(Number(batchId))) return Promise.reject(new Error("Invalid batch ID"));
   let query = `?batchId=${batchId}`;
   if (departmentId) {
     query += `&departmentId=${departmentId}`;
@@ -260,7 +270,7 @@ export function generateTimetable(batchId, departmentId) {
 
 export function fetchTimetable(batchId, departmentId, isAdmin, timetableId) {
   let query = "";
-  if (batchId) query += `?batchId=${batchId}`;
+  if (batchId && !isNaN(Number(batchId))) query += `?batchId=${batchId}`;
   if (departmentId) query += (query ? `&` : `?`) + `departmentId=${departmentId}`;
   if (isAdmin) query += (query ? `&` : `?`) + `isAdmin=true`;
   if (timetableId) query += (query ? `&` : `?`) + `timetableId=${timetableId}`;
@@ -271,16 +281,20 @@ export function fetchLecturerTimetable(lecturerId) {
   return request(`/api/timetable?lecturerId=${lecturerId}`);
 }
 
-export function fetchTimetableStatus(batchId, departmentId) {
+export function fetchTimetableStatus(batchId, departmentId, isAdmin) {
   let query = "";
-  if (batchId) query += `?batchId=${batchId}`;
+  if (batchId && !isNaN(Number(batchId))) query += `?batchId=${batchId}`;
   if (departmentId) {
     query += (query ? `&` : `?`) + `departmentId=${departmentId}`;
+  }
+  if (isAdmin) {
+    query += (query ? `&` : `?`) + `isAdmin=true`;
   }
   return request(`/api/timetable/status${query}`);
 }
 
 export function publishTimetable(batchId, departmentId) {
+  if (!batchId || isNaN(Number(batchId))) return Promise.reject(new Error("Invalid batch ID"));
   let query = `?batchId=${batchId}`;
   if (departmentId) {
     query += `&departmentId=${departmentId}`;
@@ -307,8 +321,132 @@ export function publishTimetableVersion(versionId) {
   });
 }
 
+export function unpublishTimetableVersion(versionId) {
+  return request("/api/timetable/versions/unpublish", {
+    method: "POST",
+    body: JSON.stringify({ timetableId: versionId }),
+  });
+}
+
 export function deleteTimetableVersion(versionId) {
   return request(`/api/timetable/versions/${versionId}`, {
+    method: "DELETE",
+  });
+}
+
+export function fetchMasterLecturerStatus() {
+  return request("/api/timetable/versions/master-lecturer-status");
+}
+
+export function publishMasterLecturerTimetable() {
+  return request("/api/timetable/versions/publish-master-lecturer", {
+    method: "POST",
+  });
+}
+
+export function unpublishMasterLecturerTimetable() {
+  return request("/api/timetable/versions/unpublish-master-lecturer", {
+    method: "POST",
+  });
+}
+
+export function fetchExamTimetables(batchId, streamScope) {
+  let params = [];
+  if (batchId) params.push(`batchId=${batchId}`);
+  if (streamScope) params.push(`streamScope=${encodeURIComponent(streamScope)}`);
+  const query = params.length > 0 ? `?${params.join("&")}` : "";
+  return request(`/api/exam-timetables${query}`);
+}
+
+export function fetchExamTimetableDetails(examTimetableId) {
+  return request(`/api/exam-timetables/${examTimetableId}`);
+}
+
+export function createExamTimetable(data) {
+  return request("/api/exam-timetables", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export function saveExamEntries(examTimetableId, entries) {
+  return request(`/api/exam-timetables/${examTimetableId}/entries`, {
+    method: "POST",
+    body: JSON.stringify(entries),
+  });
+}
+
+export function publishExamTimetable(examTimetableId) {
+  return request(`/api/exam-timetables/${examTimetableId}/publish`, {
+    method: "POST",
+  });
+}
+
+export function unpublishExamTimetable(examTimetableId) {
+  return request(`/api/exam-timetables/${examTimetableId}/unpublish`, {
+    method: "POST",
+  });
+}
+
+export function reoptimizeExamTimetable(examTimetableId) {
+  return request(`/api/exam-timetables/${examTimetableId}/reoptimize`, {
+    method: "POST",
+  });
+}
+
+export function deleteExamTimetable(examTimetableId) {
+  return request(`/api/exam-timetables/${examTimetableId}`, {
+    method: "DELETE",
+  });
+}
+
+export function deleteExamEntry(examTimetableId, entryId) {
+  return request(`/api/exam-timetables/${examTimetableId}/entries/${entryId}`, {
+    method: "DELETE",
+  });
+}
+
+
+export function fetchExamHallUnavailabilities() {
+  return request("/api/exam-timetables/hall-unavailabilities");
+}
+
+export function addExamHallUnavailability(data) {
+  return request("/api/exam-timetables/hall-unavailabilities", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export function deleteExamHallUnavailability(id) {
+  return request(`/api/exam-timetables/hall-unavailabilities/${id}`, {
+    method: "DELETE",
+  });
+}
+
+export function fetchStudentExamTimetable(batchId, identifier = null) {
+  const query = identifier ? `batchId=${batchId}&identifier=${encodeURIComponent(identifier)}` : `batchId=${batchId}`;
+  return request(`/api/exam-timetables/student?${query}`);
+}
+
+// === MIS STUDENT ENROLLMENT SYNC & PERSONALIZATION ===
+export function fetchStudentEnrollments(batchId) {
+  return request(`/api/student-enrollments/batch/${batchId}`);
+}
+
+export function fetchPersonalizedStudentEnrollments(identifier) {
+  return request(`/api/student-enrollments/student?identifier=${encodeURIComponent(identifier)}`);
+}
+
+export function syncMISStudentEnrollments(batchId, records) {
+  return request(`/api/student-enrollments/sync`, {
+    method: "POST",
+    body: JSON.stringify({ batchId, records }),
+  });
+}
+
+export function clearBatchEnrollments(batchId) {
+  return request(`/api/student-enrollments/batch/${batchId}`, {
     method: "DELETE",
   });
 }
@@ -322,5 +460,47 @@ export function updateUserProfile(userId, data) {
   return request(`/api/auth/profile/${userId}`, {
     method: "PATCH",
     body: JSON.stringify(data),
+  });
+}
+
+export function changePassword(userId, currentPassword, newPassword) {
+  return request(`/api/auth/change-password`, {
+    method: "POST",
+    body: JSON.stringify({ userId, currentPassword, newPassword }),
+  });
+}
+
+export function requestPasswordReset(identifier) {
+  return request(`/api/auth/forgot-password`, {
+    method: "POST",
+    body: JSON.stringify({ identifier }),
+  });
+}
+
+export function verifyResetCode(email, verificationCode) {
+  return request(`/api/auth/verify-reset-code`, {
+    method: "POST",
+    body: JSON.stringify({ email, verificationCode }),
+  });
+}
+
+export function resetPasswordDirect(identifier, newPassword) {
+  return request(`/api/auth/reset-password`, {
+    method: "POST",
+    body: JSON.stringify({ identifier, newPassword }),
+  });
+}
+
+export function resetPasswordWithKey(identifier, verificationCode, newPassword) {
+  return request(`/api/auth/reset-password`, {
+    method: "POST",
+    body: JSON.stringify({ identifier, newPassword }),
+  });
+}
+
+export function moveTimetableEntry(entryId, dayOfWeek, startTime, endTime, venueId) {
+  return request(`/api/timetable/entries/${entryId}/move`, {
+    method: "PUT",
+    body: JSON.stringify({ dayOfWeek, startTime, endTime, venueId }),
   });
 }

@@ -3,8 +3,8 @@
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Sidebar from "../components/Sidebar";
-import { fetchUserProfile, updateUserProfile } from "../lib/api";
-import { User, Mail, Briefcase, MapPin, Phone, Camera, ArrowLeft, Loader2, Award, BookOpen, LogOut, CheckCircle } from "lucide-react";
+import { fetchUserProfile, updateUserProfile, changePassword } from "../lib/api";
+import { User, Mail, Briefcase, MapPin, Phone, Camera, ArrowLeft, Loader2, Award, BookOpen, LogOut, CheckCircle, Lock } from "lucide-react";
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -14,6 +14,15 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
+
+  // Password change state
+  const [showPasswordCard, setShowPasswordCard] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPasswordInput, setNewPasswordInput] = useState("");
+  const [confirmNewPasswordInput, setConfirmNewPasswordInput] = useState("");
+  const [passwordSaving, setPasswordSaving] = useState(false);
+  const [passwordError, setPasswordError] = useState("");
+  const [passwordSuccess, setPasswordSuccess] = useState("");
 
   // Details state
   const [formData, setFormData] = useState({
@@ -28,7 +37,8 @@ export default function ProfilePage() {
     role: "",
     batchName: "",
     departmentName: "",
-    maxHoursPerWeek: ""
+    maxHoursPerWeek: "",
+    studentIdNumber: ""
   });
 
   useEffect(() => {
@@ -58,13 +68,45 @@ export default function ProfilePage() {
         role: data.role || "",
         batchName: data.batchName || "N/A",
         departmentName: data.departmentName || data.departmentCode || "Common (General)",
-        maxHoursPerWeek: data.maxHoursPerWeek || ""
+        maxHoursPerWeek: data.maxHoursPerWeek || "",
+        studentIdNumber: data.studentIdNumber || ""
       });
     } catch (err) {
       console.error(err);
       setError("Failed to load profile details.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleChangePassword = async (e) => {
+    e.preventDefault();
+    if (!currentPassword || !newPasswordInput || !confirmNewPasswordInput) {
+      setPasswordError("Please fill in all password fields.");
+      return;
+    }
+    if (newPasswordInput.length < 6) {
+      setPasswordError("New password must be at least 6 characters long.");
+      return;
+    }
+    if (newPasswordInput !== confirmNewPasswordInput) {
+      setPasswordError("New passwords do not match.");
+      return;
+    }
+
+    try {
+      setPasswordSaving(true);
+      setPasswordError("");
+      setPasswordSuccess("");
+      await changePassword(currentUser.userId, currentPassword, newPasswordInput);
+      setPasswordSuccess("Password updated successfully!");
+      setCurrentPassword("");
+      setNewPasswordInput("");
+      setConfirmNewPasswordInput("");
+    } catch (err) {
+      setPasswordError(err.message || "Failed to update password. Please check your current password.");
+    } finally {
+      setPasswordSaving(false);
     }
   };
 
@@ -296,6 +338,11 @@ export default function ProfilePage() {
                           <span style={{ fontSize: "12px", color: "var(--neutral-500)", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.5px" }}>Batch Year</span>
                           <span style={{ fontSize: "15px", color: "var(--neutral-800)", fontWeight: "600" }}>{formData.batchName}</span>
                         </div>
+
+                        <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                          <span style={{ fontSize: "12px", color: "var(--neutral-500)", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.5px" }}>Registration ID</span>
+                          <span style={{ fontSize: "15px", color: "var(--neutral-800)", fontWeight: "600" }}>{formData.studentIdNumber || "—"}</span>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -350,6 +397,107 @@ export default function ProfilePage() {
                     </div>
                   </div>
                 )}
+
+              {/* SECURITY & PASSWORD CARD */}
+              <div className="card" style={{ background: "white", border: "1px solid var(--neutral-200)", borderRadius: "var(--radius-md)" }}>
+                <div className="card-body" style={{ padding: "24px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: showPasswordCard ? "20px" : "0" }}>
+                    <h3 style={{ margin: 0, fontSize: "16px", fontWeight: "700", display: "flex", alignItems: "center", gap: "8px", color: "var(--neutral-800)" }}>
+                      <Lock size={18} style={{ color: "var(--primary-600)" }} />
+                      <span>Security & Password</span>
+                    </h3>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowPasswordCard(!showPasswordCard);
+                        setPasswordError("");
+                        setPasswordSuccess("");
+                        setCurrentPassword("");
+                        setNewPasswordInput("");
+                        setConfirmNewPasswordInput("");
+                      }}
+                      className="btn btn-secondary btn-sm"
+                      style={{ fontSize: "13px", fontWeight: "600" }}
+                    >
+                      {showPasswordCard ? "Cancel" : "Change Password"}
+                    </button>
+                  </div>
+
+                  {showPasswordCard && (
+                    <form onSubmit={handleChangePassword} style={{ display: "flex", flexDirection: "column", gap: "16px", marginTop: "12px", borderTop: "1px solid var(--neutral-100)", paddingTop: "16px" }}>
+                      {passwordError && (
+                        <div style={{ background: "#fee2e2", border: "1px solid #fecaca", color: "#b91c1c", padding: "10px 14px", borderRadius: "8px", fontSize: "13px" }}>
+                          ⚠️ {passwordError}
+                        </div>
+                      )}
+                      {passwordSuccess && (
+                        <div style={{ background: "#dcfce7", border: "1px solid #bbf7d0", color: "#15803d", padding: "10px 14px", borderRadius: "8px", fontSize: "13px", fontWeight: "600", display: "flex", alignItems: "center", gap: "6px" }}>
+                          <CheckCircle size={16} />
+                          {passwordSuccess}
+                        </div>
+                      )}
+
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "16px" }}>
+                        <div>
+                          <label style={{ display: "block", fontSize: "12px", color: "var(--neutral-600)", fontWeight: "600", marginBottom: "6px", textTransform: "uppercase" }}>
+                            Current Password
+                          </label>
+                          <input
+                            type="password"
+                            value={currentPassword}
+                            onChange={(e) => setCurrentPassword(e.target.value)}
+                            placeholder="Enter current password"
+                            disabled={passwordSaving}
+                            className="form-control"
+                            style={{ fontSize: "14px", padding: "10px 12px" }}
+                          />
+                        </div>
+
+                        <div>
+                          <label style={{ display: "block", fontSize: "12px", color: "var(--neutral-600)", fontWeight: "600", marginBottom: "6px", textTransform: "uppercase" }}>
+                            New Password
+                          </label>
+                          <input
+                            type="password"
+                            value={newPasswordInput}
+                            onChange={(e) => setNewPasswordInput(e.target.value)}
+                            placeholder="Min 6 characters"
+                            disabled={passwordSaving}
+                            className="form-control"
+                            style={{ fontSize: "14px", padding: "10px 12px" }}
+                          />
+                        </div>
+
+                        <div>
+                          <label style={{ display: "block", fontSize: "12px", color: "var(--neutral-600)", fontWeight: "600", marginBottom: "6px", textTransform: "uppercase" }}>
+                            Confirm New Password
+                          </label>
+                          <input
+                            type="password"
+                            value={confirmNewPasswordInput}
+                            onChange={(e) => setConfirmNewPasswordInput(e.target.value)}
+                            placeholder="Re-enter new password"
+                            disabled={passwordSaving}
+                            className="form-control"
+                            style={{ fontSize: "14px", padding: "10px 12px" }}
+                          />
+                        </div>
+                      </div>
+
+                      <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "8px" }}>
+                        <button
+                          type="submit"
+                          disabled={passwordSaving}
+                          className="btn btn-primary btn-sm"
+                          style={{ minWidth: "140px", padding: "10px 18px", fontWeight: "600" }}
+                        >
+                          {passwordSaving ? "Updating Password..." : "Update Password"}
+                        </button>
+                      </div>
+                    </form>
+                  )}
+                </div>
+              </div>
 
               </div>
 

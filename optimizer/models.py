@@ -9,11 +9,14 @@ class ModuleInput(BaseModel):
     lecturerId: int
     lecturerIds: Optional[List[int]] = None
     preferredHallId: Optional[int] = None
+    studentCount: Optional[int] = None
+    needsComputer: Optional[bool] = False
 
 class HallInput(BaseModel):
     hallId: int
     hallName: str
     capacity: int
+    isComputerLab: Optional[bool] = False
 
 class TimeSlotInput(BaseModel):
     slotId: int

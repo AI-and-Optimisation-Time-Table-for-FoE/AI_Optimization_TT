@@ -21,6 +21,9 @@ venv/
 *.log
 *.sql
 *.json
+!package.json
+!frontend/package.json
+!frontend/vercel.json
 .env
 .env.local
 
@@ -29,3 +32,5 @@ task.md
 walkthrough.md
 scratch/
 temp_payload.json
+*.db
+~$*.docx

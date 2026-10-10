@@ -23,6 +23,8 @@ def solve_hard_constraints_internal(req: OptimizeRequest, relaxed: bool = False)
                 "moduleName": mod.moduleName,
                 "lecturerIds": lec_ids,
                 "preferredHallId": mod.preferredHallId,
+                "studentCount": mod.studentCount,
+                "needsComputer": mod.needsComputer,
                 "index": i
             })
             if is_elective:
@@ -52,17 +54,46 @@ def solve_hard_constraints_internal(req: OptimizeRequest, relaxed: bool = False)
     for s_idx in range(num_sessions):
         model.Add(sum(x[s_idx, t.slotId, h.hallId] for t in slots for h in halls) == 1)
         
-    # H2: Respect hall capacity (batch size must fit in hall)
-    for s_idx in range(num_sessions):
+    # H2: Strict Hall Rules (Capacity, Computer Needs, Admin Preference)
+    for s_idx, session in enumerate(sessions):
+        req_capacity = session.get("studentCount") or req.studentCount
+        pref_hall_id = session.get("preferredHallId")
+        needs_computer = session.get("needsComputer", False)
+        
         for h in halls:
-            if h.capacity < req.studentCount:
-                # Cannot use this hall
+            can_use = True
+            
+            if pref_hall_id is not None:
+                if h.hallId != pref_hall_id:
+                    can_use = False
+            else:
+                if needs_computer:
+                    if not getattr(h, 'isComputerLab', False):
+                        can_use = False
+                else:
+                    # For general lectures: require hall capacity >= req_capacity unless cohort exceeds largest hall
+                    if req_capacity <= 300 and h.capacity < req_capacity:
+                        can_use = False
+                        
+            if not can_use:
                 for t in slots:
                     model.Add(x[s_idx, t.slotId, h.hallId] == 0)
                     
-    # H3: No batch double-booking (no two lectures, core or elective, can be scheduled at the same time)
+    # H1: No overlapping lectures for the requested cohort (ALL sessions must be mutually exclusive)
+    # The payload contains exactly the cohort's modules, so NO sessions should overlap (including TEs).
     for t in slots:
         model.Add(sum(x[s_idx, t.slotId, h.hallId] for s_idx in range(num_sessions) for h in halls if (s_idx, t.slotId, h.hallId) in x) <= 1)
+
+    # H16: Respect Computer Lab requirement (unless admin explicitly set a preferred hall)
+    for s_idx, session in enumerate(sessions):
+        needs_comp = session.get("needsComputer", False)
+        has_preferred = session.get("preferredHallId") is not None
+        if needs_comp and not has_preferred:
+            for h in halls:
+                if not getattr(h, "isComputerLab", False):
+                    for t in slots:
+                        if (s_idx, t.slotId, h.hallId) in x:
+                            model.Add(x[s_idx, t.slotId, h.hallId] == 0)
 
 
     # H14: No hall double-booking (at most one session per hall per slot)
@@ -155,31 +186,37 @@ def solve_hard_constraints_internal(req: OptimizeRequest, relaxed: bool = False)
                         if (s_idx, t.slotId, h.hallId) in x:
                             model.Add(x[s_idx, t.slotId, h.hallId] == 0)
                         
-    # H8: Max lecture hours per day per batch
-    # Group time slots by day
     slots_by_day = {}
     for t in slots:
         slots_by_day.setdefault(t.dayOfWeek, []).append(t.slotId)
         
-    # Calculate daily limit dynamically to guarantee feasibility
-    # e.g., if we need 25 sessions, we need at least 5 per day, so we allow 7 to allow flexibility under lab blocks.
-    import math
-    min_needed_per_day = math.ceil(num_sessions / 5.0)
-    max_hours_limit = max(5, min_needed_per_day + 2)
+    max_hours_limit = 16
+    
+    # Group sessions by department for H8
+    dept_to_sessions = {}
+    for s_idx in range(num_sessions):
+        code = sessions[s_idx]["moduleCode"]
+        dept = code[:2].upper()
+        if dept == 'IS':
+            # IS modules are shared, so they count towards all departments.
+            # We'll handle this by adding them to every department's limit below.
+            pass
+        else:
+            dept_to_sessions.setdefault(dept, []).append(s_idx)
+            
+    is_sessions = [s_idx for s_idx in range(num_sessions) if sessions[s_idx]["moduleCode"].startswith("IS")]
     
     for day, day_slots in slots_by_day.items():
-        model.Add(sum(x[s_idx, t_id, h.hallId] for s_idx in range(num_sessions) for t_id in day_slots for h in halls) <= max_hours_limit)
+        for dept, d_sessions in dept_to_sessions.items():
+            # A department's total daily sessions (including shared IS sessions) cannot exceed max_hours_limit
+            dept_group = d_sessions + is_sessions
+            model.Add(sum(x[s_idx, t_id, h.hallId] for s_idx in dept_group for t_id in day_slots for h in halls if (s_idx, t_id, h.hallId) in x) <= max_hours_limit)
         
-    # H10: Preferred Hall Constraint
-    for s_idx, session in enumerate(sessions):
-        pref_hall_id = session.get("preferredHallId")
-        if pref_hall_id is not None:
-            for t in slots:
-                for h in halls:
-                    if h.hallId != pref_hall_id:
-                        if (s_idx, t.slotId, h.hallId) in x:
-                            model.Add(x[s_idx, t.slotId, h.hallId] == 0)
-                        
+        # If there are ONLY IS modules (e.g. no specific departments)
+        if not dept_to_sessions and is_sessions:
+            model.Add(sum(x[s_idx, t_id, h.hallId] for s_idx in is_sessions for t_id in day_slots for h in halls if (s_idx, t_id, h.hallId) in x) <= max_hours_limit)
+        
+
     # H13: Friday after 4:30 PM constraint (Friday 16:30 onwards is blocked)
     for t in slots:
         if t.dayOfWeek == "Friday":
@@ -249,7 +286,8 @@ def solve_hard_constraints_internal(req: OptimizeRequest, relaxed: bool = False)
                 else:
                     model.Add(is_two == 0)
                     
-            model.Add(sum(is_two_days) == 1)
+            if not relaxed:
+                model.Add(sum(is_two_days) == 1)
 
         elif len(s_indices) == 3:
             is_one_days = []
@@ -299,8 +337,9 @@ def solve_hard_constraints_internal(req: OptimizeRequest, relaxed: bool = False)
                     model.Add(is_two == 0)
                     
             # Enforce exactly one day has 1 session, and exactly one day has 2 sessions
-            model.Add(sum(is_one_days) == 1)
-            model.Add(sum(is_two_days) == 1)
+            if not relaxed:
+                model.Add(sum(is_one_days) == 1)
+                model.Add(sum(is_two_days) == 1)
 
         elif len(s_indices) == 4:
             is_two_days = []
@@ -348,8 +387,8 @@ def solve_hard_constraints_internal(req: OptimizeRequest, relaxed: bool = False)
                 else:
                     model.Add(is_two == 0)
                     
-            # Enforce exactly two days have 2 sessions each
-            model.Add(sum(is_two_days) == 2)
+            if not relaxed:
+                model.Add(sum(is_two_days) == 2)
 
     # Objective: Guide CP-SAT toward a balanced, student-friendly initial solution.
     # Goal: sessions spread across morning AND afternoon, nothing crammed into one block.
@@ -387,6 +426,13 @@ def solve_hard_constraints_internal(req: OptimizeRequest, relaxed: bool = False)
                     cost = 15   # Late morning — slight nudge to not over-pack
                 else:
                     cost = 10   # Early morning 08:30-10:30 — preferred
+                    
+                # Penalize using unnecessarily large halls
+                student_count = sessions[s_idx].get("studentCount") or 0
+                capacity_waste = max(0, h.capacity - student_count)
+                # Add the wasted seats as a direct cost to strongly discourage huge halls for small classes
+                cost += capacity_waste
+                
                 objective_terms.append(cost * var)
 
     # Penalise if we have more than 1 late lecture per week
@@ -403,7 +449,7 @@ def solve_hard_constraints_internal(req: OptimizeRequest, relaxed: bool = False)
 
     # Solve
     solver = cp_model.CpSolver()
-    solver.parameters.max_time_in_seconds = 20.0
+    solver.parameters.max_time_in_seconds = 60.0
     solver.parameters.log_search_progress = True
     status = solver.Solve(model)
     
