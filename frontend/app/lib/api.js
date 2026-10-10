@@ -2,6 +2,7 @@
 // Base URL of the backend API: uses NEXT_PUBLIC_API_URL if set, otherwise localhost:5000 in development
 export const API_BASE = process.env.NEXT_PUBLIC_API_URL || (process.env.NODE_ENV === "production" ? "" : "http://localhost:5000");
 
+// Shared helper that sends every API call, adds JSON headers, and throws an error with the server's message if the request fails
 async function request(path, options = {}) {
   const response = await fetch(`${API_BASE}${path}`, {
     cache: "no-store",
