@@ -6,6 +6,7 @@ import Sidebar from "../components/Sidebar";
 import { fetchUserProfile, updateUserProfile, changePassword } from "../lib/api";
 import { User, Mail, Briefcase, MapPin, Phone, Camera, ArrowLeft, Loader2, Award, BookOpen, LogOut, CheckCircle, Lock } from "lucide-react";
 
+// ProfilePage component: shows the signed-in user's profile (personal, academic or lecturer details), lets them change their photo and password, and log out
 export default function ProfilePage() {
   const router = useRouter();
   const fileInputRef = useRef(null);
