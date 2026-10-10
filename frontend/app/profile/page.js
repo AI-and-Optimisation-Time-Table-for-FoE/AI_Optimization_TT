@@ -42,6 +42,7 @@ export default function ProfilePage() {
     studentIdNumber: ""
   });
 
+  // On page load: sends the user back to login if nobody is signed in, otherwise loads their profile details from the backend
   useEffect(() => {
     const userStr = localStorage.getItem("user");
     if (!userStr) {
