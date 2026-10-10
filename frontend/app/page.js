@@ -7,6 +7,7 @@ import { login, requestPasswordReset, resetPasswordWithKey } from "./lib/api";
 import { Eye, EyeOff, KeyRound, ArrowLeft, CheckCircle2, Lock, Mail, ShieldAlert } from "lucide-react";
 import "./optimizer.css"; 
 
+// Login page: lets admin, student and lecturer users sign in, and reset a forgotten password
 export default function LoginPage() {
   const router = useRouter();
   const [username, setUsername] = useState("");
