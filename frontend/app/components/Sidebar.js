@@ -38,7 +38,6 @@ export default function Sidebar() {
     setSidebarOpen(false);
   };
 
-  // Build navigation items dynamically
   const getNavItems = () => {
     if (!user) return [];
 
