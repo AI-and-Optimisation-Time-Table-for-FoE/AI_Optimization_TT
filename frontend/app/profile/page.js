@@ -6,6 +6,7 @@ import Sidebar from "../components/Sidebar";
 import { fetchUserProfile, updateUserProfile, changePassword } from "../lib/api";
 import { User, Mail, Briefcase, MapPin, Phone, Camera, ArrowLeft, Loader2, Award, BookOpen, LogOut, CheckCircle, Lock } from "lucide-react";
 
+// ProfilePage component: shows the signed-in user's profile (personal, academic or lecturer details), lets them change their photo and password, and log out
 export default function ProfilePage() {
   const router = useRouter();
   const fileInputRef = useRef(null);
@@ -41,6 +42,7 @@ export default function ProfilePage() {
     studentIdNumber: ""
   });
 
+  // On page load: sends the user back to login if nobody is signed in, otherwise loads their profile details from the backend
   useEffect(() => {
     const userStr = localStorage.getItem("user");
     if (!userStr) {
@@ -79,6 +81,7 @@ export default function ProfilePage() {
     }
   };
 
+  // Validates the password form (all fields filled, at least 6 characters, passwords match) and sends the change request to the backend
   const handleChangePassword = async (e) => {
     e.preventDefault();
     if (!currentPassword || !newPasswordInput || !confirmNewPasswordInput) {
@@ -115,6 +118,7 @@ export default function ProfilePage() {
     fileInputRef.current.click();
   };
 
+  // Handles profile picture upload: checks the file is an image under 2MB, previews it, saves it to the backend and updates the sidebar
   const handleFileChange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -134,7 +138,7 @@ export default function ProfilePage() {
     reader.onloadend = async () => {
       const base64Image = reader.result;
       
-      // Instantly preview
+    
       setFormData(prev => ({ ...prev, profilePicture: base64Image }));
 
       // Auto-save to database
