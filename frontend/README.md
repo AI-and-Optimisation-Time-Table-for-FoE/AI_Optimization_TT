@@ -111,3 +111,17 @@ After signing in, each user is redirected to the panel for their role. All roles
 open their **Profile** page to change their photo and password.
 
 User details are stored in the browser's `localStorage` under the key `user`.
+
+## Troubleshooting
+
+| Problem | Likely cause and fix |
+|---------|----------------------|
+| `npm` is not recognized | Node.js is not installed. Install the LTS version and restart the terminal. |
+| Pages open but sign in fails | The backend is not running, or `NEXT_PUBLIC_API_URL` is wrong. |
+| Port 3000 is already in use | Close the other app using it, or run `npm run dev -- -p 3001`. |
+| Strange errors after pulling new code | Run `npm install` again. |
+
+## Team
+
+Developed as a university software project by the Faculty of Engineering team.
+Frontend: Madhavi.
