@@ -77,3 +77,24 @@ NEXT_PUBLIC_API_URL=http://localhost:5000
 
 The backend must be running for sign in and timetable data to work. Without it, the
 pages still open but no data is loaded.
+
+## Project Structure
+
+```
+frontend/
+├── app/
+│   ├── admin/          Admin pages (admin panel, exam timetable)
+│   ├── student/        Student pages (student panel, exam schedule)
+│   ├── lecturer/       Lecturer pages
+│   ├── timetable/      Lecture schedule view
+│   ├── profile/        Account profile page
+│   ├── register/       Registration page
+│   ├── components/     Shared components (Sidebar, UpcomingLecture)
+│   ├── lib/api.js      Backend API functions
+│   ├── page.js         Login page
+│   ├── layout.js       Root layout
+│   ├── globals.css     Global styles
+│   └── optimizer.css   Additional styles
+├── public/             Static files (logo, images)
+└── package.json        Dependencies and scripts
+```
