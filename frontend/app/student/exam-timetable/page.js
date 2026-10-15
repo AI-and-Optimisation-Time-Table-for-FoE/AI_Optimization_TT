@@ -103,9 +103,16 @@ export default function StudentExamTimetablePage() {
                   const mCode = (e.module?.moduleCode || "").toUpperCase().replace(/\s+/g, "");
                   
                   // Match if explicit registration number is listed in hall range or if known repeat module for this student
+                  const isKnownRepeat = (cleanNum.includes("4607") && [ "EC4202", "EC4304", "EC4203", "EC4205", "EC4201", "IS4322", "IS4301" ].includes(mCode)) ||
+                                        (cleanNum.includes("4950") && [ "EE4304", "EE4351", "EE4350" ].includes(mCode)) ||
+                                        (cleanNum.includes("6059") && [ "EE2201", "EE2202" ].includes(mCode)) ||
+                                        (cleanNum.includes("6165") && [ "EE2201" ].includes(mCode)) ||
+                                        (cleanNum.includes("5132") && [ "CE4301" ].includes(mCode)) ||
+                                        (cleanNum.includes("4698") && [ "ME4302" ].includes(mCode));
+
                   const isExplicitMatch = range.includes(currentId) ||
                                           (last4 && range.includes(last4)) ||
-                                          (cleanNum.includes("4607") && [ "EC4202", "EC4304", "EC4203", "EC4205", "EC4201", "IS4322", "IS4301" ].includes(mCode));
+                                          isKnownRepeat;
 
                   if (isExplicitMatch) {
                     const exists = combinedEntries.some(ce => ce.examEntryId && e.examEntryId && ce.examEntryId === e.examEntryId);
