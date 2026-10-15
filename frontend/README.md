@@ -28,3 +28,33 @@ REST API.
 | Styling | CSS (`globals.css`, `optimizer.css`) and inline styles |
 | Backend | Java REST API (`timetable` folder in this repository) |
 | Hosting | Vercel (see `vercel.json`) |
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js (LTS version)
+- npm (installed with Node.js)
+
+### Installation
+
+```bash
+cd frontend
+npm install
+```
+
+### Run in development
+
+```bash
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000) in your browser.
+Press `Ctrl + C` in the terminal to stop the server.
+
+### Production build
+
+```bash
+npm run build
+npm start
+```
