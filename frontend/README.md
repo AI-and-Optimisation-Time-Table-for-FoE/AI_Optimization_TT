@@ -17,3 +17,14 @@ REST API.
 - Account profile page with profile photo upload and password change
 - Forgot-password flow on the login page
 - Responsive layout with a mobile sidebar menu
+
+## Tech Stack
+
+| Area | Technology |
+|------|------------|
+| Framework | Next.js (App Router) |
+| UI library | React |
+| Icons | lucide-react |
+| Styling | CSS (`globals.css`, `optimizer.css`) and inline styles |
+| Backend | Java REST API (`timetable` folder in this repository) |
+| Hosting | Vercel (see `vercel.json`) |
