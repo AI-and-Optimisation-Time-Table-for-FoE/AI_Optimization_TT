@@ -98,3 +98,16 @@ frontend/
 ├── public/             Static files (logo, images)
 └── package.json        Dependencies and scripts
 ```
+
+## User Roles
+
+| Role | Pages |
+|------|-------|
+| Admin | Admin Panel, Lecture Schedule, Exam Timetable |
+| Student | Student Panel, Lecture Schedule, Exam Schedule |
+| Lecturer | Lecturer Panel, Lecture Schedule |
+
+After signing in, each user is redirected to the panel for their role. All roles can
+open their **Profile** page to change their photo and password.
+
+User details are stored in the browser's `localStorage` under the key `user`.
