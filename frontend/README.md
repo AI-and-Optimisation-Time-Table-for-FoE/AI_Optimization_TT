@@ -58,3 +58,22 @@ Press `Ctrl + C` in the terminal to stop the server.
 npm run build
 npm start
 ```
+
+## Backend Configuration
+
+All API calls are defined in `app/lib/api.js` and go through one shared
+`request()` helper.
+
+The base URL is chosen as follows:
+
+1. If the `NEXT_PUBLIC_API_URL` environment variable is set, it is used.
+2. Otherwise, in development, `http://localhost:5000` is used.
+
+To use a different backend, create a `.env.local` file in the `frontend` folder:
+
+```bash
+NEXT_PUBLIC_API_URL=http://localhost:5000
+```
+
+The backend must be running for sign in and timetable data to work. Without it, the
+pages still open but no data is loaded.
