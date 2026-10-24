@@ -68,3 +68,21 @@ The exported API functions call the shared `request()` helper. It uses `fetch()`
 | `fetchLabSchedules(batchId, departmentId)` | `GET` | `/api/lab-schedules` with optional `batchId` and `departmentId` | Retrieves lab schedules, optionally filtered by batch and department. |
 | `createLabSchedule(data)` | `POST` | `/api/lab-schedules` | Creates a lab schedule from the supplied data. |
 | `deleteLabSchedule(id)` | `DELETE` | `/api/lab-schedules/{id}` | Deletes a lab schedule. |
+
+## Lecture Timetables and Versions
+
+| Function | Method | Endpoint path | Purpose |
+| --- | --- | --- | --- |
+| `generateTimetable(batchId, departmentId)` | `POST` | `/api/timetable/generate?batchId={batchId}` with optional `departmentId` | Generates a timetable for a batch and optional department; an invalid or missing batch ID rejects with `Invalid batch ID` without a request. |
+| `fetchTimetable(batchId, departmentId, isAdmin, timetableId)` | `GET` | `/api/timetable` with optional `batchId`, `departmentId`, `isAdmin=true`, and `timetableId` | Retrieves a timetable using the supplied optional filters. |
+| `fetchLecturerTimetable(lecturerId)` | `GET` | `/api/timetable?lecturerId={lecturerId}` | Retrieves the timetable for a lecturer. |
+| `fetchTimetableStatus(batchId, departmentId, isAdmin)` | `GET` | `/api/timetable/status` with optional `batchId`, `departmentId`, and `isAdmin=true` | Retrieves timetable generation or publication status using optional filters. |
+| `publishTimetable(batchId, departmentId)` | `POST` | `/api/timetable/publish?batchId={batchId}` with optional `departmentId` | Publishes a timetable for a batch and optional department; an invalid or missing batch ID rejects with `Invalid batch ID` without a request. |
+| `moveTimetableEntry(entryId, dayOfWeek, startTime, endTime, venueId)` | `PUT` | `/api/timetable/entries/{entryId}/move` | Moves a timetable entry to a new day, time range, and venue. |
+| `fetchTimetableVersions(batchId, departmentId)` | `GET` | `/api/timetable/versions?batchId={batchId}` with optional `departmentId` | Retrieves timetable versions for a batch and optional department; a missing batch ID returns an empty array without a request. |
+| `publishTimetableVersion(versionId)` | `POST` | `/api/timetable/versions/publish` | Publishes a timetable version using its ID in the request body. |
+| `unpublishTimetableVersion(versionId)` | `POST` | `/api/timetable/versions/unpublish` | Unpublishes a timetable version using its ID in the request body. |
+| `deleteTimetableVersion(versionId)` | `DELETE` | `/api/timetable/versions/{versionId}` | Deletes a timetable version. |
+| `fetchMasterLecturerStatus()` | `GET` | `/api/timetable/versions/master-lecturer-status` | Retrieves the master lecturer timetable publication status. |
+| `publishMasterLecturerTimetable()` | `POST` | `/api/timetable/versions/publish-master-lecturer` | Publishes the master lecturer timetable. |
+| `unpublishMasterLecturerTimetable()` | `POST` | `/api/timetable/versions/unpublish-master-lecturer` | Unpublishes the master lecturer timetable. |
