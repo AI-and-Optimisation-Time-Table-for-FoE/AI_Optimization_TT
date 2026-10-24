@@ -86,3 +86,31 @@ The exported API functions call the shared `request()` helper. It uses `fetch()`
 | `fetchMasterLecturerStatus()` | `GET` | `/api/timetable/versions/master-lecturer-status` | Retrieves the master lecturer timetable publication status. |
 | `publishMasterLecturerTimetable()` | `POST` | `/api/timetable/versions/publish-master-lecturer` | Publishes the master lecturer timetable. |
 | `unpublishMasterLecturerTimetable()` | `POST` | `/api/timetable/versions/unpublish-master-lecturer` | Unpublishes the master lecturer timetable. |
+
+## Exam Timetables and Enrollment
+
+| Function | Method | Endpoint path | Purpose |
+| --- | --- | --- | --- |
+| `fetchExamTimetables(batchId, streamScope)` | `GET` | `/api/exam-timetables` with optional `batchId` and `streamScope` | Retrieves exam timetables, optionally filtered by batch and stream scope. |
+| `fetchExamTimetableDetails(examTimetableId)` | `GET` | `/api/exam-timetables/{examTimetableId}` | Retrieves the details of an exam timetable. |
+| `createExamTimetable(data)` | `POST` | `/api/exam-timetables` | Creates an exam timetable from the supplied data. |
+| `saveExamEntries(examTimetableId, entries)` | `POST` | `/api/exam-timetables/{examTimetableId}/entries` | Saves entries for an exam timetable. |
+| `publishExamTimetable(examTimetableId)` | `POST` | `/api/exam-timetables/{examTimetableId}/publish` | Publishes an exam timetable. |
+| `unpublishExamTimetable(examTimetableId)` | `POST` | `/api/exam-timetables/{examTimetableId}/unpublish` | Unpublishes an exam timetable. |
+| `reoptimizeExamTimetable(examTimetableId)` | `POST` | `/api/exam-timetables/{examTimetableId}/reoptimize` | Reoptimizes an exam timetable. |
+| `deleteExamTimetable(examTimetableId)` | `DELETE` | `/api/exam-timetables/{examTimetableId}` | Deletes an exam timetable. |
+| `deleteExamEntry(examTimetableId, entryId)` | `DELETE` | `/api/exam-timetables/{examTimetableId}/entries/{entryId}` | Deletes an entry from an exam timetable. |
+| `fetchExamHallUnavailabilities()` | `GET` | `/api/exam-timetables/hall-unavailabilities` | Retrieves exam hall unavailability records. |
+| `addExamHallUnavailability(data)` | `POST` | `/api/exam-timetables/hall-unavailabilities` | Adds an exam hall unavailability record. |
+| `deleteExamHallUnavailability(id)` | `DELETE` | `/api/exam-timetables/hall-unavailabilities/{id}` | Deletes an exam hall unavailability record. |
+| `fetchStudentExamTimetable(batchId, identifier)` | `GET` | `/api/exam-timetables/student?batchId={batchId}` with optional `identifier` | Retrieves a student's exam timetable for a batch, optionally for a specific identifier. |
+| `fetchStudentEnrollments(batchId)` | `GET` | `/api/student-enrollments/batch/{batchId}` | Retrieves enrollments for a batch. |
+| `fetchPersonalizedStudentEnrollments(identifier)` | `GET` | `/api/student-enrollments/student?identifier={identifier}` | Retrieves personalized enrollments for a student identifier. |
+| `syncMISStudentEnrollments(batchId, records)` | `POST` | `/api/student-enrollments/sync` | Synchronizes MIS enrollment records for a batch. |
+| `clearBatchEnrollments(batchId)` | `DELETE` | `/api/student-enrollments/batch/{batchId}` | Clears all enrollments for a batch. |
+
+## Notes
+
+- The client uses `GET`, `POST`, `PUT`, `PATCH`, and `DELETE` according to the tables above. JSON request bodies are serialized by each exported function before being passed to `request()`.
+- Optional query parameters are included only when their corresponding arguments are truthy. `streamScope`, student identifiers, and lecturer identifiers used in query strings are URL-encoded where the source does so.
+- To add a new endpoint, export a function in `frontend/app/lib/api.js` that calls `request()` with the exact path, HTTP method, query construction, and JSON body required by the backend, then document that function in the appropriate table in this file.
