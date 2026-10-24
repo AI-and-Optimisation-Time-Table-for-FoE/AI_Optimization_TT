@@ -25,3 +25,33 @@ The exported API functions call the shared `request()` helper. It uses `fetch()`
 | `verifyResetCode(email, verificationCode)` | `POST` | `/api/auth/verify-reset-code` | Verifies a password-reset code for an email address. |
 | `resetPasswordDirect(identifier, newPassword)` | `POST` | `/api/auth/reset-password` | Resets a password directly using an identifier and new password. |
 | `resetPasswordWithKey(identifier, verificationCode, newPassword)` | `POST` | `/api/auth/reset-password` | Resets a password through the key-based wrapper; the implementation sends the identifier and new password. |
+
+## Batches, Halls, Modules, Time Slots, Users, Departments, and Lecturers
+
+| Function | Method | Endpoint path | Purpose |
+| --- | --- | --- | --- |
+| `fetchBatches()` | `GET` | `/api/batches` | Retrieves all batches. |
+| `createBatch(data)` | `POST` | `/api/batches` | Creates a batch from the supplied data. |
+| `updateBatch(batchId, data)` | `PUT` | `/api/batches/{batchId}` | Updates a batch. |
+| `deleteBatch(batchId)` | `DELETE` | `/api/batches/{batchId}` | Deletes a batch. |
+| `fetchHalls()` | `GET` | `/api/halls` | Retrieves all halls. |
+| `createHall(data)` | `POST` | `/api/halls` | Creates a hall from the supplied data. |
+| `updateHall(hallId, data)` | `PUT` | `/api/halls/{hallId}` | Updates a hall. |
+| `deleteHall(hallId)` | `DELETE` | `/api/halls/{hallId}` | Deletes a hall. |
+| `fetchModules()` | `GET` | `/api/modules` | Retrieves all modules. |
+| `createModule(data)` | `POST` | `/api/modules` | Creates a module from the supplied data. |
+| `updateModule(moduleId, data)` | `PUT` | `/api/modules/{moduleId}` | Updates a module. |
+| `deleteModule(moduleId)` | `DELETE` | `/api/modules/{moduleId}` | Deletes a module. |
+| `fetchTimeSlots()` | `GET` | `/api/timeslots` | Retrieves all time slots. |
+| `createTimeSlot(data)` | `POST` | `/api/timeslots` | Creates a time slot from the supplied data. |
+| `updateTimeSlot(slotId, data)` | `PUT` | `/api/timeslots/{slotId}` | Updates a time slot. |
+| `deleteTimeSlot(slotId)` | `DELETE` | `/api/timeslots/{slotId}` | Deletes a time slot. |
+| `fetchUsers()` | `GET` | `/api/users` | Retrieves all users. |
+| `createUser(data)` | `POST` | `/api/users` | Creates a user from the supplied data. |
+| `updateUser(userId, data)` | `PUT` | `/api/users/{userId}` | Updates a user. |
+| `deleteUser(userId)` | `DELETE` | `/api/users/{userId}` | Deletes a user. |
+| `fetchDepartments()` | `GET` | `/api/departments` | Retrieves all departments. |
+| `fetchLecturers()` | `GET` | `/api/lecturers` | Retrieves all lecturers. |
+| `updateLecturer(lecturerId, data)` | `PUT` | `/api/lecturers/{lecturerId}` | Updates a lecturer. |
+| `deleteLecturer(lecturerId)` | `DELETE` | `/api/lecturers/{lecturerId}` | Deletes a lecturer. |
+| `fetchLecturerModules(lecturerId)` | `GET` | `/api/lecturers/{lecturerId}/modules` | Retrieves the modules assigned to a lecturer. |
