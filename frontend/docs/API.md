@@ -1,0 +1,13 @@
+# Frontend API Reference
+
+## Base URL
+
+All requests are prefixed with `API_BASE`. The client uses `NEXT_PUBLIC_API_URL` when it is set. Otherwise, in development, it uses `http://localhost:5000`. In production, the fallback is an empty string, so requests use the current origin.
+
+## Shared Request Helper
+
+The exported API functions call the shared `request()` helper. It uses `fetch()` with `cache: "no-store"`, adds the `Content-Type: application/json` header (while preserving any headers supplied by the caller), and serializes request bodies as JSON where applicable. For a non-success response, it throws an `Error` using the server's `message` field when one is returned; otherwise it uses `Request failed: <path>`. A `204 No Content` response returns an empty array. Other successful responses are parsed as JSON.
+
+| Helper | Method | Endpoint path | Purpose |
+| --- | --- | --- | --- |
+| `request(path, options)` | Varies | Varies | Shared fetch helper used by the exported API functions; applies request defaults and parses or reports the response. |
