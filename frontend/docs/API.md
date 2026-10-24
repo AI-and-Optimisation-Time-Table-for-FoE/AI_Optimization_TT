@@ -55,3 +55,16 @@ The exported API functions call the shared `request()` helper. It uses `fetch()`
 | `updateLecturer(lecturerId, data)` | `PUT` | `/api/lecturers/{lecturerId}` | Updates a lecturer. |
 | `deleteLecturer(lecturerId)` | `DELETE` | `/api/lecturers/{lecturerId}` | Deletes a lecturer. |
 | `fetchLecturerModules(lecturerId)` | `GET` | `/api/lecturers/{lecturerId}/modules` | Retrieves the modules assigned to a lecturer. |
+
+## Batch Modules and Lab Schedules
+
+| Function | Method | Endpoint path | Purpose |
+| --- | --- | --- | --- |
+| `autoLinkSharedModules(batchId)` | `POST` | `/api/batches/{batchId}/auto-link-shared` | Automatically links shared modules for a batch. |
+| `fetchBatchModules(batchId, departmentId)` | `GET` | `/api/batches/{batchId}/modules` with optional `departmentId` | Retrieves modules assigned to a batch, optionally filtered by department; an invalid or missing batch ID returns an empty array without a request. |
+| `updateBatchModule(batchModuleId, data)` | `PUT` | `/api/batches/modules/{batchModuleId}` | Updates a batch-module assignment. |
+| `addModuleToBatch(batchId, moduleId, departmentId)` | `POST` | `/api/batches/{batchId}/modules` | Adds a module to a batch with the module and department IDs; an invalid or missing batch ID rejects with `Invalid batch ID` without a request. |
+| `removeModuleFromBatch(batchId, batchModuleId, departmentId)` | `DELETE` | `/api/batches/{batchId}/modules/{batchModuleId}` with optional `departmentId` | Removes a module assignment from a batch; an invalid or missing batch ID rejects with `Invalid batch ID` without a request. |
+| `fetchLabSchedules(batchId, departmentId)` | `GET` | `/api/lab-schedules` with optional `batchId` and `departmentId` | Retrieves lab schedules, optionally filtered by batch and department. |
+| `createLabSchedule(data)` | `POST` | `/api/lab-schedules` | Creates a lab schedule from the supplied data. |
+| `deleteLabSchedule(id)` | `DELETE` | `/api/lab-schedules/{id}` | Deletes a lab schedule. |
