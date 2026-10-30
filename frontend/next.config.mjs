@@ -7,7 +7,7 @@ const nextConfig = {
     return [
       {
         source: '/api/:path*',
-        destination: 'http://timetable-java-backend-env.eba-hvkktump.eu-north-1.elasticbeanstalk.com/api/:path*',
+        destination: 'http://backend-env.eba-83mgr7vm.ap-southeast-2.elasticbeanstalk.com/api/:path*',
       },
     ];
   },

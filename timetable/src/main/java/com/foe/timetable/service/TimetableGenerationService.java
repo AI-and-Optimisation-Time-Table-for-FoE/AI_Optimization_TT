@@ -477,7 +477,7 @@ public class TimetableGenerationService {
 
         // Call FastAPI microservice
         RestTemplate restTemplate = new RestTemplate();
-        String url = "http://timetable-optimizer-env.eba-j5hc3u2e.eu-north-1.elasticbeanstalk.com/optimize";
+        String url = "http://timetable-optimizer-env.eba-jgmyyrnh.ap-southeast-2.elasticbeanstalk.com/optimize";
         
         try {
             ResponseEntity<OptimizationResult> response = restTemplate.postForEntity(url, optRequest, OptimizationResult.class);
