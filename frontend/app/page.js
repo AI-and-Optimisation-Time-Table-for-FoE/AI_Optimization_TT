@@ -73,10 +73,8 @@ export default function LoginPage() {
     setError("");
 
     try {
-      const universityEmailForKushan = "testDrkushan@university.edu";
       const trimmed = username.trim();
-      const payloadUsername = trimmed.toLowerCase() === "kushan" ? universityEmailForKushan : trimmed;
-      const data = await login(payloadUsername, password);
+      const data = await login(trimmed, password);
       
       // Save or clear remembered email
       if (rememberMe) {
