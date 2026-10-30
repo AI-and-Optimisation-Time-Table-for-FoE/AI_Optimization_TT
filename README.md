@@ -1,4 +1,4 @@
-# AI Optimization Timetable System
+# AI Optimization Timetable System for FOE UOR
 
 An automated university timetable generation system that leverages a genetic algorithm to create conflict-free schedules. The platform includes dedicated web interfaces for administrators, lecturers, and students to manage and view their respective schedules.
 
