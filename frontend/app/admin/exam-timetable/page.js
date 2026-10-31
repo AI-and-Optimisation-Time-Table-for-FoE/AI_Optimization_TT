@@ -319,7 +319,13 @@ export default function AdminExamTimetablePage() {
     setError("");
     try {
       const data = await fetchExamTimetables(batchId, streamScope);
-      const list = Array.isArray(data) ? data : (data?.value || []);
+      const rawList = Array.isArray(data) ? data : (data?.value || []);
+      const list = (streamScope && streamScope !== "ALL")
+        ? rawList.filter(t => {
+            const tScope = (t.streamScope || "MAIN").toUpperCase();
+            return tScope === streamScope.toUpperCase() || tScope === "ALL";
+          })
+        : rawList;
       if (list && list.length > 0) {
         const latest = list[0];
         const details = await fetchExamTimetableDetails(latest.examTimetableId);
@@ -632,6 +638,22 @@ export default function AdminExamTimetablePage() {
     if (confirm("Delete this exam timetable draft?")) {
       try {
         await deleteExamTimetable(examTimetable.examTimetableId);
+        // Also clean up any older duplicate timetables for the same batch & streamScope
+        const data = await fetchExamTimetables(Number(batchId), streamScope);
+        const rawList = Array.isArray(data) ? data : (data?.value || []);
+        const matching = (streamScope && streamScope !== "ALL")
+          ? rawList.filter(t => {
+              const tScope = (t.streamScope || "MAIN").toUpperCase();
+              return tScope === streamScope.toUpperCase() || tScope === "ALL";
+            })
+          : rawList;
+        for (const t of matching) {
+          if (t.examTimetableId && t.examTimetableId !== examTimetable.examTimetableId) {
+            await deleteExamTimetable(t.examTimetableId).catch(() => {});
+          }
+        }
+        setExamTimetable(null);
+        setEntries([]);
         alert("Deleted!");
         await loadBatchExamTimetable(Number(batchId), streamScope);
       } catch (err) {

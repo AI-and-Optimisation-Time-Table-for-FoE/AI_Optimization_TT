@@ -261,15 +261,22 @@ export function deleteLabSchedule(id) {
 }
 
 // === TIMETABLE GENERATION & ACCESS ===
-export function generateTimetable(batchId, departmentId) {
+export async function generateTimetable(batchId, departmentId) {
   if (!batchId || isNaN(Number(batchId))) return Promise.reject(new Error("Invalid batch ID"));
   let query = `?batchId=${batchId}`;
   if (departmentId) {
     query += `&departmentId=${departmentId}`;
   }
-  return request(`/api/timetable/generate${query}`, {
+  const res = await fetch(`/api/timetable/generate${query}`, {
     method: "POST",
+    headers: { "Content-Type": "application/json" },
+    cache: "no-store",
   });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(data.message || "Failed to generate timetable");
+  }
+  return data;
 }
 
 export function fetchTimetable(batchId, departmentId, isAdmin, timetableId) {

@@ -4,12 +4,14 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   async rewrites() {
-    return [
-      {
-        source: '/api/:path*',
-        destination: 'http://backend-env.eba-83mgr7vm.ap-southeast-2.elasticbeanstalk.com/api/:path*',
-      },
-    ];
+    return {
+      fallback: [
+        {
+          source: '/api/:path*',
+          destination: 'http://backend-env.eba-83mgr7vm.ap-southeast-2.elasticbeanstalk.com/api/:path*',
+        },
+      ],
+    };
   },
 };
 
