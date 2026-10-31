@@ -985,9 +985,6 @@ export default function AdminExamTimetablePage() {
                       {groups.length} modules
                     </span>
                   </h3>
-                  <p style={{ margin: "4px 0 0 26px", fontSize: "12px", color: "var(--neutral-500)" }}>
-                    Multi-venue hall allocations with explicit <strong>Regular Candidates</strong> and <strong>Repeat Candidates</strong> tracking.
-                  </p>
                 </div>
                 <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
