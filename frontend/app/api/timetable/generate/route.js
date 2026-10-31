@@ -215,6 +215,18 @@ export async function POST(request) {
       }
     }
 
+    // Clean up previous timetable versions for the same (batchId, departmentId) so stale versions do not cause false clashes
+    const [prevTts] = await conn.execute(
+      `SELECT timetable_id FROM timetable WHERE batch_id = ? AND COALESCE(department_id, -1) = ?`,
+      [batchId, currentDeptParam]
+    );
+    if (prevTts.length > 0) {
+      const prevIds = prevTts.map((r) => r.timetable_id);
+      const placeholders = prevIds.map(() => "?").join(",");
+      await conn.execute(`DELETE FROM timetable_entry WHERE timetable_id IN (${placeholders})`, prevIds);
+      await conn.execute(`DELETE FROM timetable WHERE timetable_id IN (${placeholders})`, prevIds);
+    }
+
     // Create new draft timetable version
     const now = new Date();
     const [insertTt] = await conn.execute(
